@@ -10,7 +10,7 @@ Monorepo pnpm, due servizi Railway, un Postgres condiviso.
 
 ```
 apps/web      Next.js 15 App Router, TypeScript, Tailwind v4
-apps/worker   Python 3.12, raccolta ricette dalle sitemap e volantini, cron
+apps/worker   Python 3.12, raccolta ricette dalle sitemap e volantini, gira sempre
 packages/db   Schema Drizzle e migrazioni, condiviso
 ```
 
@@ -47,9 +47,11 @@ Railway, progetto `èProntooo`, ambiente `production`. Tre servizi:
 |---|---|---|
 | `postgres` | Postgres 17 con volume su `/var/lib/postgresql/data` | immagine `ghcr.io/railwayapp-templates/postgres-ssl:17` |
 | `web` | Next.js | Nixpacks dalla radice del repo, pre-deploy `db:migrate` + `seed` |
-| `worker` | Python | Dockerfile in `apps/worker`, cron ogni 30 minuti |
+| `worker` | Python | Dockerfile in `apps/worker`, processo sempre attivo |
 
-Il cron sta a 30 minuti finché il catalogo si riempie: la raccolta si ferma da sola a `CATALOGO_OBIETTIVO` ricette e da lì in poi i giri sono a vuoto. Quando arrivano i volantini (Fase 5) va riportato a settimanale.
+Il worker **non** usa il cron di Railway: ha un ciclo suo che dorme `INTERVALLO_SECONDI` fra un giro e l'altro. Non è una scelta estetica. Un servizio a cron con `restart NEVER` viene creato ma non avviato finché non scatta l'orario, e se l'orario è l'unica leva non c'è modo di far partire un giro adesso: si aspetta e basta. Un processo che dorme parte al deploy, si vede nei log, e un redeploy lo forza.
+
+Quando il catalogo ha raggiunto `CATALOGO_OBIETTIVO` il giro costa un conteggio sul database e via.
 
 Push su `main` → Railway ricostruisce e sostituisce il deploy. Nessun passaggio manuale.
 Le migrazioni girano come pre-deploy del `web`: se falliscono, il deploy vecchio resta in piedi.
