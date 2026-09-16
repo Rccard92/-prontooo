@@ -1,0 +1,11 @@
+[project]
+name = "cassetta-worker"
+version = "0.0.0"
+description = "Ingestione ricette e volantini per Cassetta. Non espone HTTP: scrive su Postgres."
+requires-python = ">=3.12"
+dependencies = [
+    "psycopg[binary]>=3.2.3",
+]
+
+[tool.uv]
+package = false

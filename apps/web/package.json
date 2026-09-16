@@ -1,0 +1,25 @@
+{
+  "name": "@cassetta/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cassetta/db": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "next": "^15.5.25",
+    "postgres": "^3.4.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.10.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  }
+}
