@@ -1,6 +1,7 @@
 export { db } from './client'
 export * as schema from './schema'
 export {
+  alimenti,
   allergeni,
   battiti,
   ingredienteAllergene,
@@ -12,10 +13,12 @@ export {
   ricette,
 } from './schema'
 export type {
+  Alimento,
   Allergene,
   Battito,
   IngredienteCanonico,
   NuovaRicetta,
+  NuovoAlimento,
   NuovoAllergene,
   NuovoRicettaIngrediente,
   Piano,

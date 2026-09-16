@@ -1,0 +1,161 @@
+import type { VoceAlimento } from './tipi'
+
+/**
+ * Il vocabolario degli alimenti.
+ *
+ * Non e' un database nutrizionale: e' l'elenco di quello che si compra al
+ * supermercato e si mette in tavola, con la porzione tipica di una persona.
+ * Le quantita' sono a crudo salvo dove ovvio, e sono il punto di partenza:
+ * l'impostazione del profilo le scala.
+ *
+ * Le etichette servono alle esclusioni. Vanno curate a mano, perche' e' qui
+ * che si nascondono i casi sporchi: il pesto ha latte e frutta a guscio, la
+ * salsa di soia ha glutine, il wurstel ha lattosio.
+ */
+export const VOCABOLARIO: VoceAlimento[] = [
+  // ---------- Basi: cereali, tuberi, pane ----------
+  { nome: 'Pasta di semola', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Pasta di semola integrale', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Pasta di lenticchie', gruppo: 'legume', ruoli: ['base', 'proteina'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Pasta di ceci', gruppo: 'legume', ruoli: ['base', 'proteina'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Riso basmati', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Riso integrale', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Riso Carnaroli', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Orzo perlato', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Farro perlato', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Cous cous', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Quinoa', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Polenta', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Gnocchi di patate', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Patate', gruppo: 'tubero', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Patate dolci', gruppo: 'tubero', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Pane integrale', gruppo: 'pane', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Pane di segale', gruppo: 'pane', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Pane senza glutine', gruppo: 'pane', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['pane'] },
+  { nome: 'Piadina integrale', gruppo: 'pane', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 100, unita: 'g', etichette: ['glutine', 'pane'] },
+
+  // ---------- Proteine: carne ----------
+  { nome: 'Petto di pollo', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Fusi di pollo', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 180, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Petto di tacchino', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Fettina di vitello', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+  { nome: 'Fettina di manzo', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+  { nome: 'Macinato di manzo', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+  { nome: 'Fettina di cavallo', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+  { nome: 'Lonza di maiale', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'maiale', 'carne_rossa'] },
+  { nome: 'Prosciutto cotto', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['proteico', 'maiale', 'lattosio'] },
+  { nome: 'Prosciutto crudo', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 70, unita: 'g', etichette: ['proteico', 'maiale'] },
+  { nome: 'Bresaola', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+
+  // ---------- Proteine: pesce ----------
+  { nome: 'Salmone fresco', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 180, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Spigola', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 250, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Orata', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 250, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Merluzzo', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Pesce azzurro', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Tonno al naturale', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 120, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Gamberi', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 180, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Calamari', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico', 'pesce'] },
+
+  // ---------- Proteine: uova, latticini, legumi ----------
+  { nome: 'Uova', gruppo: 'uova', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 120, unita: 'g', etichette: ['proteico', 'uova'] },
+  { nome: 'Albume', gruppo: 'uova', ruoli: ['proteina'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'uova'] },
+  { nome: 'Mozzarella', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 125, unita: 'g', etichette: ['proteico', 'lattosio'] },
+  { nome: 'Mozzarella senza lattosio', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 125, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Ricotta vaccina', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'lattosio'] },
+  { nome: 'Parmigiano Reggiano', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Feta', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['proteico', 'lattosio'] },
+  { nome: 'Ceci lessati', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Lenticchie lessate', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Fagioli cannellini', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Fave', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Tofu', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+
+  // ---------- Verdure ----------
+  { nome: 'Zucchine', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Melanzane', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Peperoni', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Pomodori', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Pomodorini', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Fagiolini', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Spinaci', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Cicoria', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Broccoli', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Cavolfiore', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Zucca', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Finocchi', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Carciofi', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Asparagi', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Carote', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Insalata mista', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 100, unita: 'g' },
+  { nome: 'Rucola', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Valeriana', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Verdure grigliate miste', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Piselli', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Cime di rapa', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+
+  // ---------- Grassi da condimento ----------
+  { nome: 'Olio extravergine di oliva', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 10, unita: 'g' },
+  { nome: 'Olive nere', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g' },
+  { nome: 'Avocado', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 80, unita: 'g' },
+
+  // ---------- Colazione: latticini e bevande ----------
+  { nome: 'Yogurt greco 0%', gruppo: 'latticino', ruoli: ['latticino'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Yogurt greco 5%', gruppo: 'latticino', ruoli: ['latticino'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Yogurt bianco senza lattosio', gruppo: 'latticino', ruoli: ['latticino'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Skyr', gruppo: 'latticino', ruoli: ['latticino'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Latte intero', gruppo: 'latticino', ruoli: ['latticino'], fasce: ['colazione'], quantita: 200, unita: 'ml', etichette: ['lattosio'] },
+  { nome: 'Latte senza lattosio', gruppo: 'latticino', ruoli: ['latticino'], fasce: ['colazione'], quantita: 200, unita: 'ml' },
+  { nome: 'Bevanda di avena', gruppo: 'bevanda', ruoli: ['latticino'], fasce: ['colazione'], quantita: 200, unita: 'ml', etichette: ['glutine'] },
+  { nome: 'Bevanda di mandorla', gruppo: 'bevanda', ruoli: ['latticino'], fasce: ['colazione'], quantita: 200, unita: 'ml', etichette: ['frutta_guscio'] },
+  { nome: 'Bevanda di soia', gruppo: 'bevanda', ruoli: ['latticino'], fasce: ['colazione'], quantita: 200, unita: 'ml' },
+
+  // ---------- Colazione: cereali ----------
+  { nome: "Fiocchi d'avena", gruppo: 'cereale', ruoli: ['cereale_colazione'], fasce: ['colazione'], quantita: 40, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Corn flakes', gruppo: 'cereale', ruoli: ['cereale_colazione'], fasce: ['colazione'], quantita: 30, unita: 'g' },
+  { nome: 'Muesli', gruppo: 'cereale', ruoli: ['cereale_colazione'], fasce: ['colazione'], quantita: 40, unita: 'g', etichette: ['glutine', 'frutta_guscio'] },
+  { nome: 'Farro soffiato', gruppo: 'cereale', ruoli: ['cereale_colazione'], fasce: ['colazione'], quantita: 30, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Fette biscottate integrali', gruppo: 'pane', ruoli: ['cereale_colazione', 'base'], fasce: ['colazione'], quantita: 30, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Pane integrale tostato', gruppo: 'pane', ruoli: ['cereale_colazione', 'base'], fasce: ['colazione'], quantita: 50, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Biscotti secchi', gruppo: 'dolce', ruoli: ['cereale_colazione'], fasce: ['colazione'], quantita: 40, unita: 'g', etichette: ['glutine', 'zuccheri'] },
+
+  // ---------- Colazione: spalmabili e semi ----------
+  { nome: 'Marmellata senza zuccheri aggiunti', gruppo: 'dolce', ruoli: ['spalmabile'], fasce: ['colazione'], quantita: 30, unita: 'g' },
+  { nome: 'Miele', gruppo: 'dolce', ruoli: ['spalmabile'], fasce: ['colazione'], quantita: 15, unita: 'g', etichette: ['zuccheri'] },
+  { nome: 'Crema di nocciole 100%', gruppo: 'frutta_secca', ruoli: ['spalmabile'], fasce: ['colazione'], quantita: 20, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Burro di arachidi', gruppo: 'frutta_secca', ruoli: ['spalmabile'], fasce: ['colazione'], quantita: 20, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Ricotta spalmabile', gruppo: 'latticino', ruoli: ['spalmabile'], fasce: ['colazione'], quantita: 50, unita: 'g', etichette: ['lattosio'] },
+  { nome: 'Semi di chia', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione'], quantita: 10, unita: 'g' },
+  { nome: 'Semi di lino', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione'], quantita: 10, unita: 'g' },
+  { nome: 'Mandorle', gruppo: 'frutta_secca', ruoli: ['semi', 'snack'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 20, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Noci', gruppo: 'frutta_secca', ruoli: ['semi', 'snack'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 20, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Gocce di cioccolato fondente', gruppo: 'dolce', ruoli: ['semi'], fasce: ['colazione'], quantita: 10, unita: 'g', etichette: ['zuccheri'] },
+
+  // ---------- Frutta ----------
+  { nome: 'Mela', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Pera', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Banana', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 130, unita: 'g' },
+  { nome: 'Kiwi', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Arance', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 200, unita: 'g' },
+  { nome: 'Fragole', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 200, unita: 'g' },
+  { nome: 'Mirtilli', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 125, unita: 'g' },
+  { nome: 'Pesche', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 180, unita: 'g' },
+  { nome: 'Albicocche', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Uva', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Anguria', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['spuntino', 'merenda'], quantita: 300, unita: 'g' },
+  { nome: 'Melone', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['spuntino', 'merenda'], quantita: 250, unita: 'g' },
+  { nome: 'Ananas', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['spuntino', 'merenda'], quantita: 200, unita: 'g' },
+
+  // ---------- Spuntini ----------
+  { nome: 'Gallette di mais', gruppo: 'cereale', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 30, unita: 'g' },
+  { nome: 'Gallette di grano saraceno', gruppo: 'cereale', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 30, unita: 'g' },
+  { nome: 'Crackers integrali', gruppo: 'pane', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 30, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Grissini integrali', gruppo: 'pane', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 30, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Cioccolato fondente 70%', gruppo: 'dolce', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 20, unita: 'g', etichette: ['zuccheri'] },
+  { nome: 'Barretta proteica', gruppo: 'dolce', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 50, unita: 'g', etichette: ['proteico', 'lattosio'] },
+  { nome: 'Budino proteico', gruppo: 'latticino', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 200, unita: 'g', etichette: ['proteico', 'lattosio'] },
+  { nome: 'Cubetti di Parmigiano', gruppo: 'latticino', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 30, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Frutta secca mista', gruppo: 'frutta_secca', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 25, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Popcorn non salati', gruppo: 'cereale', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 25, unita: 'g' },
+  { nome: 'Bresaola a fette', gruppo: 'carne', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 50, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+]

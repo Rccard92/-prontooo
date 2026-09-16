@@ -1,8 +1,9 @@
 import { config } from 'dotenv'
 import { sql } from 'drizzle-orm'
 
+import { VOCABOLARIO } from './alimenti/vocabolario'
 import { db } from './client'
-import { allergeni, type NuovoAllergene } from './schema'
+import { alimenti, allergeni, type NuovoAllergene } from './schema'
 
 config({ path: ['../../.env', '.env'], quiet: true })
 
@@ -43,6 +44,40 @@ async function verificaPgvector() {
   )
 }
 
+/**
+ * Il vocabolario degli alimenti. Idempotente e aggiornante: il nome e' la
+ * chiave, cosi' correggere un peso o un'etichetta nel file e ridistribuire
+ * basta a sistemare il database.
+ */
+async function seedAlimenti() {
+  const righe = VOCABOLARIO.map((v) => ({
+    nome: v.nome,
+    gruppo: v.gruppo,
+    ruoli: v.ruoli as string[],
+    fasce: v.fasce as string[],
+    quantita: v.quantita,
+    unita: v.unita,
+    etichette: (v.etichette ?? []) as string[],
+  }))
+
+  await db()
+    .insert(alimenti)
+    .values(righe)
+    .onConflictDoUpdate({
+      target: alimenti.nome,
+      set: {
+        gruppo: sql`excluded.gruppo`,
+        ruoli: sql`excluded.ruoli`,
+        fasce: sql`excluded.fasce`,
+        quantita: sql`excluded.quantita`,
+        unita: sql`excluded.unita`,
+        etichette: sql`excluded.etichette`,
+      },
+    })
+
+  console.log(`alimenti: ${righe.length} voci allineate`)
+}
+
 async function seed() {
   const inseriti = await db()
     .insert(allergeni)
@@ -51,6 +86,7 @@ async function seed() {
     .returning({ codice: allergeni.codice })
 
   await verificaPgvector()
+  await seedAlimenti()
 
   console.log(
     inseriti.length === 0

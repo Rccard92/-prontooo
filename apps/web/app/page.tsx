@@ -8,6 +8,7 @@ import { db, pianiPasti, ricette } from '@prontooo/db'
 
 import { cambiaPasto, generaPiano, leggiPiano, leggiProfilo } from '@/lib/piano/genera'
 import { GIORNI, dataDelGiorno, lunediDi } from '@/lib/piano/settimana'
+import { NOME_RUOLO } from '@/lib/nutrizione/componi'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 
 import { Testata, durata } from './componenti/testata'
@@ -56,59 +57,78 @@ type Pasto = NonNullable<Awaited<ReturnType<typeof leggiPiano>>>['pasti'][number
 
 function Pasto({ pasto }: { pasto: Pasto }) {
   const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
-  const tempo = durata(pasto.minutiTotali)
 
   return (
-    <div className="scheda flex gap-4 p-3">
-      <div className="size-20 shrink-0 overflow-hidden rounded-controllo bg-basilico-tenue sm:size-24">
-        {pasto.immagineUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
-          <img src={pasto.immagineUrl} alt="" loading="lazy" className="size-full object-cover" />
-        ) : null}
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className={`pillola self-start ${stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'}`}>
+    <div className="scheda p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className={`pillola ${stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'}`}
+        >
           {nome}
         </span>
 
-        {pasto.ricettaId ? (
-          <Link
-            href={`/ricette/${pasto.ricettaId}`}
-            className="mt-1.5 text-base leading-snug font-bold text-inchiostro"
+        <form action={blocca}>
+          <input type="hidden" name="pasto" value={pasto.id} />
+          <input type="hidden" name="bloccato" value={pasto.bloccato ? 'si' : 'no'} />
+          <button
+            type="submit"
+            className={`pillola ${pasto.bloccato ? 'bg-limone text-inchiostro' : 'bg-fondo text-fumo'}`}
           >
-            {pasto.titolo}
-          </Link>
-        ) : (
-          <p className="mt-1.5 text-base font-bold text-fumo">Niente di adatto in catalogo</p>
-        )}
-
-        <p className="cifre mt-1 text-sm text-fumo">
-          {[tempo, `${pasto.porzioni} porzioni`].filter(Boolean).join(' · ')}
-        </p>
-
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          <form action={cambia}>
-            <input type="hidden" name="pasto" value={pasto.id} />
-            <button type="submit" className="bottone-chiaro hover:bg-basilico hover:text-bianco">
-              Cambia ricetta
-            </button>
-          </form>
-
-          <form action={blocca}>
-            <input type="hidden" name="pasto" value={pasto.id} />
-            <input type="hidden" name="bloccato" value={pasto.bloccato ? 'si' : 'no'} />
-            <button
-              type="submit"
-              className={`pillola ${
-                pasto.bloccato ? 'bg-limone text-inchiostro' : 'bg-fondo text-fumo'
-              }`}
-            >
-              {pasto.bloccato ? 'Tenuto fermo' : 'Tieni fermo'}
-            </button>
-          </form>
-        </div>
+            {pasto.bloccato ? 'Tenuto fermo' : 'Tieni fermo'}
+          </button>
+        </form>
       </div>
+
+      {pasto.componenti.length === 0 ? (
+        <p className="mt-3 text-base text-fumo">
+          Niente di adatto: le esclusioni tolgono troppo per questa fascia.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {pasto.componenti.map((c) => (
+            <li
+              key={`${c.ruolo}-${c.alimentoId}`}
+              className="rounded-controllo flex items-baseline justify-between gap-3 bg-fondo px-3 py-2"
+            >
+              <span className="text-base text-inchiostro">
+                {c.nome}
+                <span className="ml-2 text-xs text-fumo">{NOME_RUOLO[c.ruolo] ?? c.ruolo}</span>
+              </span>
+              <span className="cifre shrink-0 text-base font-bold text-inchiostro">
+                {c.quantita} {c.unita}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {pasto.ricettaId ? (
+        <Link
+          href={`/ricette/${pasto.ricettaId}`}
+          className="rounded-controllo mt-3 flex items-center gap-3 bg-basilico-tenue px-3 py-2"
+        >
+          {pasto.immagineUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
+            <img
+              src={pasto.immagineUrl}
+              alt=""
+              loading="lazy"
+              className="size-10 shrink-0 rounded-full object-cover"
+            />
+          ) : null}
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold text-basilico-scuro">Idea per cucinarli</span>
+            <span className="block truncate text-sm text-inchiostro">{pasto.titolo}</span>
+          </span>
+        </Link>
+      ) : null}
+
+      <form action={cambia} className="mt-3">
+        <input type="hidden" name="pasto" value={pasto.id} />
+        <button type="submit" className="bottone-chiaro hover:bg-basilico hover:text-bianco">
+          Cambia pasto
+        </button>
+      </form>
     </div>
   )
 }
@@ -163,30 +183,14 @@ export default async function Settimana() {
           </form>
         </div>
 
-        {quanteRicette === 0 ? (
-          <div className="scheda mt-6 px-6 py-10 text-center">
-            <h2 className="font-marchio text-2xl text-inchiostro">Il catalogo è ancora vuoto</h2>
-            <p className="mx-auto mt-2 max-w-md text-base text-fumo">
-              Il worker sta raccogliendo le ricette dai siti. Ci mette qualche minuto al primo giro:
-              torna fra poco e premi Genera.
-            </p>
-            <Link href="/importa" className="bottone-chiaro mt-6">
-              Oppure incollane una a mano
-            </Link>
-          </div>
-        ) : null}
-
         {piano === null ? (
-          quanteRicette > 0 ? (
-            <div className="scheda mt-6 px-6 py-10 text-center">
-              <h2 className="font-marchio text-2xl text-inchiostro">
-                {quanteRicette} ricette pronte
-              </h2>
-              <p className="mx-auto mt-2 max-w-md text-base text-fumo">
-                Premi Genera la settimana e ti riempio i pasti che hai scelto nel wizard.
-              </p>
-            </div>
-          ) : null
+          <div className="scheda mt-6 px-6 py-10 text-center">
+            <h2 className="font-marchio text-2xl text-inchiostro">Nessun piano per questa settimana</h2>
+            <p className="mx-auto mt-2 max-w-md text-base text-fumo">
+              Premi Genera la settimana: compongo i pasti con gli alimenti che hai scelto e i grammi
+              giusti. Le {quanteRicette} ricette in catalogo servono come idee per cucinarli.
+            </p>
+          </div>
         ) : (
           <div className="mt-8 flex flex-col gap-8">
             {GIORNI.map((giorno, indice) => {

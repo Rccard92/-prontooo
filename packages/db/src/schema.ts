@@ -193,6 +193,13 @@ export const profilo = pgTable('profilo', {
   // Minuti massimi per fascia: { colazione: 10, cena: 45 }
   minutiMassimi: jsonb('minuti_massimi').$type<Record<string, number>>().notNull().default({}),
   daEvitare: jsonb('da_evitare').$type<string[]>().notNull().default([]),
+  // Le etichette escluse: rigide, un alimento che ne porta una non entra mai.
+  esclusioni: jsonb('esclusioni').$type<string[]>().notNull().default([]),
+  // Come si spostano le proporzioni fra i ruoli: equilibrata, proteica,
+  // dimagrire, piu_verdure, leggera_sera. Una sola alla volta.
+  impostazione: text('impostazione').notNull().default('equilibrata'),
+  // Gli alimenti che vuoi usare questa settimana: il piano pesca prima da qui.
+  alimentiScelti: jsonb('alimenti_scelti').$type<number[]>().notNull().default([]),
   settimaneAntiRipetizione: integer('settimane_anti_ripetizione').notNull().default(3),
   aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -228,8 +235,43 @@ export const pianiPasti = pgTable(
     ricettaId: integer('ricetta_id').references(() => ricette.id, { onDelete: 'set null' }),
     porzioni: integer('porzioni').notNull().default(2),
     bloccato: boolean('bloccato').notNull().default(false),
+    // Di cosa e' fatto il pasto: ruolo, alimento e grammi. E' questa la
+    // sostanza; la ricetta, quando c'e', e' solo un modo di cucinarli.
+    componenti: jsonb('componenti')
+      .$type<{ ruolo: string; alimentoId: number; nome: string; quantita: number; unita: string }[]>()
+      .notNull()
+      .default([]),
   },
   (t) => [uniqueIndex('piani_pasti_posto_idx').on(t.pianoId, t.giorno, t.fascia)],
 )
 
 export type PianoPasto = typeof pianiPasti.$inferSelect
+
+/**
+ * Il vocabolario degli alimenti: cosa si compra e si mette in tavola, con la
+ * porzione tipica e il ruolo che copre dentro un pasto.
+ *
+ * E' questo che permette di rispettare davvero "senza lattosio" o "senza
+ * glutine": l'etichetta sta sull'alimento, non sulla ricetta. Il contenuto
+ * arriva dal seed, non dall'utente.
+ */
+export const alimenti = pgTable(
+  'alimenti',
+  {
+    id: serial('id').primaryKey(),
+    nome: text('nome').notNull(),
+    gruppo: text('gruppo').notNull(),
+    // I ruoli che puo' coprire: base, proteina, verdura, grasso, frutta...
+    ruoli: jsonb('ruoli').$type<string[]>().notNull().default([]),
+    fasce: jsonb('fasce').$type<string[]>().notNull().default([]),
+    quantita: integer('quantita').notNull(),
+    unita: text('unita').notNull(),
+    // lattosio, glutine, pane, maiale, carne_rossa, pesce, uova, frutta_guscio,
+    // fritto, proteico, zuccheri. Sono queste che fanno scattare le esclusioni.
+    etichette: jsonb('etichette').$type<string[]>().notNull().default([]),
+  },
+  (t) => [uniqueIndex('alimenti_nome_idx').on(t.nome)],
+)
+
+export type Alimento = typeof alimenti.$inferSelect
+export type NuovoAlimento = typeof alimenti.$inferInsert

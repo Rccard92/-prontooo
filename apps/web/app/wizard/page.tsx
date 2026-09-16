@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import { db, profilo as tabellaProfilo } from '@prontooo/db'
 
 import { FASCE, NOME_FASCIA } from '@/lib/ricette/fasce'
-import { PROFILO_PREDEFINITO, leggiProfilo } from '@/lib/piano/genera'
+import { ESCLUSIONI, IMPOSTAZIONI } from '@/lib/nutrizione/impostazioni'
+import { PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/piano/genera'
 import { GIORNI } from '@/lib/piano/settimana'
 
 import { Testata } from '../componenti/testata'
@@ -36,6 +37,14 @@ async function salva(dati: FormData) {
     .map((v) => v.trim())
     .filter(Boolean)
 
+  const esclusioni: string[] = ESCLUSIONI.map((e) => e.id).filter(
+    (id) => dati.get(`esclusione-${id}`) === 'si',
+  )
+
+  const scelti = dati.getAll('alimento').map((v) => Number(v)).filter(Number.isInteger)
+
+  const impostazione = String(dati.get('impostazione') ?? 'equilibrata')
+
   const valori = {
     id: 1,
     adulti: numero(dati, 'adulti', 2),
@@ -45,6 +54,9 @@ async function salva(dati: FormData) {
     giorniFuoriPranzo,
     minutiMassimi,
     daEvitare,
+    esclusioni,
+    impostazione: IMPOSTAZIONI.some((i) => i.id === impostazione) ? impostazione : 'equilibrata',
+    alimentiScelti: scelti,
     settimaneAntiRipetizione: numero(dati, 'antiRipetizione', 3),
     aggiornatoIl: new Date(),
   }
@@ -105,9 +117,33 @@ function Numero({
   )
 }
 
+const NOME_GRUPPO: Record<string, string> = {
+  cereale: 'Cereali e riso',
+  tubero: 'Patate',
+  pane: 'Pane e sostituti',
+  legume: 'Legumi',
+  carne: 'Carne',
+  pesce: 'Pesce',
+  uova: 'Uova',
+  latticino: 'Latticini',
+  verdura: 'Verdure',
+  frutta: 'Frutta',
+  grasso: 'Condimenti',
+  frutta_secca: 'Frutta secca e semi',
+  dolce: 'Dolce',
+  bevanda: 'Bevande',
+}
+
 export default async function Wizard() {
   const salvato = await leggiProfilo()
   const p = salvato ?? { ...PROFILO_PREDEFINITO, aggiornatoIl: new Date() }
+  const alimenti = await leggiAlimenti()
+  const scelti = new Set(p.alimentiScelti)
+
+  const perGruppo = new Map<string, typeof alimenti>()
+  for (const a of alimenti) {
+    perGruppo.set(a.gruppo, [...(perGruppo.get(a.gruppo) ?? []), a])
+  }
 
   return (
     <div className="min-h-dvh bg-fondo">
@@ -204,22 +240,97 @@ export default async function Wizard() {
           </Sezione>
 
           <Sezione
-            titolo="Cosa non vuoi vedere"
-            spiega="Separati da virgola. Cerco queste parole nel testo degli ingredienti e scarto le ricette che le contengono."
+            titolo="Cosa togliere"
+            spiega="Rigide: un alimento che porta una di queste etichette non entra mai nel piano."
           >
-            <input
-              type="text"
-              name="daEvitare"
-              id="daEvitare"
-              defaultValue={p.daEvitare.join(', ')}
-              placeholder="maiale, funghi, gorgonzola"
-              className={campo}
-            />
+            <div className="flex flex-col gap-2">
+              {ESCLUSIONI.map((e) => (
+                <label
+                  key={e.id}
+                  className="rounded-controllo flex items-start gap-3 bg-fondo px-4 py-3"
+                >
+                  <input
+                    type="checkbox"
+                    name={`esclusione-${e.id}`}
+                    id={`esclusione-${e.id}`}
+                    value="si"
+                    defaultChecked={p.esclusioni.includes(e.id)}
+                    className="mt-0.5 size-5 shrink-0 accent-basilico"
+                  />
+                  <span>
+                    <span className="block text-base font-semibold text-inchiostro">{e.nome}</span>
+                    <span className="block text-sm text-fumo">{e.spiega}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+
             <p className="rounded-controllo bg-limone-tenue mt-4 px-4 py-3 text-sm text-inchiostro">
-              È una ricerca sul testo, non un controllo sugli allergeni. Per le allergie serve la
-              normalizzazione degli ingredienti, che ancora non c&rsquo;è: non fidarti di questo
-              campo per decidere se puoi mangiare qualcosa.
+              Queste valgono sugli alimenti, quindi sono affidabili. Sulle <em>ricette</em> del
+              catalogo no: lì gli ingredienti non sono ancora normalizzati. Se hai un&rsquo;allergia
+              vera, non fidarti di un suggerimento di ricetta.
             </p>
+          </Sezione>
+
+          <Sezione
+            titolo="Come vuoi mangiare"
+            spiega="Non toglie alimenti: sposta le proporzioni fra i ruoli del pasto. Una sola."
+          >
+            <div className="flex flex-col gap-2">
+              {IMPOSTAZIONI.map((i) => (
+                <label
+                  key={i.id}
+                  className="rounded-controllo flex items-start gap-3 bg-fondo px-4 py-3"
+                >
+                  <input
+                    type="radio"
+                    name="impostazione"
+                    id={`impostazione-${i.id}`}
+                    value={i.id}
+                    defaultChecked={p.impostazione === i.id}
+                    className="mt-0.5 size-5 shrink-0 accent-basilico"
+                  />
+                  <span>
+                    <span className="block text-base font-semibold text-inchiostro">{i.nome}</span>
+                    <span className="block text-sm text-fumo">{i.spiega}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </Sezione>
+
+          <Sezione
+            titolo="Gli ingredienti che vuoi usare"
+            spiega="Spunta quello che ti va di mangiare: il piano pesca prima da qui. Se non spunti niente pesco da tutto."
+          >
+            <div className="flex flex-col gap-5">
+              {[...perGruppo.entries()].map(([gruppo, voci]) => (
+                <div key={gruppo}>
+                  <h3 className="text-sm font-bold text-inchiostro">
+                    {NOME_GRUPPO[gruppo] ?? gruppo}
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {voci.map((a) => (
+                      <label key={a.id} className="cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="alimento"
+                          id={`alimento-${a.id}`}
+                          value={a.id}
+                          defaultChecked={scelti.has(a.id)}
+                          className="peer sr-only"
+                        />
+                        <span className="pillola bg-fondo text-fumo peer-checked:bg-basilico peer-checked:text-bianco">
+                          {a.nome}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <input type="hidden" name="daEvitare" value={p.daEvitare.join(', ')} />
           </Sezione>
 
           <Sezione

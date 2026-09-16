@@ -31,7 +31,7 @@ pnpm test                          # test del parser ricette
 pnpm db:generate                   # genera migrazione dopo modifica schema
 pnpm db:migrate                    # applica migrazioni
 pnpm db:studio                     # ispeziona il database
-pnpm seed                          # popola l'elenco allergeni, idempotente
+pnpm seed                          # allergeni e vocabolario alimenti, idempotente
 
 cd apps/worker && uv run python main.py   # worker in locale
 ```
@@ -124,17 +124,36 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
 
-Fatto: catalogo che si riempie da solo dalle sitemap, wizard del profilo, piano settimanale con "cambia ricetta" e "tieni fermo", pagina ricetta, import manuale come attrezzo da officina.
+Fatto: catalogo che si riempie da solo dalle sitemap, wizard, piano settimanale composto dagli alimenti, pagina ricetta, import manuale come attrezzo da officina.
 
-Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti, e quindi allergeni, reparti e lista della spesa.
+Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti delle **ricette**, e quindi allergeni sulle ricette, reparti e lista della spesa.
 
-Due regole che dipendono da quella mancanza:
+## Come si compone un pasto
 
-- Finche' `normalizzata_il` e' nulla su una ricetta, l'app **non** sa i suoi allergeni e deve dirlo. Non mostrare mai "senza allergeni" per una ricetta non normalizzata
-- `profilo.daEvitare` e' una ricerca sul testo della riga ingrediente, non un controllo sugli allergeni, e la UI lo dichiara. Non chiamarlo "allergie" e non presentarlo come sicuro
+Questa e' la parte che regge l'app, ed e' stata rifatta dopo che il primo piano generava tiramisu' a colazione. Il problema non era un filtro tarato male: era prendere una ricetta intera raccattata da un sito e infilarla in una casella. Una ricetta cosi' non ha pesi, la sua fascia e' indovinata da una parola, e non si sa cosa contiene - quindi nessuna regola nutrizionale e' applicabile.
 
-### Come si tiene insieme il piano
+Adesso il piano si costruisce dagli alimenti, in tre strati:
 
-`ricette.ruolo` (primo, secondo, dolce...) decide `ricette.fasce`, cioe' in quali pasti una ricetta puo' finire. La classificazione sta in `apps/web/lib/ricette/fasce.ts` ed e' una tabella di parole, non un modello: costa zero e si corregge a mano. E' quello che fa si' che "cambia ricetta" su un primo ripeschi un altro primo.
+1. **`alimenti`** — il vocabolario, in `packages/db/src/alimenti/vocabolario.ts` e seminato a ogni deploy. Ogni voce ha gruppo, ruoli che puo' coprire, fasce, porzione tipica ed **etichette** (lattosio, glutine, pane, maiale, carne rossa, pesce, uova, frutta a guscio, fritto, proteico, zuccheri)
+2. **Schemi di pasto** — `apps/web/lib/nutrizione/schemi.ts`. Un pranzo vuole base + proteina + verdura + grasso, una colazione latticino + cereale + semi. Sono la struttura, non il contenuto
+3. **Il compositore** — `apps/web/lib/nutrizione/componi.ts`. Sceglie uno schema della fascia e riempie ogni posto pescando prima fra gli alimenti spuntati nel wizard, poi fra quelli che l'impostazione favorisce, poi fra tutti
 
-Ruolo nullo vuol dire che non l'abbiamo capito: la ricetta resta in catalogo ma il piano non la usa. Proporre un contorno come cena e' peggio che lasciare la casella vuota.
+La ricetta e' diventata un **suggerimento**: `ideaRicetta` cerca in catalogo qualcosa che usi il componente principale. La corrispondenza e' sul testo grezzo, quindi si mostra come "idea per cucinarli" e mai come prescrizione.
+
+### Esclusioni e impostazione sono due cose diverse
+
+Non vanno mai mischiate nella stessa lista, ed e' questo che rendeva inutile la versione precedente del wizard.
+
+- **Esclusioni** (`profilo.esclusioni`): etichette. Rigide. Un alimento che ne porta una non entra mai, in nessuno schema. Sono affidabili perche' l'etichetta sta sull'alimento
+- **Impostazione** (`profilo.impostazione`): una sola alla volta. Non toglie niente, sposta i moltiplicatori di porzione per ruolo. La proteica alza la proteina e abbassa la base, quella per dimagrire taglia i grassi ed esclude i fritti
+
+`profilo.alimentiScelti` sono gli ingredienti spuntati nel wizard: il compositore pesca prima da li'. Vuoto vuol dire "pesca da tutto", non "non pescare niente".
+
+Due regole che restano finche' manca la chiave:
+
+- Finche' `ricette.normalizzataIl` e' nulla, l'app **non** sa gli allergeni di quella ricetta e deve dirlo. Mai "senza allergeni" su una ricetta non normalizzata
+- Le esclusioni valgono sugli **alimenti**, non sulle ricette suggerite. La UI lo dichiara: chi ha un'allergia vera non deve fidarsi di un suggerimento di ricetta
+
+### La classificazione delle ricette
+
+`ricette.ruolo` (primo, secondo, dolce...) decide `ricette.fasce`, cioe' in quali pasti una ricetta puo' essere suggerita. Sta in `apps/web/lib/ricette/fasce.ts` ed e' una tabella di parole, non un modello: costa zero e si corregge a mano. Ruolo nullo vuol dire che non l'abbiamo capito, e la ricetta non viene mai suggerita.

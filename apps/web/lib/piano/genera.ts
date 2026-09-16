@@ -1,15 +1,20 @@
-import { and, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, sql } from 'drizzle-orm'
 
 import {
+  type Alimento,
+  type Profilo,
+  alimenti as tabellaAlimenti,
   db,
   piani,
   pianiPasti,
   profilo as tabellaProfilo,
   ricettaIngredienti,
   ricette,
-  type Profilo,
 } from '@prontooo/db'
+import type { FasciaPasto } from '@prontooo/db/alimenti'
 
+import { type Componente, ammesso, componiPasto } from '../nutrizione/componi'
+import { impostazione as leggiImpostazione } from '../nutrizione/impostazioni'
 import { type Fascia, eFascia } from '../ricette/fasce'
 
 import { lunediDi } from './settimana'
@@ -23,6 +28,9 @@ export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl'> = {
   giorniFuoriPranzo: [],
   minutiMassimi: { colazione: 15, spuntino: 10, pranzo: 40, merenda: 15, cena: 45 },
   daEvitare: [],
+  esclusioni: [],
+  impostazione: 'equilibrata',
+  alimentiScelti: [],
   settimaneAntiRipetizione: 3,
 }
 
@@ -30,6 +38,10 @@ export async function leggiProfilo(): Promise<Profilo | null> {
   const [riga] = await db().select().from(tabellaProfilo).where(eq(tabellaProfilo.id, 1)).limit(1)
 
   return riga ?? null
+}
+
+export async function leggiAlimenti(): Promise<Alimento[]> {
+  return db().select().from(tabellaAlimenti).orderBy(tabellaAlimenti.nome)
 }
 
 /** Le caselle da riempire: un posto per ogni giorno e ogni fascia attiva. */
@@ -49,96 +61,73 @@ export function caselle(profilo: Pick<Profilo, 'fasceAttive' | 'giorniFuoriPranz
   return posti
 }
 
-/** Le ricette che contengono, nel testo grezzo, una delle cose da evitare. */
-async function ricetteDaSaltare(daEvitare: string[]): Promise<number[]> {
-  const termini = daEvitare.map((t) => t.trim()).filter(Boolean)
+/** Gli alimenti che il profilo ammette: esclusioni del wizard piu' quelle dell'impostazione. */
+export function alimentiAmmessi(tutti: Alimento[], profilo: Profilo): Alimento[] {
+  const escluse = new Set([
+    ...profilo.esclusioni,
+    ...(leggiImpostazione(profilo.impostazione).escludi ?? []),
+  ])
 
-  if (termini.length === 0) return []
-
-  const righe = await db()
-    .selectDistinct({ id: ricettaIngredienti.ricettaId })
-    .from(ricettaIngredienti)
-    .where(
-      or(...termini.map((t) => sql`lower(${ricettaIngredienti.rigaGrezza}) like ${'%' + t.toLowerCase() + '%'}`)),
-    )
-
-  return righe.map((r) => r.id)
-}
-
-/** Le ricette gia' usate nelle ultime settimane: servono per non ripetersi. */
-async function ricetteRecenti(settimane: number): Promise<number[]> {
-  if (settimane <= 0) return []
-
-  const limite = new Date()
-  limite.setDate(limite.getDate() - settimane * 7)
-  const dal = limite.toISOString().slice(0, 10)
-
-  const righe = await db()
-    .selectDistinct({ id: pianiPasti.ricettaId })
-    .from(pianiPasti)
-    .innerJoin(piani, eq(piani.id, pianiPasti.pianoId))
-    .where(gte(piani.inizioSettimana, dal))
-
-  return righe.map((r) => r.id).filter((id): id is number => id !== null)
-}
-
-type Candidata = { id: number }
-
-/**
- * Le ricette che possono stare in una fascia, gia' filtrate per tempo massimo.
- * L'ordine e' casuale: e' quello che rende "cambia ricetta" utile davvero.
- */
-async function candidate(fascia: Fascia, minutiMassimi: number | undefined, escludi: number[]) {
-  const condizioni = [sql`${ricette.fasce} @> ${JSON.stringify([fascia])}::jsonb`]
-
-  if (minutiMassimi && minutiMassimi > 0) {
-    // Una ricetta senza tempo dichiarato resta ammessa: scartarla toglierebbe
-    // mezzo catalogo per un dato che manca, non per una ricetta troppo lunga.
-    condizioni.push(or(isNull(ricette.minutiTotali), sql`${ricette.minutiTotali} <= ${minutiMassimi}`)!)
-  }
-
-  if (escludi.length > 0) {
-    condizioni.push(sql`${ricette.id} not in ${escludi}`)
-  }
-
-  const righe: Candidata[] = await db()
-    .select({ id: ricette.id })
-    .from(ricette)
-    .where(and(...condizioni))
-    .orderBy(sql`random()`)
-    .limit(40)
-
-  return righe
+  return tutti.filter((a) => ammesso(a, escluse))
 }
 
 /**
- * Sceglie una ricetta per una casella.
+ * Cerca in catalogo una ricetta che usi il componente principale del pasto.
  *
- * Prova in tre passaggi, allargando ogni volta: prima rispettando tutto, poi
- * ammettendo le ricette gia' viste nelle settimane scorse, infine ignorando il
- * tempo massimo. Meglio una cena un po' piu' lunga che una casella vuota.
+ * E' un suggerimento, non una prescrizione: la corrispondenza e' sul testo
+ * grezzo della riga ingrediente, quindi va mostrata come un'idea. Quando
+ * arrivera' la normalizzazione degli ingredienti questa funzione diventera'
+ * seria; per ora vale quanto vale, e la UI lo dice.
  */
-async function scegli(
+async function ideaRicetta(fascia: Fascia, componenti: Componente[]): Promise<number | null> {
+  const principale =
+    componenti.find((c) => c.ruolo === 'proteina') ?? componenti.find((c) => c.ruolo === 'base')
+
+  if (!principale) return null
+
+  // "Petto di pollo" -> "pollo": la parola piu' lunga e' quella che conta.
+  const parola = principale.nome
+    .toLowerCase()
+    .split(/[\s,()]+/)
+    .filter((p) => p.length > 3)
+    .sort((a, b) => b.length - a.length)[0]
+
+  if (!parola) return null
+
+  const righe = await db()
+    .selectDistinct({ id: ricette.id })
+    .from(ricette)
+    .innerJoin(ricettaIngredienti, eq(ricettaIngredienti.ricettaId, ricette.id))
+    .where(
+      and(
+        sql`${ricette.fasce} @> ${JSON.stringify([fascia])}::jsonb`,
+        sql`lower(${ricettaIngredienti.rigaGrezza}) like ${'%' + parola + '%'}`,
+      ),
+    )
+    .orderBy(sql`random()`)
+    .limit(1)
+
+  return righe[0]?.id ?? null
+}
+
+type Preparato = { componenti: Componente[]; ricettaId: number | null }
+
+async function preparaPasto(
   fascia: Fascia,
+  disponibili: Alimento[],
   profilo: Profilo,
-  giaNelPiano: number[],
-  daSaltare: number[],
-  recenti: number[],
-): Promise<number | null> {
-  const minuti = profilo.minutiMassimi[fascia]
-  const tentativi: [number | undefined, number[]][] = [
-    [minuti, [...giaNelPiano, ...daSaltare, ...recenti]],
-    [minuti, [...giaNelPiano, ...daSaltare]],
-    [undefined, [...giaNelPiano, ...daSaltare]],
-  ]
+  giaUsati: Set<number>,
+): Promise<Preparato | null> {
+  const composto = componiPasto(fascia as FasciaPasto, disponibili, {
+    esclusioni: profilo.esclusioni,
+    impostazione: profilo.impostazione,
+    alimentiScelti: profilo.alimentiScelti,
+    porzioni: profilo.porzioniDefault,
+  }, giaUsati)
 
-  for (const [tetto, escludi] of tentativi) {
-    const righe = await candidate(fascia, tetto, escludi)
+  if (!composto) return null
 
-    if (righe[0]) return righe[0].id
-  }
-
-  return null
+  return { componenti: composto.componenti, ricettaId: await ideaRicetta(fascia, composto.componenti) }
 }
 
 /**
@@ -147,6 +136,7 @@ async function scegli(
  */
 export async function generaPiano(inizio = lunediDi()): Promise<number> {
   const profilo = (await leggiProfilo()) ?? { ...PROFILO_PREDEFINITO, aggiornatoIl: new Date() }
+  const disponibili = alimentiAmmessi(await leggiAlimenti(), profilo)
   const connessione = db()
 
   const [piano] = await connessione
@@ -163,41 +153,46 @@ export async function generaPiano(inizio = lunediDi()): Promise<number> {
     .where(eq(pianiPasti.pianoId, piano.id))
 
   const bloccati = esistenti.filter((p) => p.bloccato)
-  const idBloccati = bloccati.map((p) => p.ricettaId).filter((id): id is number => id !== null)
-
-  // Via tutto quello che non e' bloccato: si ripesca da capo.
   const daCancellare = esistenti.filter((p) => !p.bloccato).map((p) => p.id)
 
   if (daCancellare.length > 0) {
     await connessione.delete(pianiPasti).where(inArray(pianiPasti.id, daCancellare))
   }
 
-  const daSaltare = await ricetteDaSaltare(profilo.daEvitare)
-  const recenti = await ricetteRecenti(profilo.settimaneAntiRipetizione)
-  const usate = [...idBloccati]
-
   const occupate = new Set(bloccati.map((p) => `${p.giorno}:${p.fascia}`))
+
+  // Gli alimenti usati oggi: evita la giornata con tre volte lo stesso pollo.
+  const usatiPerGiorno = new Map<number, Set<number>>()
+
+  for (const p of bloccati) {
+    const insieme = usatiPerGiorno.get(p.giorno) ?? new Set<number>()
+    p.componenti.forEach((c) => insieme.add(c.alimentoId))
+    usatiPerGiorno.set(p.giorno, insieme)
+  }
 
   for (const posto of caselle(profilo)) {
     if (occupate.has(`${posto.giorno}:${posto.fascia}`)) continue
 
-    const scelta = await scegli(posto.fascia, profilo, usate, daSaltare, recenti)
+    const usatiOggi = usatiPerGiorno.get(posto.giorno) ?? new Set<number>()
+    const preparato = await preparaPasto(posto.fascia, disponibili, profilo, usatiOggi)
 
-    if (scelta !== null) usate.push(scelta)
+    preparato?.componenti.forEach((c) => usatiOggi.add(c.alimentoId))
+    usatiPerGiorno.set(posto.giorno, usatiOggi)
 
     await connessione.insert(pianiPasti).values({
       pianoId: piano.id,
       giorno: posto.giorno,
       fascia: posto.fascia,
-      ricettaId: scelta,
       porzioni: profilo.porzioniDefault,
+      componenti: preparato?.componenti ?? [],
+      ricettaId: preparato?.ricettaId ?? null,
     })
   }
 
   return piano.id
 }
 
-/** Ripesca una sola casella, restando nella sua fascia. */
+/** Ricompone una sola casella, restando nella sua fascia. */
 export async function cambiaPasto(pastoId: number): Promise<void> {
   const connessione = db()
 
@@ -210,33 +205,23 @@ export async function cambiaPasto(pastoId: number): Promise<void> {
   if (!pasto || !eFascia(pasto.fascia)) return
 
   const profilo = (await leggiProfilo()) ?? { ...PROFILO_PREDEFINITO, aggiornatoIl: new Date() }
+  const disponibili = alimentiAmmessi(await leggiAlimenti(), profilo)
 
-  const altri = await connessione
-    .select({ ricettaId: pianiPasti.ricettaId })
-    .from(pianiPasti)
-    .where(eq(pianiPasti.pianoId, pasto.pianoId))
+  // Gli alimenti di adesso restano fuori: cambiare deve cambiare qualcosa.
+  const attuali = new Set(pasto.componenti.map((c) => c.alimentoId))
+  const preparato = await preparaPasto(pasto.fascia, disponibili, profilo, attuali)
 
-  const giaNelPiano = altri.map((a) => a.ricettaId).filter((id): id is number => id !== null)
-  const daSaltare = await ricetteDaSaltare(profilo.daEvitare)
-  const recenti = await ricetteRecenti(profilo.settimaneAntiRipetizione)
-
-  const scelta = await scegli(pasto.fascia, profilo, giaNelPiano, daSaltare, recenti)
-
-  if (scelta === null) return
+  if (!preparato) return
 
   await connessione
     .update(pianiPasti)
-    .set({ ricettaId: scelta })
+    .set({ componenti: preparato.componenti, ricettaId: preparato.ricettaId })
     .where(eq(pianiPasti.id, pastoId))
 }
 
-/** Il piano della settimana con dentro le ricette, pronto da mostrare. */
+/** Il piano della settimana, pronto da mostrare. */
 export async function leggiPiano(inizio = lunediDi()) {
-  const [piano] = await db()
-    .select()
-    .from(piani)
-    .where(eq(piani.inizioSettimana, inizio))
-    .limit(1)
+  const [piano] = await db().select().from(piani).where(eq(piani.inizioSettimana, inizio)).limit(1)
 
   if (!piano) return null
 
@@ -247,6 +232,7 @@ export async function leggiPiano(inizio = lunediDi()) {
       fascia: pianiPasti.fascia,
       porzioni: pianiPasti.porzioni,
       bloccato: pianiPasti.bloccato,
+      componenti: pianiPasti.componenti,
       ricettaId: ricette.id,
       titolo: ricette.titolo,
       immagineUrl: ricette.immagineUrl,
@@ -260,10 +246,3 @@ export async function leggiPiano(inizio = lunediDi()) {
   return { piano, pasti }
 }
 
-export type PastoDelPiano = Awaited<ReturnType<typeof leggiPiano>> extends infer T
-  ? T extends { pasti: (infer P)[] }
-    ? P
-    : never
-  : never
-
-export { desc }
