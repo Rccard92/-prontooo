@@ -187,57 +187,46 @@ Da non costruire, per non affondare: multi-utente, ruoli e permessi, app native,
 
 ## 5. Design
 
-Il brief è esplicito: niente estetica generata. Due direzioni, ne va scelta una e portata fino in fondo.
+Direzione scelta e chiusa: **caldo e contemporaneo**, come le app di adesso. Le due direzioni di partenza (etichetta d'agrumi, banco del mercato) sono state provate e scartate: troppo spigolose e fredde.
 
-### Direzione A — Etichetta d'agrumi *(consigliata)*
+### Cosa vuol dire
 
-L'immaginario delle etichette litografiche delle cassette di agrumi siciliani: colore pieno e saturo, cornici decorative, tipografia da manifesto, niente pastello.
+- Fondo bianco, schede bianche che si staccano con un'ombra leggera
+- Angoli morbidi: 24px sulle superfici, 14px sui controlli, pillole piene sui pulsanti
+- Tre colori vivi presi dal cibo, non dalla tavolozza di un framework
 
 ```
-Inchiostro    #14213D   fondo profondo, testo
-Cobalto       #1B4BA8   superfici, sezioni
-Zagara        #F2C230   accento primario, prezzi, azioni
-Foglia        #2E6B3E   conferme, stagionalità
-Carta         #FAF6EC   fondo chiaro, non crema pubblicitaria
-Rosso sangue  #C3352B   scadenze, allergeni, avvisi
+Basilico    #1EB85C   azioni, conferme
+Pomodoro    #E8402A   allergeni, errori, scadenze
+Limone      #FFC629   attenzione, evidenziazioni
+Inchiostro  #14261C   testo
+Fumo        #64786C   testo secondario
+Fondo       #F6FAF7   fondo pagina
 ```
 
-- **Display:** Yeseva One — grazie ornate, contrasto alto, vive bene grande
-- **Testo e UI:** Archivo — grottesca con larghezze variabili, cifre tabulari per i prezzi
-- Il colore pieno è la struttura, non la decorazione: intere sezioni su fondo cobalto, la card ricetta è un'etichetta, non un rettangolo bianco con bordo grigio
-- Le foto delle ricette vanno grandi ed edge-to-edge, mai francobolli in una griglia
+- **Marchio e titoli:** Fraunces, un serif morbido, con gli assi SOFT e WONK
+- **Testo e UI:** Plus Jakarta Sans, cifre tabulari dove i numeri si incolonnano
+- Le foto delle ricette vanno grandi, mai francobolli in una griglia
 
-### Direzione B — Banco del mercato
+### Regole che restano
 
-Il linguaggio dei cartelli dei prezzi scritti a mano: cartone, giallo etichetta, cifre enormi e stencil, materialità tattile. Più ruvida, più divertente, meno adatta ai testi lunghi delle ricette.
-
-### Regole anti-genericità
-
-Valgono qualunque direzione si scelga.
-
-- **Vietato Inter.** È il font di default di ogni interfaccia generata
-- Niente card tutte uguali: bordo grigio 1px, `rounded-lg`, `shadow-sm` ripetuti ovunque
-- Niente palette `slate` / `zinc` / `gray` di Tailwind: solo i token qui sopra
-- Niente etichette in maiuscoletto spaziato sopra ogni titolo
-- Niente gradiente viola, niente emoji usate come icone
-- Niente `→` appiccicato al testo dei pulsanti
-- Scala tipografica ampia: forte stacco tra titolo e corpo, non tutto a 14px grigio
-- Una sola animazione orchestrata in tutta l'app, non transizioni hover su ogni elemento
+- Niente font Inter
+- Niente palette `slate` / `zinc` / `gray`: solo i token qui sopra
+- Niente emoji usate come icone
+- Niente `->` appiccicato al testo dei pulsanti
+- Due sole ombre in tutta l'app, e servono a dire "questa e' una superficie", non a decorare
+- Scala tipografica ampia: forte stacco fra titolo e corpo
 
 ### Librerie da usare
 
 Non il kit shadcn di default.
 
 - **Base UI** o **Radix primitives**, vestiti a mano
-- **Motion** per l'unico momento animato
+- **Motion** per i momenti animati
 - **Embla** per lo scorrimento delle card ricetta
-- **Phosphor Icons** — Lucide è l'icon set di default di shadcn, si riconosce
+- **Phosphor Icons** — Lucide e' l'icon set di default di shadcn, si riconosce
 - **Vaul** per i pannelli dal basso su mobile
 - **NumberFlow** per prezzi e porzioni che cambiano
-
-### Metodo
-
-Prima di scrivere CSS: piano di design compatto (token colore, ruoli tipografici, concetto di layout, principi), poi revisione contro il brief. Se un pezzo del piano è quello che verrebbe fuori per qualsiasi altra app di ricette, va rifatto.
 
 ---
 

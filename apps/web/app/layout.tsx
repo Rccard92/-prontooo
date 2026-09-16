@@ -1,19 +1,20 @@
 import type { Metadata } from 'next'
-import { Archivo, Yeseva_One } from 'next/font/google'
+import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google'
 
 import './globals.css'
 
-const archivo = Archivo({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-archivo',
+  variable: '--font-jakarta',
   display: 'swap',
 })
 
-const yeseva = Yeseva_One({
+// Solo per il marchio e i titoli grossi: da' calore senza irrigidire la UI.
+const fraunces = Fraunces({
   subsets: ['latin'],
-  weight: '400',
-  variable: '--font-yeseva-one',
+  variable: '--font-fraunces',
   display: 'swap',
+  axes: ['SOFT', 'WONK'],
 })
 
 export const metadata: Metadata = {
@@ -22,12 +23,12 @@ export const metadata: Metadata = {
 }
 
 export const viewport = {
-  themeColor: '#1b4ba8',
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" className={`${archivo.variable} ${yeseva.variable}`}>
+    <html lang="it" className={`${jakarta.variable} ${fraunces.variable}`}>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   )

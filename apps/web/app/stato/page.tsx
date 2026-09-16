@@ -53,30 +53,26 @@ async function leggiStato(): Promise<Voce[]> {
     console.error('lettura stato impianto fallita:', errore)
 
     return [
-      {
-        nome: 'Database Postgres',
-        valore: 'non risponde, guarda i log del deploy',
-        esito: 'rotto',
-      },
+      { nome: 'Database Postgres', valore: 'non risponde, guarda i log', esito: 'rotto' },
       { nome: 'Worker di ingestione', valore: 'non verificabile senza database', esito: 'attesa' },
     ]
   }
 }
 
 const segno = {
-  ok: 'bg-foglia',
-  attesa: 'bg-zagara',
-  rotto: 'bg-sangue',
+  ok: 'bg-basilico',
+  attesa: 'bg-limone',
+  rotto: 'bg-pomodoro',
 } as const
 
 function Riga({ voce }: { voce: Voce }) {
   return (
-    <div className="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
-      <dt className="flex items-baseline gap-3 text-base text-carta">
-        <span className={`inline-block size-2 translate-y-[-1px] ${segno[voce.esito]}`} aria-hidden />
+    <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <dt className="flex items-center gap-3 text-base font-semibold text-inchiostro">
+        <span className={`inline-block size-2.5 rounded-full ${segno[voce.esito]}`} aria-hidden />
         {voce.nome}
       </dt>
-      <dd className="pl-5 text-base text-carta/70 sm:pl-0 sm:text-right">{voce.valore}</dd>
+      <dd className="cifre pl-[1.375rem] text-sm text-fumo sm:pl-0 sm:text-right">{voce.valore}</dd>
     </div>
   )
 }
@@ -85,27 +81,21 @@ export default async function Stato() {
   const stato = await leggiStato()
 
   return (
-    <div className="min-h-dvh bg-cobalto">
+    <div className="min-h-dvh bg-fondo">
       <Testata />
 
-      <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-8 sm:py-16">
-        <div className="cornice">
-          <div className="cornice-interna px-6 py-12 sm:px-12">
-            <h1 className="font-display text-4xl leading-tight text-zagara sm:text-5xl">
-              Stato dell&rsquo;impianto
-            </h1>
+      <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+        <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Stato dell&rsquo;impianto</h1>
 
-            <dl className="mt-8 divide-y divide-carta/20 border-t border-carta/20">
-              <Riga voce={{ nome: 'Applicazione web', valore: 'in linea', esito: 'ok' }} />
-              {stato.map((voce) => (
-                <Riga key={voce.nome} voce={voce} />
-              ))}
-            </dl>
-          </div>
-        </div>
+        <dl className="scheda mt-6 divide-y divide-bordo overflow-hidden">
+          <Riga voce={{ nome: 'Applicazione web', valore: 'in linea', esito: 'ok' }} />
+          {stato.map((voce) => (
+            <Riga key={voce.nome} voce={voce} />
+          ))}
+        </dl>
 
-        <p className="mt-6 px-1 text-sm text-carta/60">
-          Questa pagina non e l&rsquo;app: e la prova che l&rsquo;impianto sotto regge.
+        <p className="mt-4 px-1 text-sm text-fumo">
+          Questa pagina non è l&rsquo;app: è la prova che l&rsquo;impianto sotto regge.
         </p>
       </main>
     </div>

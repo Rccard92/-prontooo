@@ -13,6 +13,7 @@ type RigaCatalogo = {
   immagineUrl: string | null
   minutiTotali: number | null
   porzioni: number | null
+  tipoPasto: string | null
   fonteNome: string
 }
 
@@ -25,6 +26,7 @@ async function leggiCatalogo(): Promise<RigaCatalogo[] | null> {
         immagineUrl: ricette.immagineUrl,
         minutiTotali: ricette.minutiTotali,
         porzioni: ricette.porzioni,
+        tipoPasto: ricette.tipoPasto,
         fonteNome: ricette.fonteNome,
       })
       .from(ricette)
@@ -37,35 +39,46 @@ async function leggiCatalogo(): Promise<RigaCatalogo[] | null> {
   }
 }
 
-/**
- * La card e' un'etichetta: foto piena in cima, sotto il blocco cobalto col
- * titolo. Niente bordo, niente angoli tondi, niente ombra: quello che separa
- * una card dall'altra e' il colore pieno.
- */
-function Etichetta({ riga }: { riga: RigaCatalogo }) {
+/** Ogni fascia ha il suo colore, sempre lo stesso in tutta l'app. */
+const coloreFascia: Record<string, string> = {
+  colazione: 'bg-limone-tenue text-inchiostro',
+  spuntino: 'bg-limone-tenue text-inchiostro',
+  merenda: 'bg-limone-tenue text-inchiostro',
+  pranzo: 'bg-basilico-tenue text-basilico-scuro',
+  cena: 'bg-pomodoro-tenue text-pomodoro',
+  antipasto: 'bg-basilico-tenue text-basilico-scuro',
+  dolce: 'bg-pomodoro-tenue text-pomodoro',
+}
+
+function Scheda({ riga }: { riga: RigaCatalogo }) {
   const tempo = durata(riga.minutiTotali)
 
   return (
-    <Link href={`/ricette/${riga.id}`} className="group block">
-      <div className="aspect-4/3 w-full overflow-hidden bg-inchiostro">
+    <Link
+      href={`/ricette/${riga.id}`}
+      className="scheda group block overflow-hidden transition-shadow hover:shadow-sollevata"
+    >
+      <div className="aspect-4/3 w-full overflow-hidden bg-basilico-tenue">
         {riga.immagineUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
-          <img
-            src={riga.immagineUrl}
-            alt=""
-            loading="lazy"
-            className="size-full object-cover"
-          />
+          <img src={riga.immagineUrl} alt="" loading="lazy" className="size-full object-cover" />
         ) : (
-          <div className="flex size-full items-center justify-center px-4">
-            <span className="font-display text-2xl text-zagara/50">senza foto</span>
+          <div className="flex size-full items-center justify-center">
+            <span className="font-marchio text-xl text-basilico-scuro">senza foto</span>
           </div>
         )}
       </div>
 
-      <div className="bg-cobalto px-4 py-4 group-hover:bg-inchiostro">
-        <h2 className="font-display text-2xl leading-tight text-zagara">{riga.titolo}</h2>
-        <p className="mt-2 text-sm text-carta/70">
+      <div className="p-4">
+        {riga.tipoPasto ? (
+          <span className={`pillola ${coloreFascia[riga.tipoPasto] ?? 'bg-basilico-tenue text-basilico-scuro'}`}>
+            {riga.tipoPasto}
+          </span>
+        ) : null}
+
+        <h2 className="mt-2 text-lg leading-snug font-bold text-inchiostro">{riga.titolo}</h2>
+
+        <p className="cifre mt-1.5 text-sm text-fumo">
           {[tempo, riga.porzioni ? `${riga.porzioni} porzioni` : null, riga.fonteNome]
             .filter(Boolean)
             .join(' · ')}
@@ -75,29 +88,30 @@ function Etichetta({ riga }: { riga: RigaCatalogo }) {
   )
 }
 
-function Vuoto({
+function Avviso({
   titolo,
   testo,
   invito,
+  tono = 'sereno',
 }: {
   titolo: string
   testo: string
   invito?: string
+  tono?: 'sereno' | 'rotto'
 }) {
   return (
-    <div className="cornice">
-      <div className="cornice-interna bg-cobalto px-6 py-14 sm:px-12">
-        <h2 className="font-display text-3xl text-zagara sm:text-4xl">{titolo}</h2>
-        <p className="mt-4 max-w-lg text-lg text-carta">{testo}</p>
-        {invito ? (
-          <Link
-            href="/importa"
-            className="mt-8 inline-block bg-zagara px-6 py-3 text-lg text-inchiostro"
-          >
-            {invito}
-          </Link>
-        ) : null}
-      </div>
+    <div className="scheda px-6 py-12 text-center sm:px-12">
+      <h2
+        className={`font-marchio text-3xl ${tono === 'rotto' ? 'text-pomodoro' : 'text-inchiostro'}`}
+      >
+        {titolo}
+      </h2>
+      <p className="mx-auto mt-3 max-w-md text-base text-fumo">{testo}</p>
+      {invito ? (
+        <Link href="/importa" className="bottone mt-8 hover:bg-basilico-scuro">
+          {invito}
+        </Link>
+      ) : null}
     </div>
   )
 }
@@ -106,29 +120,30 @@ export default async function Catalogo() {
   const righe = await leggiCatalogo()
 
   return (
-    <div className="min-h-dvh bg-carta">
+    <div className="min-h-dvh bg-fondo">
       <Testata attiva="catalogo" />
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-8 sm:py-14">
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         {righe === null ? (
-          <Vuoto
+          <Avviso
+            tono="rotto"
             titolo="Il database non risponde"
-            testo="Il catalogo non e leggibile in questo momento. Il dettaglio sta nei log del deploy."
+            testo="Le ricette non sono leggibili in questo momento. Il dettaglio sta nei log del deploy."
           />
         ) : righe.length === 0 ? (
-          <Vuoto
-            titolo="Il catalogo e vuoto"
-            testo="Incolla il link di una ricetta e finisce qui dentro. Da li si costruisce tutto il resto: il piano della settimana, la lista della spesa, le offerte."
-            invito="Importa la prima ricetta"
+          <Avviso
+            titolo="Ancora nessuna ricetta"
+            testo="Il catalogo si riempirà da solo quando il wizard sarà pronto. Nel frattempo puoi incollare un link a mano."
+            invito="Incolla una ricetta"
           />
         ) : (
           <>
-            <h1 className="font-display text-4xl text-inchiostro sm:text-5xl">
+            <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">
               {righe.length} ricette
             </h1>
-            <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {righe.map((riga) => (
-                <Etichetta key={riga.id} riga={riga} />
+                <Scheda key={riga.id} riga={riga} />
               ))}
             </div>
           </>

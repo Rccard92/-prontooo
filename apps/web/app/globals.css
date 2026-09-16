@@ -1,60 +1,116 @@
 @import "tailwindcss";
 
 /*
-  Direzione visiva: etichetta litografica da cassetta di agrumi.
-  Colore pieno come struttura, non come decorazione.
+  Direzione visiva: caldo e contemporaneo. Fondo bianco, angoli morbidi, ombre
+  leggere, e tre colori vivi presi dal cibo vero - basilico, pomodoro, limone.
+  Niente spigoli, niente superfici fredde.
 
-  La palette di default di Tailwind e' azzerata di proposito: slate, zinc e gray
-  non devono essere raggiungibili nemmeno per sbaglio. Stessa cosa per i font:
-  esistono solo display e testo.
+  La palette di default di Tailwind resta azzerata: slate, zinc e gray non
+  devono entrare nemmeno per sbaglio. I neutri qui sotto hanno tutti una punta
+  di verde, cosi' stanno insieme al resto invece di sembrare grigi di sistema.
 */
 @theme {
   --color-*: initial;
   --color-transparent: transparent;
   --color-current: currentColor;
+  --color-bianco: #ffffff;
 
-  --color-inchiostro: #14213d;
-  --color-cobalto: #1b4ba8;
-  --color-zagara: #f2c230;
-  --color-foglia: #2e6b3e;
-  --color-carta: #faf6ec;
-  --color-sangue: #c3352b;
+  --color-basilico: #1eb85c;
+  --color-basilico-scuro: #159049;
+  --color-basilico-tenue: #e8f7ee;
+
+  --color-pomodoro: #e8402a;
+  --color-pomodoro-tenue: #fdecea;
+
+  --color-limone: #ffc629;
+  --color-limone-tenue: #fff6e0;
+
+  --color-inchiostro: #14261c;
+  --color-fumo: #64786c;
+  --color-fondo: #f6faf7;
+  --color-bordo: #e4ece7;
 
   --font-*: initial;
-  --font-display: var(--font-yeseva-one), "Times New Roman", serif;
-  --font-testo: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-
+  --font-marchio: var(--font-fraunces), Georgia, serif;
+  --font-testo: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --default-font-family: var(--font-testo);
-  --default-font-feature-settings: "tnum" 1;
+
+  /* Angoli: grandi sulle superfici, medi sui controlli, pieni sulle pillole. */
+  --radius-scheda: 1.5rem;
+  --radius-controllo: 0.875rem;
+
+  /* Due ombre soltanto: una di appoggio e una di sollevamento. */
+  --shadow-appoggio: 0 1px 2px rgb(20 38 28 / 0.05), 0 6px 20px -8px rgb(20 38 28 / 0.12);
+  --shadow-sollevata: 0 2px 4px rgb(20 38 28 / 0.06), 0 16px 32px -12px rgb(20 38 28 / 0.2);
 }
 
-/* Le cifre non devono ballare: prezzi, quantita' e porzioni sono tabulari. */
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    font-variant-numeric: tabular-nums;
   }
 
   body {
-    background-color: var(--color-cobalto);
-    color: var(--color-carta);
+    background-color: var(--color-fondo);
+    color: var(--color-inchiostro);
+  }
+
+  /* I numeri non devono ballare: prezzi, tempi e porzioni sono tabulari. */
+  .cifre {
+    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
-    background-color: var(--color-zagara);
+    background-color: var(--color-limone);
     color: var(--color-inchiostro);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-basilico);
+    outline-offset: 2px;
   }
 }
 
-/*
-  La cornice dell'etichetta: doppio filetto, quello esterno spesso, quello
-  interno sottile e staccato. E' l'unico elemento ripetibile del sistema.
-*/
-@utility cornice {
-  border: 4px solid var(--color-zagara);
-  padding: 0.5rem;
+/* La scheda: superficie bianca, angoli morbidi, ombra d'appoggio. */
+@utility scheda {
+  background-color: var(--color-bianco);
+  border-radius: var(--radius-scheda);
+  box-shadow: var(--shadow-appoggio);
 }
 
-@utility cornice-interna {
-  border: 1px solid color-mix(in srgb, var(--color-zagara) 55%, transparent);
+/* Il pulsante pieno. Verde di default: e' il colore dell'azione. */
+@utility bottone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  background-color: var(--color-basilico);
+  color: var(--color-bianco);
+  box-shadow: var(--shadow-appoggio);
+  transition: background-color 150ms ease;
+}
+
+@utility bottone-chiaro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  background-color: var(--color-basilico-tenue);
+  color: var(--color-basilico-scuro);
+  transition: background-color 150ms ease;
+}
+
+/* La pillola: l'etichetta della fascia sopra ogni ricetta. */
+@utility pillola {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }

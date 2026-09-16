@@ -1,22 +1,21 @@
 import Link from 'next/link'
 
 /**
- * Testata unica dell'app. Su fondo inchiostro pieno, staccata per colore dal
- * contenuto sotto: niente bordo, niente ombra.
+ * Testata unica dell'app: bianca, appoggiata sul fondo, le voci sono pillole.
  */
 export function Testata({ attiva }: { attiva?: 'catalogo' | 'importa' }) {
-  const voce = 'text-base text-carta/70 hover:text-carta'
-  const voceAttiva = 'text-base text-zagara'
+  const voce = 'rounded-full px-3 py-1.5 text-sm font-semibold text-fumo'
+  const voceAttiva = 'rounded-full bg-basilico-tenue px-3 py-1.5 text-sm font-semibold text-basilico-scuro'
 
   return (
-    <header className="bg-inchiostro">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-baseline justify-between gap-x-8 gap-y-2 px-4 py-5 sm:px-8">
-        <Link href="/" className="font-display text-3xl leading-none text-zagara sm:text-4xl">
+    <header className="sticky top-0 z-10 border-b border-bordo bg-bianco/90 backdrop-blur">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+        <Link href="/" className="font-marchio text-2xl leading-none text-inchiostro">
           èProntooo
         </Link>
-        <nav className="flex items-baseline gap-6">
+        <nav className="flex items-center gap-1">
           <Link href="/" className={attiva === 'catalogo' ? voceAttiva : voce}>
-            Catalogo
+            Ricette
           </Link>
           <Link href="/importa" className={attiva === 'importa' ? voceAttiva : voce}>
             Importa

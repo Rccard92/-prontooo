@@ -73,34 +73,42 @@ Il Postgres ha anche un proxy TCP pubblico (`DATABASE_PUBLIC_URL`), serve per la
 
 ## Design
 
-Direzione scelta: **A, etichetta d'agrumi** (`ROADMAP.md`, sezione 5). Da rispettare alla lettera.
+Direzione scelta: **caldo e contemporaneo**. Fondo bianco, angoli morbidi, ombre leggere, tre colori vivi presi dal cibo. Niente spigoli, niente superfici fredde.
 
-I token stanno in `apps/web/app/globals.css`, dentro `@theme`. La palette di default di Tailwind è azzerata con `--color-*: initial`: `slate`, `zinc` e `gray` non sono raggiungibili nemmeno per sbaglio, e lo stesso vale per i font.
+I token stanno in `apps/web/app/globals.css`, dentro `@theme`. La palette di default di Tailwind resta azzerata con `--color-*: initial`: `slate`, `zinc` e `gray` non sono raggiungibili. I neutri hanno tutti una punta di verde, cosi' stanno insieme al resto invece di sembrare grigi di sistema.
 
 ```
-inchiostro  #14213D   fondo profondo, testo
-cobalto     #1B4BA8   superfici, sezioni
-zagara      #F2C230   accento primario, prezzi, azioni
-foglia      #2E6B3E   conferme, stagionalità
-carta       #FAF6EC   fondo chiaro
-sangue      #C3352B   scadenze, allergeni, avvisi
+basilico    #1EB85C   azioni, conferme, il colore che comanda
+pomodoro    #E8402A   allergeni, errori, scadenze
+limone      #FFC629   attenzione, colazione, evidenziazioni
+inchiostro  #14261C   testo
+fumo        #64786C   testo secondario
+fondo       #F6FAF7   fondo pagina
+bianco      #FFFFFF   superficie delle schede
+bordo       #E4ECE7   filetti
 ```
 
-`font-display` è Yeseva One, `font-testo` è Archivo con cifre tabulari. Le utility `cornice` e `cornice-interna` fanno il doppio filetto dell'etichetta: è l'unico elemento ripetibile del sistema.
+`font-marchio` e' Fraunces (marchio e titoli), `font-testo` e' Plus Jakarta Sans (tutto il resto). La classe `cifre` mette le cifre tabulari dove i numeri si incolonnano: tempi, porzioni, prezzi.
 
-Vietato in tutta l'app:
+Quattro utility, e sono l'intero sistema:
 
-- font Inter
-- palette `slate` / `zinc` / `gray` di Tailwind
-- card identiche con bordo 1px grigio, `rounded-lg` e `shadow-sm`
-- etichette in maiuscoletto spaziato sopra i titoli
-- emoji al posto delle icone
-- `→` nel testo dei pulsanti
-- transizioni hover su ogni elemento
+- `scheda` — superficie bianca, `--radius-scheda` (24px), ombra d'appoggio
+- `bottone` — pillola verde piena, per l'azione principale
+- `bottone-chiaro` — pillola verde tenue, per le azioni secondarie
+- `pillola` — l'etichetta della fascia sopra ogni ricetta
 
-Prima di scrivere CSS per una schermata nuova: piano compatto di colore, tipografia e layout, poi verifica che non sia quello che verrebbe fuori per qualsiasi altra app di ricette.
+Ogni fascia ha il suo colore fisso in tutta l'app: colazione, spuntino e merenda su limone; pranzo e antipasto su basilico; cena e dolce su pomodoro.
 
-Librerie previste quando servono (non installate finché non servono): Base UI o Radix vestiti a mano, Motion per l'unico momento animato, Embla, Phosphor Icons, Vaul, NumberFlow. Non il kit shadcn di default, non Lucide.
+Regole:
+
+- L'ombra si usa per dire "questa e' una superficie", non per decorare. Due sole ombre: `shadow-appoggio` a riposo, `shadow-sollevata` sotto il dito
+- Il verde e' il colore dell'azione. Rosso solo per quello che non va o non si puo' mangiare, giallo per quello che chiede attenzione
+- Le foto delle ricette vanno grandi, mai francobolli in una griglia
+- Niente font Inter, niente palette `slate` / `zinc` / `gray`, niente emoji al posto delle icone, niente `->` nel testo dei pulsanti
+
+Prima di scrivere CSS per una schermata nuova: piano compatto di colore, tipografia e layout, e usa le utility che ci sono invece di inventarne altre.
+
+Librerie previste quando servono (non installate finche' non servono): Base UI o Radix vestiti a mano, Motion per i momenti animati, Embla, Phosphor Icons, Vaul per i pannelli dal basso, NumberFlow per i numeri che cambiano.
 
 ## Copy
 

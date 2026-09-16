@@ -32,47 +32,42 @@ export default async function Importa({
   const { errore } = await searchParams
 
   return (
-    <div className="min-h-dvh bg-carta">
+    <div className="min-h-dvh bg-fondo">
       <Testata attiva="importa" />
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8 sm:py-14">
-        <div className="cornice">
-          <div className="cornice-interna bg-cobalto px-6 py-12 sm:px-12">
-            <h1 className="font-display text-4xl leading-tight text-zagara sm:text-5xl">
-              Incolla una ricetta
-            </h1>
-            <p className="mt-4 max-w-xl text-lg text-carta">
-              Il link diretto alla ricetta, non alla categoria. Leggo titolo, tempi, porzioni,
-              ingredienti e passaggi.
+      <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+        <div className="scheda p-6 sm:p-10">
+          <h1 className="font-marchio text-3xl leading-tight text-inchiostro sm:text-4xl">
+            Incolla una ricetta
+          </h1>
+          <p className="mt-3 text-base text-fumo">
+            Serve solo finché il catalogo non si riempie da solo. Il link deve puntare alla ricetta,
+            non alla categoria.
+          </p>
+
+          <form action={importa} className="mt-8">
+            <label htmlFor="url" className="block text-sm font-semibold text-inchiostro">
+              Indirizzo della ricetta
+            </label>
+            <input
+              id="url"
+              name="url"
+              type="url"
+              required
+              autoComplete="off"
+              placeholder="https://www.giallozafferano.it/ricette/..."
+              className="rounded-controllo mt-2 w-full border border-bordo bg-fondo px-4 py-3 text-base text-inchiostro outline-none placeholder:text-fumo/60 focus:border-basilico"
+            />
+            <button type="submit" className="bottone mt-6 w-full hover:bg-basilico-scuro sm:w-auto">
+              Porta dentro la ricetta
+            </button>
+          </form>
+
+          {errore ? (
+            <p className="rounded-controllo bg-pomodoro-tenue mt-6 px-4 py-3 text-sm text-pomodoro">
+              {errore}
             </p>
-
-            <form action={importa} className="mt-10">
-              <label htmlFor="url" className="block text-base text-carta">
-                Indirizzo della ricetta
-              </label>
-              <input
-                id="url"
-                name="url"
-                type="url"
-                required
-                autoComplete="off"
-                placeholder="https://www.giallozafferano.it/ricette/..."
-                className="mt-2 w-full border-b-2 border-zagara bg-transparent pb-2 text-lg text-carta outline-none placeholder:text-carta/40 focus:border-carta"
-              />
-              <button
-                type="submit"
-                className="mt-8 bg-zagara px-6 py-3 text-lg text-inchiostro"
-              >
-                Porta dentro la ricetta
-              </button>
-            </form>
-
-            {errore ? (
-              <p className="mt-8 border-l-4 border-sangue bg-inchiostro px-4 py-3 text-base text-carta">
-                {errore}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </main>
     </div>
