@@ -1,11 +1,16 @@
 """Riempie il catalogo di ricette senza che nessuno debba incollare link.
 
-Legge le sitemap delle fonti, tiene solo gli indirizzi che sembrano ricette,
-scarta quelli gia' in database e passa i rimanenti al servizio web, che e'
-l'unico posto dove vive il parser JSON-LD.
+Scopre le sitemap dal robots.txt di ogni fonte, tiene gli indirizzi che
+possono essere ricette, scarta quelli gia' in database e passa i rimanenti al
+servizio web, che e' l'unico posto dove vive il parser JSON-LD.
 
-Gira a cron. Va piano di proposito: i siti da cui leggiamo non ci devono
-rimettere niente.
+Non prova a indovinare quali indirizzi siano ricette con una regola precisa:
+scarta solo quello che di sicuro non lo e' (categorie, tag, allegati) e lascia
+decidere al parser. Una pagina senza ricetta torna 422 e si va avanti. E'
+meno efficiente di un filtro esatto, ma non si rompe quando un sito cambia
+la forma dei suoi indirizzi.
+
+Va piano di proposito: i siti da cui leggiamo non ci devono rimettere niente.
 """
 
 from __future__ import annotations
@@ -19,15 +24,42 @@ from urllib.parse import urlparse
 import httpx
 import psycopg
 
-from fonti import FONTI, Fonte
+from fonti import FONTI, NON_E_UNA_RICETTA, Fonte
 
 AGENTE = "Mozilla/5.0 (compatible; eProntoooBot/0.1; progetto personale)"
 SPAZIO_SITEMAP = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 
-# Quante ricette nuove al massimo per giro, e quanto aspettare fra una e l'altra.
-TETTO_PER_GIRO = int(os.environ.get("RICETTE_PER_GIRO", "60"))
-PAUSA = float(os.environ.get("PAUSA_FRA_RICETTE", "1.5"))
+TETTO_PER_GIRO = int(os.environ.get("RICETTE_PER_GIRO", "150"))
+PAUSA = float(os.environ.get("PAUSA_FRA_RICETTE", "0.8"))
 CATALOGO_OBIETTIVO = int(os.environ.get("CATALOGO_OBIETTIVO", "400"))
+# Quante sotto-sitemap aprire per fonte: sono tante, ne bastano poche.
+SOTTO_SITEMAP = int(os.environ.get("SOTTO_SITEMAP", "6"))
+
+
+def sitemap_dichiarate(cliente: httpx.Client, fonte: Fonte) -> list[str]:
+    """Le sitemap che il sito dichiara nel suo robots.txt."""
+    url = f"{fonte.radice}/robots.txt"
+
+    try:
+        risposta = cliente.get(url, timeout=20)
+        risposta.raise_for_status()
+    except Exception as errore:
+        print(f"{fonte.nome}: robots.txt non leggibile ({errore})", flush=True)
+        return list(fonte.ripiego)
+
+    dichiarate = [
+        riga.split(":", 1)[1].strip()
+        for riga in risposta.text.splitlines()
+        if riga.lower().startswith("sitemap:")
+    ]
+
+    if not dichiarate:
+        print(f"{fonte.nome}: robots.txt non dichiara sitemap, uso il ripiego", flush=True)
+        return list(fonte.ripiego)
+
+    print(f"{fonte.nome}: {len(dichiarate)} sitemap dichiarate nel robots.txt", flush=True)
+
+    return dichiarate
 
 
 def _indirizzi(cliente: httpx.Client, url: str, profondita: int = 0) -> list[str]:
@@ -36,32 +68,54 @@ def _indirizzi(cliente: httpx.Client, url: str, profondita: int = 0) -> list[str
         return []
 
     try:
-        risposta = cliente.get(url, timeout=30)
+        risposta = cliente.get(url, timeout=40)
         risposta.raise_for_status()
         radice = ET.fromstring(risposta.content)
-    except Exception as errore:  # sitemap rotta o irraggiungibile: si tira dritto
-        print(f"sitemap {url} non leggibile: {errore}", flush=True)
+    except Exception as errore:
+        print(f"  sitemap {url} saltata: {errore}", flush=True)
         return []
 
     trovati = [nodo.text.strip() for nodo in radice.iter(f"{SPAZIO_SITEMAP}loc") if nodo.text]
 
-    if radice.tag == f"{SPAZIO_SITEMAP}sitemapindex":
+    if radice.tag.endswith("sitemapindex"):
         annidati: list[str] = []
-        # Le sitemap di ricette sono tante: ne bastano poche per riempire il catalogo.
-        for sotto in trovati[:8]:
+        for sotto in trovati[:SOTTO_SITEMAP]:
             annidati.extend(_indirizzi(cliente, sotto, profondita + 1))
         return annidati
 
     return trovati
 
 
+def puo_essere_ricetta(url: str, fonte: Fonte) -> bool:
+    try:
+        pezzi = urlparse(url)
+    except Exception:
+        return False
+
+    if pezzi.hostname not in fonte.host:
+        return False
+
+    if NON_E_UNA_RICETTA.search(pezzi.path):
+        return False
+
+    # La home e le pagine di primo livello non sono ricette.
+    return len([p for p in pezzi.path.split("/") if p]) >= 1 and pezzi.path not in ("/", "")
+
+
 def raccogli_indirizzi(cliente: httpx.Client, fonte: Fonte) -> list[str]:
-    tutti = _indirizzi(cliente, fonte.sitemap)
-    ricette = [u for u in tutti if fonte.riconosci.match(u)]
+    tutti: list[str] = []
 
-    print(f"{fonte.nome}: {len(ricette)} indirizzi di ricetta su {len(tutti)}", flush=True)
+    for sitemap in sitemap_dichiarate(cliente, fonte):
+        tutti.extend(_indirizzi(cliente, sitemap))
 
-    return ricette
+    candidati = [u for u in tutti if puo_essere_ricetta(u, fonte)]
+
+    print(f"{fonte.nome}: {len(candidati)} candidati su {len(tutti)} indirizzi", flush=True)
+
+    for esempio in candidati[:3]:
+        print(f"  esempio: {esempio}", flush=True)
+
+    return candidati
 
 
 def gia_in_catalogo(connessione: psycopg.Connection) -> set[str]:
@@ -84,7 +138,7 @@ def importa(cliente: httpx.Client, base: str, segreto: str, url: str) -> bool:
             f"{base}/api/interno/importa",
             json={"url": url},
             headers={"x-segreto-interno": segreto},
-            timeout=40,
+            timeout=45,
         )
     except Exception as errore:
         print(f"importazione fallita per {url}: {errore}", flush=True)
@@ -94,7 +148,7 @@ def importa(cliente: httpx.Client, base: str, segreto: str, url: str) -> bool:
         return True
 
     if risposta.status_code == 422:
-        # Pagina senza ricetta leggibile: capita, non e' un errore nostro.
+        # Pagina senza ricetta leggibile: e' il filtro vero, non un errore.
         return False
 
     print(f"il web ha risposto {risposta.status_code} per {url}", flush=True)
@@ -113,24 +167,25 @@ def raccogli(url_db: str) -> int:
         gia_presenti = quante_ricette(connessione)
 
         if gia_presenti >= CATALOGO_OBIETTIVO:
-            print(f"catalogo a {gia_presenti} ricette: obiettivo raggiunto, non raccolgo.", flush=True)
+            print(f"catalogo a {gia_presenti} ricette: obiettivo raggiunto.", flush=True)
             return 0
 
         conosciuti = gia_in_catalogo(connessione)
 
     nuovi: list[str] = []
+    quota = TETTO_PER_GIRO // len(FONTI) + 1
 
     with httpx.Client(headers={"user-agent": AGENTE}, follow_redirects=True) as cliente:
         for fonte in FONTI:
             candidati = [u for u in raccogli_indirizzi(cliente, fonte) if u not in conosciuti]
             random.shuffle(candidati)
             # Un po' per fonte, cosi' il catalogo non diventa monotematico.
-            nuovi.extend(candidati[: TETTO_PER_GIRO // len(FONTI) + 1])
+            nuovi.extend(candidati[:quota])
 
         random.shuffle(nuovi)
         da_fare = nuovi[:TETTO_PER_GIRO]
 
-        print(f"provo a importare {len(da_fare)} ricette nuove", flush=True)
+        print(f"provo a importare {len(da_fare)} indirizzi", flush=True)
 
         importate = 0
         for url in da_fare:
