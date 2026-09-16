@@ -3,9 +3,10 @@ import Link from 'next/link'
 /**
  * Testata unica dell'app: bianca, appoggiata sul fondo, le voci sono pillole.
  */
-export function Testata({ attiva }: { attiva?: 'catalogo' | 'importa' }) {
+export function Testata({ attiva }: { attiva?: 'settimana' | 'catalogo' | 'wizard' }) {
   const voce = 'rounded-full px-3 py-1.5 text-sm font-semibold text-fumo'
-  const voceAttiva = 'rounded-full bg-basilico-tenue px-3 py-1.5 text-sm font-semibold text-basilico-scuro'
+  const voceAttiva =
+    'rounded-full bg-basilico-tenue px-3 py-1.5 text-sm font-semibold text-basilico-scuro'
 
   return (
     <header className="sticky top-0 z-10 border-b border-bordo bg-bianco/90 backdrop-blur">
@@ -14,14 +15,14 @@ export function Testata({ attiva }: { attiva?: 'catalogo' | 'importa' }) {
           èProntooo
         </Link>
         <nav className="flex items-center gap-1">
-          <Link href="/" className={attiva === 'catalogo' ? voceAttiva : voce}>
+          <Link href="/" className={attiva === 'settimana' ? voceAttiva : voce}>
+            Settimana
+          </Link>
+          <Link href="/ricette" className={attiva === 'catalogo' ? voceAttiva : voce}>
             Ricette
           </Link>
-          <Link href="/importa" className={attiva === 'importa' ? voceAttiva : voce}>
-            Importa
-          </Link>
-          <Link href="/stato" className={voce}>
-            Stato
+          <Link href="/wizard" className={attiva === 'wizard' ? voceAttiva : voce}>
+            Preferenze
           </Link>
         </nav>
       </div>

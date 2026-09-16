@@ -15,6 +15,20 @@
       "when": 1789546050632,
       "tag": "0001_adorable_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789548277846,
+      "tag": "0002_curvy_yellow_claw",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789548283773,
+      "tag": "0003_thankful_red_hulk",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "ricette" DROP COLUMN "tipo_pasto";

@@ -5,6 +5,9 @@ export {
   battiti,
   ingredienteAllergene,
   ingredientiCanonici,
+  piani,
+  pianiPasti,
+  profilo,
   ricettaIngredienti,
   ricette,
 } from './schema'
@@ -15,6 +18,9 @@ export type {
   NuovaRicetta,
   NuovoAllergene,
   NuovoRicettaIngrediente,
+  Piano,
+  PianoPasto,
+  Profilo,
   Ricetta,
   RicettaIngrediente,
 } from './schema'

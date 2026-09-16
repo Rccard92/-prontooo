@@ -19,33 +19,12 @@ export type RicettaEstratta = {
   minutiCottura: number | null
   minutiTotali: number | null
   porzioni: number | null
-  tipoPasto: string | null
+  categoriaFonte: string | null
   ingredienti: string[]
   passaggi: string[]
 }
 
 type Nodo = Record<string, unknown>
-
-/** I tipi di pasto di schema.org, ricondotti alle fasce che usa l'app. */
-const FASCE: Record<string, string> = {
-  breakfast: 'colazione',
-  colazione: 'colazione',
-  brunch: 'colazione',
-  lunch: 'pranzo',
-  pranzo: 'pranzo',
-  dinner: 'cena',
-  cena: 'cena',
-  snack: 'spuntino',
-  spuntino: 'spuntino',
-  merenda: 'merenda',
-  dessert: 'dolce',
-  dolci: 'dolce',
-  dolce: 'dolce',
-  antipasto: 'antipasto',
-  antipasti: 'antipasto',
-  'primi piatti': 'pranzo',
-  'secondi piatti': 'cena',
-}
 
 const ENTITA: Record<string, string> = {
   amp: '&',
@@ -264,8 +243,6 @@ export function estraiRicetta(html: string, url: string): RicettaEstratta | null
       minutiDaDurata(nodo.totalTime) ??
       (preparazione !== null || cottura !== null ? (preparazione ?? 0) + (cottura ?? 0) : null)
 
-    const categoria = primaStringa(nodo.recipeCategory)
-
     return {
       titolo,
       fonteUrl: url,
@@ -276,7 +253,7 @@ export function estraiRicetta(html: string, url: string): RicettaEstratta | null
       minutiCottura: cottura,
       minutiTotali: totale,
       porzioni: porzioniDaValore(nodo.recipeYield),
-      tipoPasto: categoria ? (FASCE[categoria.toLowerCase()] ?? null) : null,
+      categoriaFonte: primaStringa(nodo.recipeCategory),
       ingredienti,
       passaggi: passaggiDaIstruzioni(nodo.recipeInstructions),
     }

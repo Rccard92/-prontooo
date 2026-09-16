@@ -10,12 +10,14 @@ Monorepo pnpm, due servizi Railway, un Postgres condiviso.
 
 ```
 apps/web      Next.js 15 App Router, TypeScript, Tailwind v4
-apps/worker   Python 3.12, volantini dei supermercati, cron settimanale
+apps/worker   Python 3.12, raccolta ricette dalle sitemap e volantini, cron
 packages/db   Schema Drizzle e migrazioni, condiviso
 ```
 
 Il worker non espone HTTP pubblico: legge fonti esterne e scrive su Postgres.
-Le ricette **non** passano dal worker: il parser JSON-LD sta in TypeScript dentro il web (`apps/web/lib/ricette`), perche' l'import da URL deve rispondere subito e un servizio a cron non puo' farlo. Il worker resta per i volantini, dove serve PyMuPDF. `packages/db` viene consumato come sorgente TypeScript (`transpilePackages`), non ha un passo di build.
+Il parser JSON-LD sta in TypeScript dentro il web (`apps/web/lib/ricette`): l'import da URL deve rispondere subito, e un servizio a cron non puo' farlo.
+
+Il worker decide **quali** ricette raccogliere - legge le sitemap delle fonti, scarta quelle gia' in catalogo - e passa un indirizzo alla volta a `POST /api/interno/importa`, che e' l'unico posto dove vive il parser. La rotta e' chiusa da `SEGRETO_INTERNO` e il worker la chiama sulla rete privata di Railway (`URL_WEB_INTERNO`). Le fonti stanno in `apps/worker/fonti.py`. `packages/db` viene consumato come sorgente TypeScript (`transpilePackages`), non ha un passo di build.
 
 ## Comandi
 
@@ -45,7 +47,9 @@ Railway, progetto `èProntooo`, ambiente `production`. Tre servizi:
 |---|---|---|
 | `postgres` | Postgres 17 con volume su `/var/lib/postgresql/data` | immagine `ghcr.io/railwayapp-templates/postgres-ssl:17` |
 | `web` | Next.js | Nixpacks dalla radice del repo, pre-deploy `db:migrate` + `seed` |
-| `worker` | Python | Dockerfile in `apps/worker`, cron settimanale |
+| `worker` | Python | Dockerfile in `apps/worker`, cron ogni 30 minuti |
+
+Il cron sta a 30 minuti finché il catalogo si riempie: la raccolta si ferma da sola a `CATALOGO_OBIETTIVO` ricette e da lì in poi i giri sono a vuoto. Quando arrivano i volantini (Fase 5) va riportato a settimanale.
 
 Push su `main` → Railway ricostruisce e sostituisce il deploy. Nessun passaggio manuale.
 Le migrazioni girano come pre-deploy del `web`: se falliscono, il deploy vecchio resta in piedi.
@@ -118,7 +122,17 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
 
-Fase 1 in corso. Fatto: schema ricette, parser JSON-LD con 19 test, import da URL, catalogo, pagina ricetta.
-Manca: normalizzazione LLM degli ingredienti (serve `ANTHROPIC_API_KEY` su Railway), mappa ingrediente -> allergene curata a mano, seed in batch dalle sitemap, ricerca e filtri sul catalogo.
+Fatto: catalogo che si riempie da solo dalle sitemap, wizard del profilo, piano settimanale con "cambia ricetta" e "tieni fermo", pagina ricetta, import manuale come attrezzo da officina.
 
-Finche' `normalizzata_il` e' nulla su una ricetta, l'app **non** sa i suoi allergeni e deve dirlo. Non mostrare mai "senza allergeni" per una ricetta non normalizzata.
+Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti, e quindi allergeni, reparti e lista della spesa.
+
+Due regole che dipendono da quella mancanza:
+
+- Finche' `normalizzata_il` e' nulla su una ricetta, l'app **non** sa i suoi allergeni e deve dirlo. Non mostrare mai "senza allergeni" per una ricetta non normalizzata
+- `profilo.daEvitare` e' una ricerca sul testo della riga ingrediente, non un controllo sugli allergeni, e la UI lo dichiara. Non chiamarlo "allergie" e non presentarlo come sicuro
+
+### Come si tiene insieme il piano
+
+`ricette.ruolo` (primo, secondo, dolce...) decide `ricette.fasce`, cioe' in quali pasti una ricetta puo' finire. La classificazione sta in `apps/web/lib/ricette/fasce.ts` ed e' una tabella di parole, non un modello: costa zero e si corregge a mano. E' quello che fa si' che "cambia ricetta" su un primo ripeschi un altro primo.
+
+Ruolo nullo vuol dire che non l'abbiamo capito: la ricetta resta in catalogo ma il piano non la usa. Proporre un contorno come cena e' peggio che lasciare la casella vuota.

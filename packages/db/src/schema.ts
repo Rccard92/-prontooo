@@ -1,4 +1,6 @@
 import {
+  boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -120,7 +122,16 @@ export const ricette = pgTable(
     minutiTotali: integer('minuti_totali'),
     porzioni: integer('porzioni'),
     difficolta: text('difficolta'),
-    tipoPasto: text('tipo_pasto'),
+    // La categoria come l'ha scritta la fonte: "Primi piatti", "Dolci".
+    // Non si butta, perche' da li' si puo' sempre riclassificare.
+    categoriaFonte: text('categoria_fonte'),
+    // Il ruolo nel pasto: primo, secondo, piatto_unico, dolce, antipasto,
+    // contorno, lievitato, bevanda.
+    ruolo: text('ruolo'),
+    // Le fasce in cui questa ricetta puo' finire. Un primo vale a pranzo e a
+    // cena, una torta vale a colazione e a merenda. Vuoto = sta in catalogo ma
+    // il piano non la usa mai.
+    fasce: jsonb('fasce').$type<string[]>().notNull().default([]),
     passaggi: jsonb('passaggi').$type<string[]>().notNull().default([]),
     normalizzataIl: timestamp('normalizzata_il', { withTimezone: true }),
     importataIl: timestamp('importata_il', { withTimezone: true }).notNull().defaultNow(),
@@ -161,3 +172,64 @@ export const ricettaIngredienti = pgTable(
 
 export type RicettaIngrediente = typeof ricettaIngredienti.$inferSelect
 export type NuovoRicettaIngrediente = typeof ricettaIngredienti.$inferInsert
+
+/**
+ * Il profilo: una riga sola, quella dell'unico utente. L'output del wizard.
+ *
+ * Non c'e' un campo allergie di proposito. Le allergie si rispettano solo
+ * passando dagli ingredienti canonici, e finche' quella pipeline non esiste
+ * chiederle sarebbe una promessa che l'app non puo' mantenere. `daEvitare`
+ * e' un'altra cosa: sono preferenze, e si applicano con una ricerca sul testo
+ * della riga ingrediente. Approssimata, e dichiarata tale nella UI.
+ */
+export const profilo = pgTable('profilo', {
+  id: integer('id').primaryKey(),
+  adulti: integer('adulti').notNull().default(2),
+  bambini: integer('bambini').notNull().default(0),
+  porzioniDefault: integer('porzioni_default').notNull().default(2),
+  fasceAttive: jsonb('fasce_attive').$type<string[]>().notNull().default([]),
+  // Giorni in cui sei fuori a pranzo, 0 = lunedi. Quei pasti non entrano nel piano.
+  giorniFuoriPranzo: jsonb('giorni_fuori_pranzo').$type<number[]>().notNull().default([]),
+  // Minuti massimi per fascia: { colazione: 10, cena: 45 }
+  minutiMassimi: jsonb('minuti_massimi').$type<Record<string, number>>().notNull().default({}),
+  daEvitare: jsonb('da_evitare').$type<string[]>().notNull().default([]),
+  settimaneAntiRipetizione: integer('settimane_anti_ripetizione').notNull().default(3),
+  aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type Profilo = typeof profilo.$inferSelect
+
+/** Una settimana pianificata, identificata dal lunedi'. */
+export const piani = pgTable(
+  'piani',
+  {
+    id: serial('id').primaryKey(),
+    inizioSettimana: date('inizio_settimana').notNull(),
+    creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('piani_inizio_settimana_idx').on(t.inizioSettimana)],
+)
+
+export type Piano = typeof piani.$inferSelect
+
+/**
+ * Un pasto del piano. `bloccato` e' quello che regge "blocca e rigenera":
+ * rigenerando la settimana, i pasti bloccati restano dove sono.
+ */
+export const pianiPasti = pgTable(
+  'piani_pasti',
+  {
+    id: serial('id').primaryKey(),
+    pianoId: integer('piano_id')
+      .notNull()
+      .references(() => piani.id, { onDelete: 'cascade' }),
+    giorno: integer('giorno').notNull(),
+    fascia: text('fascia').notNull(),
+    ricettaId: integer('ricetta_id').references(() => ricette.id, { onDelete: 'set null' }),
+    porzioni: integer('porzioni').notNull().default(2),
+    bloccato: boolean('bloccato').notNull().default(false),
+  },
+  (t) => [uniqueIndex('piani_pasti_posto_idx').on(t.pianoId, t.giorno, t.fascia)],
+)
+
+export type PianoPasto = typeof pianiPasti.$inferSelect

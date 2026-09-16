@@ -5,6 +5,7 @@ description = "Ingestione ricette e volantini per èProntooo. Non espone HTTP: s
 requires-python = ">=3.12"
 dependencies = [
     "psycopg[binary]>=3.2.3",
+    "httpx>=0.28.1",
 ]
 
 [tool.uv]

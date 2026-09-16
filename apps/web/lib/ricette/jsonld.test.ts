@@ -80,7 +80,7 @@ describe('estraiRicetta', () => {
     assert.equal(ricetta.minutiPreparazione, 20)
     assert.equal(ricetta.minutiCottura, 25)
     assert.equal(ricetta.porzioni, 4)
-    assert.equal(ricetta.tipoPasto, 'pranzo')
+    assert.equal(ricetta.categoriaFonte, 'Primi piatti')
     assert.deepEqual(ricetta.ingredienti, [
       '320 g di sedanini',
       '2 melanzane',

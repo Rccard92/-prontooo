@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { db, ricettaIngredienti, ricette } from '@prontooo/db'
 
+import { classifica } from './fasce'
 import { estraiRicetta } from './jsonld'
 
 const AGENTE = 'Mozilla/5.0 (compatible; eProntoooBot/0.1; progetto personale)'
@@ -91,6 +92,7 @@ export async function importaDaUrl(indirizzo: string): Promise<EsitoImport> {
     }
   }
 
+  const { ruolo, fasce } = classifica(estratta.categoriaFonte, estratta.fonteUrl)
   const connessione = db()
 
   const [salvata] = await connessione
@@ -105,7 +107,9 @@ export async function importaDaUrl(indirizzo: string): Promise<EsitoImport> {
       minutiCottura: estratta.minutiCottura,
       minutiTotali: estratta.minutiTotali,
       porzioni: estratta.porzioni,
-      tipoPasto: estratta.tipoPasto,
+      categoriaFonte: estratta.categoriaFonte,
+      ruolo,
+      fasce,
       passaggi: estratta.passaggi,
     })
     .onConflictDoUpdate({
@@ -118,7 +122,9 @@ export async function importaDaUrl(indirizzo: string): Promise<EsitoImport> {
         minutiCottura: estratta.minutiCottura,
         minutiTotali: estratta.minutiTotali,
         porzioni: estratta.porzioni,
-        tipoPasto: estratta.tipoPasto,
+        categoriaFonte: estratta.categoriaFonte,
+      ruolo,
+      fasce,
         passaggi: estratta.passaggi,
         // Gli ingredienti cambiano: quello che l'LLM aveva capito non vale piu'.
         normalizzataIl: null,
