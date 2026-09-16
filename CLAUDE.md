@@ -29,7 +29,7 @@ pnpm test                          # test del parser ricette
 pnpm db:generate                   # genera migrazione dopo modifica schema
 pnpm db:migrate                    # applica migrazioni
 pnpm db:studio                     # ispeziona il database
-pnpm --filter @prontooo/db seed    # popola l'elenco allergeni, idempotente
+pnpm seed                          # popola l'elenco allergeni, idempotente
 
 cd apps/worker && uv run python main.py   # worker in locale
 ```

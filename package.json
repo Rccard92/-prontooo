@@ -6,15 +6,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @prontooo/web dev",
-    "build": "pnpm --filter @prontooo/web build",
-    "start": "pnpm --filter @prontooo/web start",
+    "dev": "pnpm -C apps/web dev",
+    "build": "pnpm -C apps/web build",
+    "start": "pnpm -C apps/web start",
+    "test": "pnpm -C apps/web test",
     "typecheck": "pnpm -r typecheck",
-    "db:generate": "pnpm --filter @prontooo/db generate",
-    "db:migrate": "pnpm --filter @prontooo/db migrate",
-    "db:studio": "pnpm --filter @prontooo/db studio",
-    "seed": "pnpm --filter @prontooo/db seed",
-    "test": "pnpm --filter @prontooo/web test"
+    "db:generate": "pnpm -C packages/db generate",
+    "db:migrate": "pnpm -C packages/db migrate",
+    "db:studio": "pnpm -C packages/db studio",
+    "seed": "pnpm -C packages/db seed"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
