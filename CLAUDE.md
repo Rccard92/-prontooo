@@ -47,6 +47,10 @@ Railway, progetto `cassetta`, ambiente `production`. Tre servizi:
 
 Push su `main` → Railway ricostruisce e sostituisce il deploy. Nessun passaggio manuale.
 Le migrazioni girano come pre-deploy del `web`: se falliscono, il deploy vecchio resta in piedi.
+Ogni servizio guarda solo la sua parte del repo (`watchPatterns`): toccare il worker non ricostruisce il web.
+
+Produzione: <https://web-production-ad6b7.up.railway.app>
+Il Postgres ha anche un proxy TCP pubblico (`DATABASE_PUBLIC_URL`), serve per lavorare in locale e per `db:studio`. Se un giorno non serve piu', va tolto.
 
 ## Regole di lavoro
 

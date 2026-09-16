@@ -20,11 +20,13 @@ export async function GET() {
       istante: new Date().toISOString(),
     })
   } catch (errore) {
+    // Il messaggio vero va nei log, non nella risposta: la sonda e' pubblica.
+    console.error('healthcheck fallito:', errore)
+
     return NextResponse.json(
       {
         ok: false,
         database: 'non raggiungibile',
-        errore: errore instanceof Error ? errore.message : 'errore sconosciuto',
         istante: new Date().toISOString(),
       },
       { status: 503 },
