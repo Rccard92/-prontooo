@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [[package]]
-name = "cassetta-worker"
+name = "prontooo-worker"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
