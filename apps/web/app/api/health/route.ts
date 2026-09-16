@@ -1,7 +1,7 @@
 import { count } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 
-import { allergeni, db } from '@cassetta/db'
+import { allergeni, db } from '@prontooo/db'
 
 export const dynamic = 'force-dynamic'
 

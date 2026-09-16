@@ -17,7 +17,7 @@ const yeseva = Yeseva_One({
 })
 
 export const metadata: Metadata = {
-  title: 'Cassetta',
+  title: 'èProntooo',
   description: 'Pianifica la settimana, fai la lista, compra dove conviene.',
 }
 

@@ -1,4 +1,4 @@
-# Cassetta
+# èProntooo
 
 Pianifichi la settimana, la lista della spesa esce da sola, e sai in quale supermercato conviene andare.
 
@@ -10,7 +10,7 @@ Progetto personale, utente singolo. Convenzioni, comandi e regole di design stan
 pnpm install
 cp .env.example .env     # metti dentro DATABASE_URL
 pnpm db:migrate
-pnpm --filter @cassetta/db seed
+pnpm --filter @prontooo/db seed
 pnpm dev
 ```
 

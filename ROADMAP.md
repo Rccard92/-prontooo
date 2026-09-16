@@ -1,10 +1,10 @@
-# Cassetta — roadmap operativa
+# èProntooo — roadmap operativa
 
 Webapp personale per pianificare i pasti della settimana, generare la lista della spesa e incrociarla con i volantini di Lidl, Eurospin e Conad.
 
 Uso singolo utente, non commerciale. Deploy su Railway.
 
-> Nome di lavoro: **Cassetta** (dalle cassette del mercato). Cambiabile.
+> Nome: **èProntooo**. Quello che si grida quando la tavola è pronta e bisogna richiamare tutti.
 
 ---
 

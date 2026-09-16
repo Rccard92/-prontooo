@@ -1,4 +1,4 @@
-# Cassetta
+# èProntooo
 
 Webapp personale di pianificazione pasti, lista della spesa e confronto offerte dei supermercati. Utente singolo, uso privato, non commerciale.
 
@@ -27,7 +27,7 @@ pnpm typecheck                     # tsc su tutti i pacchetti
 pnpm db:generate                   # genera migrazione dopo modifica schema
 pnpm db:migrate                    # applica migrazioni
 pnpm db:studio                     # ispeziona il database
-pnpm --filter @cassetta/db seed    # popola l'elenco allergeni, idempotente
+pnpm --filter @prontooo/db seed    # popola l'elenco allergeni, idempotente
 
 cd apps/worker && uv run python main.py   # worker in locale
 ```
@@ -37,7 +37,7 @@ Per lavorare in locale contro il Postgres di Railway usa `DATABASE_PUBLIC_URL` (
 
 ## Deploy
 
-Railway, progetto `cassetta`, ambiente `production`. Tre servizi:
+Railway, progetto `èProntooo`, ambiente `production`. Tre servizi:
 
 | Servizio | Cos'è | Come si costruisce |
 |---|---|---|
@@ -50,6 +50,7 @@ Le migrazioni girano come pre-deploy del `web`: se falliscono, il deploy vecchio
 Ogni servizio guarda solo la sua parte del repo (`watchPatterns`): toccare il worker non ricostruisce il web.
 
 Produzione: <https://web-production-ad6b7.up.railway.app>
+Il database dentro Postgres si chiama ancora `cassetta`, il nome di lavoro di prima: rinominarlo vuol dire ricreare il volume, e finche' non ci sono dati veri non vale la pena.
 Il Postgres ha anche un proxy TCP pubblico (`DATABASE_PUBLIC_URL`), serve per lavorare in locale e per `db:studio`. Se un giorno non serve piu', va tolto.
 
 ## Regole di lavoro

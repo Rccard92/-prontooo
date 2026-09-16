@@ -1,6 +1,6 @@
 import { count, desc } from 'drizzle-orm'
 
-import { allergeni, battiti, db } from '@cassetta/db'
+import { allergeni, battiti, db } from '@prontooo/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,8 +86,8 @@ export default async function Home() {
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-8 sm:py-16">
       <div className="cornice">
         <div className="cornice-interna px-6 py-14 sm:px-12 sm:py-20">
-          <h1 className="font-display text-[clamp(3.25rem,13vw,7.5rem)] leading-[0.82] text-zagara">
-            Cassetta
+          <h1 className="font-display text-[clamp(3rem,12vw,7rem)] leading-[0.82] text-zagara">
+            èProntooo
           </h1>
 
           <p className="mt-8 max-w-xl text-xl leading-snug text-carta sm:text-2xl">

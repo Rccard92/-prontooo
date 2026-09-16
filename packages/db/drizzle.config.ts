@@ -7,7 +7,7 @@ config({ path: ['../../.env', '.env'], quiet: true })
 
 // `generate` legge solo lo schema e non apre connessioni: deve funzionare anche
 // senza database. `migrate` e `studio` invece falliscono, ed e' giusto cosi'.
-const url = process.env.DATABASE_URL ?? 'postgresql://utente@database-non-configurato:5432/cassetta'
+const url = process.env.DATABASE_URL ?? 'postgresql://utente@database-non-configurato:5432/prontooo'
 
 export default defineConfig({
   schema: './src/schema.ts',

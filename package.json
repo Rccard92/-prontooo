@@ -1,19 +1,19 @@
 {
-  "name": "cassetta",
+  "name": "prontooo",
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @cassetta/web dev",
-    "build": "pnpm --filter @cassetta/web build",
-    "start": "pnpm --filter @cassetta/web start",
-    "lint": "pnpm --filter @cassetta/web lint",
+    "dev": "pnpm --filter @prontooo/web dev",
+    "build": "pnpm --filter @prontooo/web build",
+    "start": "pnpm --filter @prontooo/web start",
     "typecheck": "pnpm -r typecheck",
-    "db:generate": "pnpm --filter @cassetta/db generate",
-    "db:migrate": "pnpm --filter @cassetta/db migrate",
-    "db:studio": "pnpm --filter @cassetta/db studio"
+    "db:generate": "pnpm --filter @prontooo/db generate",
+    "db:migrate": "pnpm --filter @prontooo/db migrate",
+    "db:studio": "pnpm --filter @prontooo/db studio",
+    "seed": "pnpm --filter @prontooo/db seed"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
