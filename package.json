@@ -13,7 +13,8 @@
     "db:generate": "pnpm --filter @prontooo/db generate",
     "db:migrate": "pnpm --filter @prontooo/db migrate",
     "db:studio": "pnpm --filter @prontooo/db studio",
-    "seed": "pnpm --filter @prontooo/db seed"
+    "seed": "pnpm --filter @prontooo/db seed",
+    "test": "pnpm --filter @prontooo/web test"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -1,0 +1,485 @@
+{
+  "id": "88e3f4b8-8606-432f-95f1-6c728b3fa9ea",
+  "prevId": "e51ad537-f170-4d3f-8fb5-318d24900552",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.allergeni": {
+      "name": "allergeni",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "codice": {
+          "name": "codice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "allergeni_codice_idx": {
+          "name": "allergeni_codice_idx",
+          "columns": [
+            {
+              "expression": "codice",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.battiti": {
+      "name": "battiti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "servizio": {
+          "name": "servizio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messaggio": {
+          "name": "messaggio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registrato_il": {
+          "name": "registrato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ingrediente_allergene": {
+      "name": "ingrediente_allergene",
+      "schema": "",
+      "columns": {
+        "ingrediente_id": {
+          "name": "ingrediente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "allergene_id": {
+          "name": "allergene_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "certezza": {
+          "name": "certezza",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'certo'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ingrediente_allergene_ingrediente_id_ingredienti_canonici_id_fk": {
+          "name": "ingrediente_allergene_ingrediente_id_ingredienti_canonici_id_fk",
+          "tableFrom": "ingrediente_allergene",
+          "tableTo": "ingredienti_canonici",
+          "columnsFrom": [
+            "ingrediente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ingrediente_allergene_allergene_id_allergeni_id_fk": {
+          "name": "ingrediente_allergene_allergene_id_allergeni_id_fk",
+          "tableFrom": "ingrediente_allergene",
+          "tableTo": "allergeni",
+          "columnsFrom": [
+            "allergene_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "ingrediente_allergene_ingrediente_id_allergene_id_pk": {
+          "name": "ingrediente_allergene_ingrediente_id_allergene_id_pk",
+          "columns": [
+            "ingrediente_id",
+            "allergene_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ingredienti_canonici": {
+      "name": "ingredienti_canonici",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reparto": {
+          "name": "reparto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mesi_stagione": {
+          "name": "mesi_stagione",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ingredienti_canonici_nome_idx": {
+          "name": "ingredienti_canonici_nome_idx",
+          "columns": [
+            {
+              "expression": "nome",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ricetta_ingredienti": {
+      "name": "ricetta_ingredienti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ricetta_id": {
+          "name": "ricetta_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posizione": {
+          "name": "posizione",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "riga_grezza": {
+          "name": "riga_grezza",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantita": {
+          "name": "quantita",
+          "type": "numeric(10, 3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unita": {
+          "name": "unita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ingrediente_canonico_id": {
+          "name": "ingrediente_canonico_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ricetta_ingredienti_ricetta_idx": {
+          "name": "ricetta_ingredienti_ricetta_idx",
+          "columns": [
+            {
+              "expression": "ricetta_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ricetta_ingredienti_ricetta_id_ricette_id_fk": {
+          "name": "ricetta_ingredienti_ricetta_id_ricette_id_fk",
+          "tableFrom": "ricetta_ingredienti",
+          "tableTo": "ricette",
+          "columnsFrom": [
+            "ricetta_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ricetta_ingredienti_ingrediente_canonico_id_ingredienti_canonici_id_fk": {
+          "name": "ricetta_ingredienti_ingrediente_canonico_id_ingredienti_canonici_id_fk",
+          "tableFrom": "ricetta_ingredienti",
+          "tableTo": "ingredienti_canonici",
+          "columnsFrom": [
+            "ingrediente_canonico_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ricette": {
+      "name": "ricette",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "titolo": {
+          "name": "titolo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fonte_url": {
+          "name": "fonte_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fonte_nome": {
+          "name": "fonte_nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "immagine_url": {
+          "name": "immagine_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descrizione": {
+          "name": "descrizione",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minuti_preparazione": {
+          "name": "minuti_preparazione",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minuti_cottura": {
+          "name": "minuti_cottura",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minuti_totali": {
+          "name": "minuti_totali",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "porzioni": {
+          "name": "porzioni",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "difficolta": {
+          "name": "difficolta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo_pasto": {
+          "name": "tipo_pasto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "passaggi": {
+          "name": "passaggi",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "normalizzata_il": {
+          "name": "normalizzata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "importata_il": {
+          "name": "importata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ricette_fonte_url_idx": {
+          "name": "ricette_fonte_url_idx",
+          "columns": [
+            {
+              "expression": "fonte_url",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ricette_titolo_idx": {
+          "name": "ricette_titolo_idx",
+          "columns": [
+            {
+              "expression": "titolo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

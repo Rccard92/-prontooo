@@ -10,11 +10,12 @@ Monorepo pnpm, due servizi Railway, un Postgres condiviso.
 
 ```
 apps/web      Next.js 15 App Router, TypeScript, Tailwind v4
-apps/worker   Python 3.12, ingestion ricette e volantini, cron settimanale
+apps/worker   Python 3.12, volantini dei supermercati, cron settimanale
 packages/db   Schema Drizzle e migrazioni, condiviso
 ```
 
-Il worker non espone HTTP pubblico: legge fonti esterne e scrive su Postgres. `packages/db` viene consumato come sorgente TypeScript (`transpilePackages`), non ha un passo di build.
+Il worker non espone HTTP pubblico: legge fonti esterne e scrive su Postgres.
+Le ricette **non** passano dal worker: il parser JSON-LD sta in TypeScript dentro il web (`apps/web/lib/ricette`), perche' l'import da URL deve rispondere subito e un servizio a cron non puo' farlo. Il worker resta per i volantini, dove serve PyMuPDF. `packages/db` viene consumato come sorgente TypeScript (`transpilePackages`), non ha un passo di build.
 
 ## Comandi
 
@@ -23,6 +24,7 @@ pnpm install                       # una volta, alla radice
 pnpm dev                           # web in locale su :3000
 pnpm build                         # build di produzione del web
 pnpm typecheck                     # tsc su tutti i pacchetti
+pnpm test                          # test del parser ricette
 
 pnpm db:generate                   # genera migrazione dopo modifica schema
 pnpm db:migrate                    # applica migrazioni
@@ -107,4 +109,8 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 ## Stato
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
-Prossima: Fase 1, catalogo ricette.
+
+Fase 1 in corso. Fatto: schema ricette, parser JSON-LD con 19 test, import da URL, catalogo, pagina ricetta.
+Manca: normalizzazione LLM degli ingredienti (serve `ANTHROPIC_API_KEY` su Railway), mappa ingrediente -> allergene curata a mano, seed in batch dalle sitemap, ricerca e filtri sul catalogo.
+
+Finche' `normalizzata_il` e' nulla su una ricetta, l'app **non** sa i suoi allergeni e deve dirlo. Non mostrare mai "senza allergeni" per una ricetta non normalizzata.
