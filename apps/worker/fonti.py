@@ -24,20 +24,33 @@ class Fonte:
     ripiego: tuple[str, ...] = ()
 
 
-# Pagine che non sono ricette: categorie, tag, elenchi, allegati.
+# Pagine che non sono ricette. Le prime due righe vengono dai log del primo
+# giro vero: su GialloZafferano le sitemap sono piene di pagine di ricerca, su
+# Misya di indici per ingrediente (ricette-acciughe.htm). Sembrano ricette
+# dall'indirizzo e non lo sono.
 NON_E_UNA_RICETTA = re.compile(
+    r"/ricerca-ricette/|/ricette-[a-z0-9-]+\.htm$|"
     r"/(categoria|categorie|category|tag|tags|autore|author|page|pagina|search|ricette-cat"
-    r"|feed|wp-content|wp-json|amp|video|news|magazine|speciali|menu|collezioni)/|"
+    r"|feed|wp-content|wp-json|amp|video|news|magazine|speciali|menu|collezioni|glossario"
+    r"|dizionario|scuola-di-cucina|come-fare)/|"
     r"\.(jpg|jpeg|png|gif|webp|pdf|xml)$",
     re.IGNORECASE,
 )
 
 FONTI: list[Fonte] = [
+    # Le ricette di GialloZafferano stanno sul sottodominio, non su www: e'
+    # quello il robots.txt che dichiara le sitemap giuste.
     Fonte(
-        nome="giallozafferano.it",
+        nome="ricette.giallozafferano.it",
+        radice="https://ricette.giallozafferano.it",
+        host=("ricette.giallozafferano.it",),
+        ripiego=("https://ricette.giallozafferano.it/sitemap.xml",),
+    ),
+    Fonte(
+        nome="blog.giallozafferano.it",
         radice="https://www.giallozafferano.it",
-        host=("www.giallozafferano.it", "ricette.giallozafferano.it"),
-        ripiego=("https://www.giallozafferano.it/sitemap-index.xml",),
+        host=("www.giallozafferano.it",),
+        ripiego=(),
     ),
     Fonte(
         nome="misya.info",
@@ -45,10 +58,8 @@ FONTI: list[Fonte] = [
         host=("www.misya.info",),
         ripiego=("https://www.misya.info/sitemap.xml",),
     ),
-    Fonte(
-        nome="fattoincasadabenedetta.it",
-        radice="https://www.fattoincasadabenedetta.it",
-        host=("www.fattoincasadabenedetta.it",),
-        ripiego=("https://www.fattoincasadabenedetta.it/sitemap.xml",),
-    ),
+    # Fatto in casa da Benedetta risponde 403 a qualsiasi cosa non sia un
+    # browser, robots.txt compreso. Resta qui documentata ma disattivata:
+    # insistere vorrebbe dire fingersi un browser, e non e' il caso.
+    # Fonte(nome="fattoincasadabenedetta.it", ...)
 ]

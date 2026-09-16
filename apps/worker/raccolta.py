@@ -33,7 +33,7 @@ TETTO_PER_GIRO = int(os.environ.get("RICETTE_PER_GIRO", "150"))
 PAUSA = float(os.environ.get("PAUSA_FRA_RICETTE", "0.8"))
 CATALOGO_OBIETTIVO = int(os.environ.get("CATALOGO_OBIETTIVO", "400"))
 # Quante sotto-sitemap aprire per fonte: sono tante, ne bastano poche.
-SOTTO_SITEMAP = int(os.environ.get("SOTTO_SITEMAP", "6"))
+SOTTO_SITEMAP = int(os.environ.get("SOTTO_SITEMAP", "12"))
 
 
 def sitemap_dichiarate(cliente: httpx.Client, fonte: Fonte) -> list[str]:
