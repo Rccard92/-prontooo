@@ -90,14 +90,14 @@ NON_E_UN_VOLANTINO = re.compile(
 PARLA_DI_VOLANTINI = re.compile(r"volantin|flyer|offerte|promozion|catalog", re.IGNORECASE)
 
 
-def pagine_dei_volantini(cliente: httpx.Client, radice: str) -> list[str]:
-    """Dalla home, gli indirizzi che promettono volantini.
+def link_ai_volantini(cliente: httpx.Client, pagina: str) -> list[str]:
+    """Da una pagina, gli indirizzi che promettono volantini.
 
     Si guardano gli `href` e il testo intorno: un menu scrive spesso
     `href="/c/s10005610"` con dentro la parola "Volantini", e l'indirizzo da
     solo non direbbe niente.
     """
-    risposta = cliente.get(radice, timeout=30)
+    risposta = cliente.get(pagina, timeout=30)
     risposta.raise_for_status()
 
     testo = risposta.text
@@ -126,6 +126,51 @@ def pagine_dei_volantini(cliente: httpx.Client, radice: str) -> list[str]:
     candidati.sort(key=lambda u: 0 if re.search(r"volantin", u, re.I) else 1)
 
     return candidati
+
+
+# Quante pagine aprire in tutto per un'insegna. Il volantino sta a uno o due
+# passi dalla home; oltre si girerebbe per il sito di qualcun altro senza motivo.
+PAGINE_PER_INSEGNA = 8
+
+
+def cerca_il_pdf(cliente: httpx.Client, radice: str) -> tuple[list[str], list[str]]:
+    """Scende dalla home finche' non trova dei PDF. Torna (pdf, pagine viste).
+
+    Due passi, non di piu': la home porta alla pagina dei volantini, e quella
+    porta al volantino della settimana. Lidl fa esattamente cosi' -
+    `/c/volantino-lidl/...` elenca, e dentro ci sono i volantini veri.
+    """
+    da_vedere = [radice]
+    viste: list[str] = []
+    pdf: list[str] = []
+
+    while da_vedere and len(viste) < PAGINE_PER_INSEGNA:
+        pagina = da_vedere.pop(0)
+
+        if pagina in viste:
+            continue
+
+        viste.append(pagina)
+
+        try:
+            for indirizzo in pdf_nella_pagina(cliente, pagina):
+                if indirizzo not in pdf:
+                    pdf.append(indirizzo)
+        except httpx.HTTPError:
+            continue
+
+        # Tre PDF bastano per capire se c'e' quello giusto.
+        if len(pdf) >= 3:
+            break
+
+        try:
+            for figlio in link_ai_volantini(cliente, pagina):
+                if figlio not in viste and figlio not in da_vedere:
+                    da_vedere.append(figlio)
+        except httpx.HTTPError:
+            continue
+
+    return pdf, viste
 
 
 def pdf_nella_pagina(cliente: httpx.Client, pagina: str) -> list[str]:
@@ -251,50 +296,25 @@ def raccogli_volantini(url_db: str) -> list[str]:
     with httpx.Client(headers={"user-agent": AGENTE}, follow_redirects=True) as cliente:
         for fonte in da_guardare:
             try:
-                pagine = pagine_dei_volantini(cliente, fonte.radice)
+                indirizzi, viste = cerca_il_pdf(cliente, fonte.radice)
             except httpx.HTTPError as errore:
                 righe.append(f"{fonte.insegna}: {fonte.radice} non raggiunta ({errore})")
                 continue
 
-            if not pagine:
-                righe.append(f"{fonte.insegna}: dalla home nessun link ai volantini")
-                continue
-
-            righe.append(f"{fonte.insegna}: provo {len(pagine[:4])} pagine, la prima e' {pagine[0]}")
-
-            indirizzi: list[str] = []
-
-            for pagina in pagine[:4]:
-                try:
-                    trovati = pdf_nella_pagina(cliente, pagina)
-                except httpx.HTTPError as errore:
-                    righe.append(f"{fonte.insegna}: {pagina} non aperta ({errore})")
-                    continue
-
-                for indirizzo in trovati:
-                    if indirizzo not in indirizzi:
-                        indirizzi.append(indirizzo)
-
-                # Tre PDF bastano per capire se c'e' quello giusto.
-                if len(indirizzi) >= 3:
-                    break
+            righe.append(f"{fonte.insegna}: aperte {len(viste)} pagine, trovati {len(indirizzi)} PDF")
 
             if not indirizzi:
-                righe.append(
-                    f"{fonte.insegna}: nessun PDF nelle pagine dei volantini."
-                    " Probabilmente il volantino si sfoglia e basta."
-                )
+                righe.append(f"{fonte.insegna}: nessun PDF, il volantino si sfoglia e basta.")
 
-                # Se non c'e' un PDF, il volantino sfogliabile prende i dati da
-                # qualche parte. Qui si stampa da dove: e' l'unico modo che ho
-                # per capire come arrivarci, visto che quei siti da dove
+                # Se il PDF non c'e', il volantino sfogliabile i dati li prende
+                # da qualche parte. Qui si stampa da dove: e' l'unico modo che
+                # ho per capire come arrivarci, visto che quei siti da dove
                 # lavoro io non si aprono.
-                try:
-                    righe.extend(
-                        f"{fonte.insegna}: indizio {u}" for u in indizi(cliente, pagine[0])
-                    )
-                except httpx.HTTPError:
-                    pass
+                for pagina in viste[:2]:
+                    try:
+                        righe.extend(f"{fonte.insegna}: indizio {u}" for u in indizi(cliente, pagina))
+                    except httpx.HTTPError:
+                        pass
 
                 continue
 
