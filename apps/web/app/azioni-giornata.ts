@@ -7,7 +7,6 @@ import { alimenti, db, giornataPasti, giornate } from '@prontooo/db'
 
 import {
   generaGiornata,
-  ideaRicetta,
   kcalDi,
   leggiGiornata,
   oggi,
@@ -301,21 +300,4 @@ async function applicaRicalibrazione(utenteId: number): Promise<void> {
       .set({ previsti: pasto.componenti })
       .where(eq(giornataPasti.id, pasto.id))
   }
-}
-
-export async function aggiornaIdea(dati: FormData) {
-  const id = Number(dati.get('pasto'))
-
-  if (!Number.isInteger(id)) return
-
-  const [pasto] = await db().select().from(giornataPasti).where(eq(giornataPasti.id, id)).limit(1)
-
-  if (!pasto) return
-
-  await db()
-    .update(giornataPasti)
-    .set({ ricettaId: await ideaRicetta(pasto.fascia, pasto.previsti) })
-    .where(eq(giornataPasti.id, id))
-
-  revalidatePath('/')
 }

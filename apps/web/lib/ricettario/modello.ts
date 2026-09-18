@@ -102,7 +102,11 @@ function accetta(posto: Posto, componente: ComponenteAbbinabile): 'pieno' | 'rip
   // Il gruppo conta piu' del ruolo: il ruolo lo abbiamo dedotto noi
   // dall'alimento, il gruppo sta scritto nel vocabolario.
   if (gruppoGiusto) return 'pieno'
-  if (ruoloGiusto) return 'ripiego'
+
+  // Il ripiego vale solo nei posti larghi. Un posto che nomina un gruppo solo
+  // - `gruppi: ['pesce']` - lo nomina apposta: accettarci il manzo perche'
+  // copre lo stesso ruolo darebbe "pesce al forno" fatto con la bistecca.
+  if (ruoloGiusto && posto.gruppi.length > 1) return 'ripiego'
 
   return null
 }
@@ -156,6 +160,12 @@ export function abbina(
   // Quello che la ricetta non usa e si mangia comunque, accanto al piatto.
   // Le voci "a piacere" hanno quantita' zero e non sono avanzi di niente.
   const avanzati = liberi.filter((c) => c.quantita > 0)
+
+  // Manca un pezzo **e** intanto ti avanza roba in mano: non e' una ricetta a
+  // cui manca poco, e' la ricetta sbagliata per questo pasto. Senza questa
+  // riga "pane e spalmabile" si proponeva a colazione usando l'olio come
+  // spalmabile, col pane da comprare e la fettina lasciata sul tavolo.
+  if (mancanti.length > 0 && avanzati.length > 0) return null
 
   // Un solo avanzo non declassa la ricetta: la frutta o il pane stanno
   // accanto al piatto senza entrarci, ed e' normale. Due sono un pasto che

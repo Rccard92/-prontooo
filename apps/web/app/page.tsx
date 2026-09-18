@@ -89,11 +89,6 @@ function SchedaPasto({
 
   return (
     <article className={`scheda overflow-hidden ${registrato ? 'opacity-70' : ''}`}>
-      {pasto.immagineUrl && !registrato ? (
-        // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
-        <img src={pasto.immagineUrl} alt="" loading="lazy" className="h-40 w-full object-cover" />
-      ) : null}
-
       <div className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className={`pillola ${stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'}`}>

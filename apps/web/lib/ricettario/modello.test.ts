@@ -105,14 +105,36 @@ describe('abbina', () => {
   })
 
   it('non mette un alimento escluso in un posto che lo rifiuta', () => {
-    const conManzo = [
+    const duecarni = [
       comp('Manzo', 'proteina', 'carne', 150, ['carne_rossa']),
-      comp('Insalata', 'verdura', 'verdura', 150),
+      comp('Petto di pollo', 'proteina', 'carne', 150),
+      comp('Zucchine', 'verdura', 'verdura', 200),
     ]
-    const esito = abbina(PER_ID.get('pollo-padella-limone')!, conManzo)
+    const esito = abbina(PER_ID.get('pollo-padella-limone')!, duecarni)
 
-    assert.equal(esito?.livello, 'adattabile')
-    assert.equal(esito?.assegnati.has('pollo'), false)
+    // Il posto rifiuta la carne rossa: prende il pollo, e il manzo resta fuori.
+    assert.equal(esito?.assegnati.get('pollo')?.nome, 'Petto di pollo')
+    assert.deepEqual(esito?.avanzati.map((c) => c.nome), ['Manzo'])
+  })
+
+  it('non mette la carne in un posto che chiede il pesce', () => {
+    const esito = abbina(PER_ID.get('pesce-forno')!, [
+      comp('Fettina di manzo', 'proteina', 'carne', 150, ['carne_rossa']),
+      comp('Patate', 'base', 'tubero', 200),
+    ])
+
+    assert.equal(esito, null)
+  })
+
+  it('scarta la ricetta quando manca un posto e intanto avanza roba', () => {
+    // "Ti manca il pesce" mentre hai in mano una bistecca non e' un
+    // adattamento: e' un'altra ricetta che dovresti cercare.
+    const bistecca = [
+      comp('Fettina di manzo', 'proteina', 'carne', 150, ['carne_rossa']),
+      comp('Patate', 'base', 'tubero', 200),
+    ]
+
+    assert.equal(abbina(PER_ID.get('pesce-forno')!, bistecca), null)
   })
 
   it('non assegna due posti allo stesso componente', () => {
@@ -195,6 +217,37 @@ describe('proposte', () => {
 
     assert.ok(elenco.length > 0)
     assert.equal(elenco[0]!.livello, 'calza')
+  })
+
+  it('non propone la fettina coi broccoli a colazione ne a merenda', () => {
+    // E' il caso che ha fatto nascere la regola: una carne e una verdura sono
+    // un pranzo o una cena, e in nessun altro posto.
+    const fettinaEBroccoli = [
+      comp('Fettina di vitello', 'proteina', 'carne', 150, ['carne_rossa']),
+      comp('Broccoli', 'verdura', 'verdura', 200),
+      comp('Olio extravergine', 'grasso', 'grasso', 10),
+    ]
+
+    for (const fascia of ['colazione', 'spuntino', 'merenda']) {
+      assert.deepEqual(proposte(fascia, fettinaEBroccoli), [], `${fascia}: qualcosa e passato`)
+    }
+
+    assert.ok(proposte('cena', fettinaEBroccoli).length > 0)
+  })
+
+  it('nessuna ricetta del libro sta insieme a colazione e a cena', () => {
+    // Una ricetta in tutte le fasce vorrebbe dire che le fasce non filtrano
+    // niente. Il pane e' l'unica eccezione onesta: pane e spalmabile vale
+    // anche a merenda, ma non arriva a cena.
+    for (const ricetta of LIBRO) {
+      const daPasto = ricetta.fasce.includes('pranzo') || ricetta.fasce.includes('cena')
+      const daColazione = ricetta.fasce.includes('colazione')
+
+      assert.ok(
+        !(daPasto && daColazione) || ricetta.posti.some((p) => p.gruppi.includes('uova')),
+        `${ricetta.id} sta sia a colazione sia a tavola`,
+      )
+    }
   })
 
   it('non propone niente per una fascia che non esiste', () => {

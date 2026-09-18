@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 
 import {
   type Alimento,
@@ -6,14 +6,12 @@ import {
   db,
   giornataPasti,
   giornate,
-  ricettaIngredienti,
-  ricette,
 } from '@prontooo/db'
 
 import { vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
 import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '../lista/modello'
-import { FASCE, eFascia } from '../ricette/fasce'
+import { FASCE } from '../ricette/fasce'
 
 import { MOLTIPLICATORI, type Componente, type TipoGiorno, nutrientiConsumati } from './modello'
 import { ricalibra, type PastoDaRicalibrare } from './ricalibra'
@@ -169,13 +167,11 @@ export async function generaGiornata(
         giornataId: giornata.id,
         fascia: pasto.fascia,
         previsti: pasto.componenti,
-        ricettaId: await ideaRicetta(pasto.fascia, pasto.componenti),
       })
       .onConflictDoUpdate({
         target: [giornataPasti.giornataId, giornataPasti.fascia],
         set: {
           previsti: pasto.componenti,
-          ricettaId: await ideaRicetta(pasto.fascia, pasto.componenti),
           // I componenti sono cambiati: la ricetta scelta prima non vale piu'.
           ricettaLibro: null,
         },
@@ -183,44 +179,6 @@ export async function generaGiornata(
   }
 
   return giornata.id
-}
-
-/**
- * Cerca in catalogo una ricetta che usi il componente principale.
- *
- * E' un'idea, non una prescrizione: la corrispondenza e' sul testo grezzo
- * della riga ingrediente, e la UI lo dice.
- */
-export async function ideaRicetta(fascia: string, componenti: Componente[]): Promise<number | null> {
-  if (!eFascia(fascia)) return null
-
-  const principale =
-    componenti.find((c) => c.ruolo === 'proteina') ?? componenti.find((c) => c.ruolo === 'base')
-
-  if (!principale) return null
-
-  const parola = principale.nome
-    .toLowerCase()
-    .split(/[\s,()]+/)
-    .filter((p) => p.length > 3)
-    .sort((a, b) => b.length - a.length)[0]
-
-  if (!parola) return null
-
-  const righe = await db()
-    .selectDistinct({ id: ricette.id })
-    .from(ricette)
-    .innerJoin(ricettaIngredienti, eq(ricettaIngredienti.ricettaId, ricette.id))
-    .where(
-      and(
-        sql`${ricette.fasce} @> ${JSON.stringify([fascia])}::jsonb`,
-        sql`lower(${ricettaIngredienti.rigaGrezza}) like ${'%' + parola + '%'}`,
-      ),
-    )
-    .orderBy(sql`random()`)
-    .limit(1)
-
-  return righe[0]?.id ?? null
 }
 
 /** La giornata con dentro i pasti, pronta da mostrare. */
@@ -242,13 +200,8 @@ export async function leggiGiornata(utenteId: number, data = oggi()) {
       previsti: giornataPasti.previsti,
       consumati: giornataPasti.consumati,
       ricettaLibro: giornataPasti.ricettaLibro,
-      ricettaId: ricette.id,
-      titolo: ricette.titolo,
-      immagineUrl: ricette.immagineUrl,
-      minutiTotali: ricette.minutiTotali,
     })
     .from(giornataPasti)
-    .leftJoin(ricette, eq(ricette.id, giornataPasti.ricettaId))
     .where(eq(giornataPasti.giornataId, giornata.id))
     .orderBy(asc(giornataPasti.id))
 
