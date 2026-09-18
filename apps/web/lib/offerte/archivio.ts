@@ -26,9 +26,35 @@ export type DatiVolantino = {
  * segnate "da verificare" - si correggono dopo, guardando l'elenco.
  */
 export async function importaVolantino(dati: ArrayBuffer, meta: DatiVolantino) {
-  const righe = leggiVolantino(await testoDelPdf(dati))
+  const testo = await testoDelPdf(dati)
+  const righe = leggiVolantino(testo)
 
-  if (righe.length === 0) return { volantinoId: null, quante: 0, certe: 0 }
+  if (righe.length === 0) {
+    // Il volantino si registra lo stesso, con zero offerte. Due motivi: si
+    // vede che l'abbiamo preso e non e' saltato, e il worker non torna a
+    // riscaricarlo ogni giro - un PDF da decine di MB ogni dieci minuti.
+    const [vuoto] = await db()
+      .insert(volantini)
+      .values({
+        insegna: meta.insegna,
+        puntoVendita: meta.puntoVendita,
+        validoDal: meta.validoDal,
+        validoAl: meta.validoAl,
+        nomeFile: meta.nomeFile,
+      })
+      .returning({ id: volantini.id })
+
+    // Serve a capire **perche'**: un volantino tutto immagini da un testo
+    // vuoto, uno impaginato male da' testo a pezzi. Sono due problemi diversi
+    // e dai log si distinguono.
+    console.warn(
+      `volantino ${meta.insegna}: nessuna offerta letta.` +
+        ` Testo estratto: ${testo.length} caratteri.` +
+        ` Assaggio: ${JSON.stringify(testo.replace(/\s+/g, ' ').slice(0, 500))}`,
+    )
+
+    return { volantinoId: vuoto?.id ?? null, quante: 0, certe: 0 }
+  }
 
   const vocabolario = await db()
     .select({ id: alimenti.id, nome: alimenti.nome })
