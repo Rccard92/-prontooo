@@ -1,6 +1,7 @@
 import { config } from 'dotenv'
 import { sql } from 'drizzle-orm'
 
+import { NUTRIENTI } from './alimenti/nutrienti'
 import { VOCABOLARIO } from './alimenti/vocabolario'
 import { db } from './client'
 import { alimenti, allergeni, type NuovoAllergene } from './schema'
@@ -50,15 +51,29 @@ async function verificaPgvector() {
  * basta a sistemare il database.
  */
 async function seedAlimenti() {
-  const righe = VOCABOLARIO.map((v) => ({
-    nome: v.nome,
-    gruppo: v.gruppo,
-    ruoli: v.ruoli as string[],
-    fasce: v.fasce as string[],
-    quantita: v.quantita,
-    unita: v.unita,
-    etichette: (v.etichette ?? []) as string[],
-  }))
+  const senzaNutrienti: string[] = []
+
+  const righe = VOCABOLARIO.map((v) => {
+    const n = NUTRIENTI.get(v.nome)
+
+    if (!n) senzaNutrienti.push(v.nome)
+
+    return {
+      nome: v.nome,
+      gruppo: v.gruppo,
+      ruoli: v.ruoli as string[],
+      fasce: v.fasce as string[],
+      quantita: v.quantita,
+      unita: v.unita,
+      etichette: (v.etichette ?? []) as string[],
+      kcal: n ? String(n.kcal) : null,
+      proteine: n ? String(n.proteine) : null,
+      carboidrati: n ? String(n.carboidrati) : null,
+      grassi: n ? String(n.grassi) : null,
+      fibre: n ? String(n.fibre) : null,
+      reparto: n?.reparto ?? null,
+    }
+  })
 
   await db()
     .insert(alimenti)
@@ -72,10 +87,20 @@ async function seedAlimenti() {
         quantita: sql`excluded.quantita`,
         unita: sql`excluded.unita`,
         etichette: sql`excluded.etichette`,
+        kcal: sql`excluded.kcal`,
+        proteine: sql`excluded.proteine`,
+        carboidrati: sql`excluded.carboidrati`,
+        grassi: sql`excluded.grassi`,
+        fibre: sql`excluded.fibre`,
+        reparto: sql`excluded.reparto`,
       },
     })
 
-  console.log(`alimenti: ${righe.length} voci allineate`)
+  console.log(
+    senzaNutrienti.length === 0
+      ? `alimenti: ${righe.length} voci allineate, tutte con i valori nutrizionali`
+      : `alimenti: ${righe.length} voci allineate, ${senzaNutrienti.length} SENZA valori nutrizionali: ${senzaNutrienti.join(', ')}`,
+  )
 }
 
 async function seed() {

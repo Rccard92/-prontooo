@@ -1,0 +1,276 @@
+import type { Reparto } from './tipi'
+
+/**
+ * Valori nutrizionali per 100g di prodotto crudo, e il reparto dove si compra.
+ *
+ * Fonte: tabelle di composizione degli alimenti del CREA. Sono valori
+ * **indicativi**: una mela non fa esattamente 52 kcal e due petti di pollo non
+ * sono uguali. Servono a stimare una giornata, non a certificarla, e l'app lo
+ * dice dove conta.
+ *
+ * Ordine dei numeri: kcal, proteine, carboidrati, grassi, fibre.
+ */
+export type Nutrienti = {
+  kcal: number
+  proteine: number
+  carboidrati: number
+  grassi: number
+  fibre: number
+}
+
+type Riga = [nome: string, kcal: number, p: number, c: number, g: number, f: number, reparto: Reparto]
+
+const RIGHE: Riga[] = [
+  // Basi
+  ['Pasta di semola', 353, 11, 71, 1.4, 2.7, 'dispensa'],
+  ['Pasta di semola integrale', 324, 12, 63, 2.5, 6.4, 'dispensa'],
+  ['Pasta di lenticchie', 340, 25, 49, 2, 8, 'dispensa'],
+  ['Pasta di ceci', 337, 21, 52, 4, 10, 'dispensa'],
+  ['Riso basmati', 350, 7.5, 78, 0.6, 1, 'dispensa'],
+  ['Riso integrale', 337, 7.5, 71, 1.9, 3.5, 'dispensa'],
+  ['Riso Carnaroli', 358, 7, 80, 0.6, 1, 'dispensa'],
+  ['Orzo perlato', 319, 10.4, 71, 1.4, 9.2, 'dispensa'],
+  ['Farro perlato', 335, 15, 67, 2.5, 6.8, 'dispensa'],
+  ['Cous cous', 358, 12, 72, 1.9, 5, 'dispensa'],
+  ['Quinoa', 368, 14, 64, 6, 7, 'dispensa'],
+  ['Polenta', 362, 8.7, 78, 2.7, 3, 'dispensa'],
+  ['Gnocchi di patate', 157, 3.6, 32, 1, 1.8, 'frigo'],
+  ['Patate', 78, 2.1, 17.9, 0.1, 1.6, 'ortofrutta'],
+  ['Patate dolci', 86, 1.6, 20, 0.1, 3, 'ortofrutta'],
+  ['Pane integrale', 224, 7.5, 44, 1.3, 6.5, 'panetteria'],
+  ['Pane di segale', 219, 8.3, 45, 1.2, 4.6, 'panetteria'],
+  ['Pane senza glutine', 245, 3.5, 47, 4.5, 3.5, 'dispensa'],
+  ['Piadina integrale', 300, 8, 48, 8, 4.5, 'panetteria'],
+
+  // Carne
+  ['Petto di pollo', 100, 23.3, 0, 0.8, 0, 'macelleria'],
+  ['Fusi di pollo', 122, 19, 0, 5, 0, 'macelleria'],
+  ['Petto di tacchino', 107, 24, 0, 1.2, 0, 'macelleria'],
+  ['Fettina di vitello', 107, 20.7, 0, 2.8, 0, 'macelleria'],
+  ['Fettina di manzo', 122, 21, 0, 4.2, 0, 'macelleria'],
+  ['Macinato di manzo', 160, 20, 0, 9, 0, 'macelleria'],
+  ['Fettina di cavallo', 143, 21, 0, 6.8, 0, 'macelleria'],
+  ['Lonza di maiale', 146, 21, 0, 7, 0, 'macelleria'],
+  ['Prosciutto cotto', 215, 19.8, 0.8, 14.7, 0, 'frigo'],
+  ['Prosciutto crudo', 224, 26, 0, 13, 0, 'frigo'],
+  ['Bresaola', 151, 32, 0.5, 2, 0, 'frigo'],
+
+  // Pesce
+  ['Salmone fresco', 185, 18.4, 0, 12, 0, 'pescheria'],
+  ['Spigola', 82, 16.5, 0.6, 1.5, 0, 'pescheria'],
+  ['Orata', 121, 20, 0, 4.6, 0, 'pescheria'],
+  ['Merluzzo', 71, 17, 0, 0.3, 0, 'pescheria'],
+  ['Pesce azzurro', 129, 20, 0, 5.5, 0, 'pescheria'],
+  ['Tonno al naturale', 103, 25, 0, 0.3, 0, 'dispensa'],
+  ['Gamberi', 71, 13.6, 2.4, 0.6, 0, 'pescheria'],
+  ['Calamari', 68, 12.6, 1.4, 1.7, 0, 'pescheria'],
+
+  // Uova, latticini, legumi
+  ['Uova', 128, 12.4, 0, 8.7, 0, 'frigo'],
+  ['Albume', 43, 10.7, 0, 0, 0, 'frigo'],
+  ['Mozzarella', 253, 18.7, 0.7, 19.5, 0, 'frigo'],
+  ['Mozzarella senza lattosio', 253, 18.7, 0.7, 19.5, 0, 'frigo'],
+  ['Ricotta vaccina', 146, 8.8, 3.5, 10.9, 0, 'frigo'],
+  ['Parmigiano Reggiano', 387, 33.5, 0, 28.4, 0, 'frigo'],
+  ['Feta', 250, 14, 1.5, 21, 0, 'frigo'],
+  ['Ceci lessati', 120, 7, 18.9, 2.4, 6, 'dispensa'],
+  ['Lenticchie lessate', 92, 6.9, 16.3, 0.4, 8, 'dispensa'],
+  ['Fagioli cannellini', 91, 6.4, 15.8, 0.5, 6.5, 'dispensa'],
+  ['Fave', 88, 7.4, 12, 0.6, 5, 'ortofrutta'],
+  ['Tofu', 145, 15.7, 1.4, 8, 1.2, 'frigo'],
+
+  // Verdure
+  ['Zucchine', 11, 1.3, 1.4, 0.1, 1.2, 'ortofrutta'],
+  ['Melanzane', 18, 1.1, 2.6, 0.1, 2.6, 'ortofrutta'],
+  ['Peperoni', 22, 0.9, 4.2, 0.3, 1.9, 'ortofrutta'],
+  ['Pomodori', 19, 1, 3.5, 0.2, 1, 'ortofrutta'],
+  ['Pomodorini', 25, 1.2, 4, 0.3, 1.2, 'ortofrutta'],
+  ['Fagiolini', 18, 2.1, 2.4, 0.1, 2.9, 'ortofrutta'],
+  ['Spinaci', 31, 3.4, 2.9, 0.7, 1.9, 'ortofrutta'],
+  ['Cicoria', 12, 1.4, 0.7, 0.2, 3.6, 'ortofrutta'],
+  ['Broccoli', 27, 3, 2.3, 0.4, 3.1, 'ortofrutta'],
+  ['Cavolfiore', 25, 3.2, 2.7, 0.2, 2.4, 'ortofrutta'],
+  ['Zucca', 18, 1.1, 3.5, 0.1, 0.5, 'ortofrutta'],
+  ['Finocchi', 9, 1.2, 1, 0.2, 2.2, 'ortofrutta'],
+  ['Carciofi', 22, 2.7, 2.5, 0.2, 5.5, 'ortofrutta'],
+  ['Asparagi', 29, 3.6, 3.3, 0.2, 2.1, 'ortofrutta'],
+  ['Carote', 35, 1.1, 7.6, 0.2, 3.1, 'ortofrutta'],
+  ['Insalata mista', 19, 1.8, 2.2, 0.4, 1.5, 'ortofrutta'],
+  ['Rucola', 28, 2.6, 3.7, 0.7, 1.6, 'ortofrutta'],
+  ['Valeriana', 21, 2, 3.6, 0.4, 1.5, 'ortofrutta'],
+  ['Verdure grigliate miste', 30, 1.5, 3.5, 1, 2.2, 'ortofrutta'],
+  ['Piselli', 76, 5.5, 12.4, 0.6, 5.2, 'surgelati'],
+  ['Cime di rapa', 22, 2.9, 2, 0.3, 2.9, 'ortofrutta'],
+
+  // Grassi
+  ['Olio extravergine di oliva', 899, 0, 0, 99.9, 0, 'dispensa'],
+  ['Olive nere', 235, 1.6, 0.8, 25, 3.5, 'dispensa'],
+  ['Avocado', 231, 4.4, 1.8, 23, 3.3, 'ortofrutta'],
+
+  // Colazione: latticini e bevande
+  ['Yogurt greco 0%', 57, 10, 4, 0.4, 0, 'frigo'],
+  ['Yogurt greco 5%', 97, 9, 4, 5, 0, 'frigo'],
+  ['Yogurt bianco senza lattosio', 66, 3.8, 4.3, 3.5, 0, 'frigo'],
+  ['Skyr', 63, 11, 4, 0.2, 0, 'frigo'],
+  ['Latte intero', 64, 3.3, 4.9, 3.6, 0, 'frigo'],
+  ['Latte senza lattosio', 64, 3.3, 4.9, 3.6, 0, 'frigo'],
+  ['Bevanda di avena', 46, 0.8, 7.8, 1.2, 0.8, 'dispensa'],
+  ['Bevanda di mandorla', 24, 0.5, 3, 1.1, 0.4, 'dispensa'],
+  ['Bevanda di soia', 39, 3.3, 1.2, 1.8, 0.5, 'dispensa'],
+
+  // Colazione: cereali
+  ["Fiocchi d'avena", 373, 13, 61, 7, 10, 'dispensa'],
+  ['Corn flakes', 361, 7.5, 84, 0.8, 3, 'dispensa'],
+  ['Muesli', 384, 9.9, 63, 10, 7, 'dispensa'],
+  ['Farro soffiato', 375, 12, 74, 2.5, 6, 'dispensa'],
+  ['Fette biscottate integrali', 375, 11, 68, 6, 7, 'dispensa'],
+  ['Pane integrale tostato', 280, 9.5, 55, 1.7, 8, 'panetteria'],
+  ['Biscotti secchi', 416, 7, 79, 8, 2.5, 'dispensa'],
+
+  // Colazione: spalmabili e semi
+  ['Marmellata senza zuccheri aggiunti', 140, 0.5, 32, 0.2, 1.5, 'dispensa'],
+  ['Miele', 304, 0.3, 82, 0, 0, 'dispensa'],
+  ['Crema di nocciole 100%', 628, 15, 8, 61, 7, 'dispensa'],
+  ['Burro di arachidi', 588, 25, 20, 50, 6, 'dispensa'],
+  ['Ricotta spalmabile', 146, 8.8, 3.5, 10.9, 0, 'frigo'],
+  ['Semi di chia', 486, 17, 42, 31, 34, 'dispensa'],
+  ['Semi di lino', 534, 18, 29, 42, 27, 'dispensa'],
+  ['Mandorle', 603, 22, 4.6, 55, 12.7, 'dispensa'],
+  ['Noci', 654, 15, 14, 65, 6.7, 'dispensa'],
+  ['Gocce di cioccolato fondente', 510, 5, 60, 30, 7, 'dispensa'],
+
+  // Frutta
+  ['Mela', 52, 0.3, 14, 0.2, 2.4, 'ortofrutta'],
+  ['Pera', 57, 0.4, 15, 0.1, 3.1, 'ortofrutta'],
+  ['Banana', 89, 1.1, 23, 0.3, 2.6, 'ortofrutta'],
+  ['Kiwi', 61, 1.1, 15, 0.5, 3, 'ortofrutta'],
+  ['Arance', 47, 0.9, 12, 0.1, 2.4, 'ortofrutta'],
+  ['Fragole', 32, 0.7, 7.7, 0.3, 2, 'ortofrutta'],
+  ['Mirtilli', 57, 0.7, 14, 0.3, 2.4, 'ortofrutta'],
+  ['Pesche', 39, 0.9, 9.5, 0.3, 1.5, 'ortofrutta'],
+  ['Albicocche', 48, 1.4, 11, 0.4, 2, 'ortofrutta'],
+  ['Uva', 69, 0.7, 18, 0.2, 0.9, 'ortofrutta'],
+  ['Anguria', 30, 0.6, 7.6, 0.2, 0.4, 'ortofrutta'],
+  ['Melone', 34, 0.8, 8.2, 0.2, 0.9, 'ortofrutta'],
+  ['Ananas', 50, 0.5, 13, 0.1, 1.4, 'ortofrutta'],
+
+  // Spuntini
+  ['Gallette di mais', 387, 8, 81, 3, 2.5, 'dispensa'],
+  ['Gallette di grano saraceno', 380, 9, 78, 3.5, 4, 'dispensa'],
+  ['Crackers integrali', 430, 10, 66, 13, 6, 'dispensa'],
+  ['Grissini integrali', 420, 12, 66, 11, 6.5, 'dispensa'],
+  ['Cioccolato fondente 70%', 598, 7.8, 46, 43, 11, 'dispensa'],
+  ['Barretta proteica', 350, 32, 30, 11, 5, 'dispensa'],
+  ['Budino proteico', 70, 10, 5, 1, 0.5, 'frigo'],
+  ['Cubetti di Parmigiano', 387, 33.5, 0, 28.4, 0, 'frigo'],
+  ['Frutta secca mista', 620, 17, 12, 55, 8, 'dispensa'],
+  ['Popcorn non salati', 387, 12, 78, 4.5, 15, 'dispensa'],
+  ['Bresaola a fette', 151, 32, 0.5, 2, 0, 'frigo'],
+  // Aggiunti dopo il confronto con le diete vere
+  ['Cous cous integrale', 340, 13, 65, 2, 8, 'dispensa'],
+  ['Passata di pomodoro', 32, 1.6, 5.5, 0.3, 1.5, 'dispensa'],
+  ['Mais in scatola', 93, 3.1, 18.6, 1.2, 2.5, 'dispensa'],
+  ['Crostini integrali', 400, 12, 66, 9, 7, 'dispensa'],
+  ['Hummus di ceci', 177, 8, 14, 10, 6, 'frigo'],
+  ['Edamame', 122, 11, 8.9, 5.2, 5.2, 'surgelati'],
+  ['Vellutata di legumi', 60, 3.5, 8, 1.4, 2.5, 'dispensa'],
+  ['Straccetti di pollo', 100, 23.3, 0, 0.8, 0, 'macelleria'],
+  ['Straccetti di tacchino', 107, 24, 0, 1.2, 0, 'macelleria'],
+  ['Coscia di pollo senza pelle', 122, 19, 0, 5, 0, 'macelleria'],
+  ['Hamburger di manzo', 160, 20, 0, 9, 0, 'macelleria'],
+  ['Lacerto di vitello', 107, 20.7, 0, 2.8, 0, 'macelleria'],
+  ['Nasello', 71, 17, 0, 0.3, 0, 'pescheria'],
+  ['Lampuga', 85, 18, 0, 1.2, 0, 'pescheria'],
+  ['Polpo', 57, 10.6, 1.4, 1, 0, 'pescheria'],
+  ['Scamorza affumicata', 334, 25, 1, 25, 0, 'frigo'],
+  ['Scaglie di Parmigiano', 387, 33.5, 0, 28.4, 0, 'frigo'],
+  ['Scarola', 19, 1.8, 2.2, 0.3, 1.6, 'ortofrutta'],
+  ['Lattuga', 19, 1.8, 2.2, 0.4, 1.5, 'ortofrutta'],
+  ['Verza', 27, 2.1, 4, 0.3, 3.1, 'ortofrutta'],
+  ['Bietola', 17, 1.3, 2.8, 0.1, 1.2, 'ortofrutta'],
+  ['Crescione', 18, 2.5, 1.3, 0.3, 1.5, 'ortofrutta'],
+  ['Cipolla', 26, 1, 5.7, 0.1, 1, 'ortofrutta'],
+  ['Limone', 11, 0.6, 2.3, 0, 1.9, 'ortofrutta'],
+  ['Aceto balsamico', 88, 0.5, 17, 0, 0, 'dispensa'],
+  ['Tè verde', 1, 0, 0, 0, 0, 'dispensa'],
+  ["Spremuta d'arancia", 33, 0.5, 8, 0, 0, 'ortofrutta'],
+  ['Pancarrè integrale', 253, 9, 45, 4, 6, 'panetteria'],
+  ['Cornetto', 400, 7.5, 47, 20, 2, 'panetteria'],
+  ['Brioche col tuppo', 330, 8, 50, 10, 2, 'panetteria'],
+  ['Granita siciliana', 120, 0.5, 29, 0.2, 0.3, 'dispensa'],
+  ['Gelato', 207, 3.5, 24, 11, 0.5, 'surgelati'],
+  ['Macedonia', 48, 0.6, 11, 0.2, 1.8, 'ortofrutta'],
+  ['Cocomero', 30, 0.6, 7.6, 0.2, 0.4, 'ortofrutta'],
+  ['Mousse proteica', 75, 10, 4, 2, 0.5, 'frigo'],
+  ['Yogurt da bere probiotico', 71, 2.8, 12, 1.5, 0, 'frigo'],
+  ['Cereali da colazione', 380, 8, 80, 3, 5, 'dispensa'],
+  ['Pizza margherita', 271, 11, 33, 10, 2.3, 'panetteria'],
+  ['Sugo di pomodoro', 60, 1.6, 7, 2.8, 1.5, 'dispensa'],
+  ['Ragù di carne', 145, 11, 5, 9, 1, 'frigo'],
+  ['Cotoletta di pollo', 245, 20, 12, 13, 0.8, 'macelleria'],
+  ['Involtini di pollo', 120, 21, 1, 3.5, 0, 'macelleria'],
+  ['Hamburger di pollo', 110, 21, 1, 2.5, 0, 'macelleria'],
+  ['Filetto di cavallo', 143, 21, 0, 6.8, 0, 'macelleria'],
+  ['Gamberetti', 71, 13.6, 2.4, 0.6, 0, 'pescheria'],
+  ['Sgombro al naturale', 180, 22, 0, 10, 0, 'dispensa'],
+  ['Totani', 68, 12.6, 1.4, 1.7, 0, 'pescheria'],
+  ['Stracciatella vaccina', 275, 8, 3, 25, 0, 'frigo'],
+  ['Cheddar', 402, 25, 1.3, 33, 0, 'frigo'],
+  ['Tortellini di carne', 320, 13, 48, 8, 2.5, 'frigo'],
+  ['Minestrone di verdure', 35, 1.8, 5, 0.9, 2.5, 'surgelati'],
+  ['Cetrioli', 14, 0.7, 1.8, 0.1, 0.8, 'ortofrutta'],
+  ['Indivia', 15, 0.9, 1.6, 0.2, 2.2, 'ortofrutta'],
+  ['Songino', 21, 2, 3.6, 0.4, 1.5, 'ortofrutta'],
+  ['Pesto alla genovese', 460, 6, 6, 45, 2, 'frigo'],
+  ['Guacamole', 160, 2, 6, 14, 5, 'frigo'],
+  ['Pinoli', 595, 32, 4, 50, 4.5, 'dispensa'],
+  ["Farina d'avena", 373, 13, 61, 7, 10, 'dispensa'],
+  ['All-bran', 270, 14, 46, 3.5, 24, 'dispensa'],
+  ["Sciroppo d'acero", 260, 0, 67, 0, 0, 'dispensa'],
+  ['Muffin', 377, 5.5, 50, 17, 1.5, 'panetteria'],
+  ['Plumcake', 390, 6, 52, 17, 1.5, 'panetteria'],
+  ['Torta fatta in casa', 350, 6, 48, 15, 1.5, 'panetteria'],
+  ['Chips proteici', 380, 30, 35, 12, 4, 'dispensa'],
+  ['More', 43, 1.4, 9.6, 0.5, 5.3, 'ortofrutta'],
+]
+
+export const NUTRIENTI = new Map<string, Nutrienti & { reparto: Reparto }>(
+  RIGHE.map(([nome, kcal, proteine, carboidrati, grassi, fibre, reparto]) => [
+    nome,
+    { kcal, proteine, carboidrati, grassi, fibre, reparto },
+  ]),
+)
+
+/** I nutrienti di una quantita' in grammi o millilitri. */
+export function perQuantita(base: Nutrienti, quantita: number): Nutrienti {
+  const fattore = quantita / 100
+
+  return {
+    kcal: base.kcal * fattore,
+    proteine: base.proteine * fattore,
+    carboidrati: base.carboidrati * fattore,
+    grassi: base.grassi * fattore,
+    fibre: base.fibre * fattore,
+  }
+}
+
+export const NUTRIENTI_ZERO: Nutrienti = {
+  kcal: 0,
+  proteine: 0,
+  carboidrati: 0,
+  grassi: 0,
+  fibre: 0,
+}
+
+export function sommaNutrienti(voci: Nutrienti[]): Nutrienti {
+  return voci.reduce(
+    (tot, v) => ({
+      kcal: tot.kcal + v.kcal,
+      proteine: tot.proteine + v.proteine,
+      carboidrati: tot.carboidrati + v.carboidrati,
+      grassi: tot.grassi + v.grassi,
+      fibre: tot.fibre + v.fibre,
+    }),
+    { ...NUTRIENTI_ZERO },
+  )
+}

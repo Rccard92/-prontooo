@@ -269,9 +269,168 @@ export const alimenti = pgTable(
     // lattosio, glutine, pane, maiale, carne_rossa, pesce, uova, frutta_guscio,
     // fritto, proteico, zuccheri. Sono queste che fanno scattare le esclusioni.
     etichette: jsonb('etichette').$type<string[]>().notNull().default([]),
+    // Per 100g di prodotto crudo. Valori CREA, indicativi: servono a stimare
+    // una giornata, non a certificarla.
+    kcal: numeric('kcal', { precision: 7, scale: 2 }),
+    proteine: numeric('proteine', { precision: 7, scale: 2 }),
+    carboidrati: numeric('carboidrati', { precision: 7, scale: 2 }),
+    grassi: numeric('grassi', { precision: 7, scale: 2 }),
+    fibre: numeric('fibre', { precision: 7, scale: 2 }),
+    // Il reparto ordina la lista della spesa sul percorso fisico nel negozio.
+    reparto: text('reparto'),
   },
   (t) => [uniqueIndex('alimenti_nome_idx').on(t.nome)],
 )
 
 export type Alimento = typeof alimenti.$inferSelect
 export type NuovoAlimento = typeof alimenti.$inferInsert
+
+
+/**
+ * Una lista di ingredienti: quello che puoi mangiare, per fascia, con i pesi.
+ *
+ * E' il centro dell'app. Si riempie in due modi che portano alla stessa
+ * struttura: importando il PDF del nutrizionista, oppure scegliendo gli
+ * alimenti a mano. Andare dal nutrizionista non e' un requisito.
+ */
+export const liste = pgTable('liste', {
+  id: serial('id').primaryKey(),
+  nome: text('nome').notNull(),
+  // 'pdf' oppure 'manuale': serve solo a raccontare da dove viene.
+  origine: text('origine').notNull().default('manuale'),
+  dataVisita: date('data_visita'),
+  attiva: boolean('attiva').notNull().default(false),
+  creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type Lista = typeof liste.$inferSelect
+
+/**
+ * Una voce della lista: un'alternativa ammessa, dentro una riga di un pasto.
+ *
+ * Le voci con lo stesso `riga` sono alternative fra loro - e' la struttura che
+ * usa il nutrizionista quando scrive "Riso 80g o Pasta 80g". `testoGrezzo`
+ * tiene quello che c'era scritto nel PDF: quando l'import non riconosce una
+ * voce non la butta, la mostra com'era e la colleghi tu.
+ */
+export const listaVoci = pgTable(
+  'lista_voci',
+  {
+    id: serial('id').primaryKey(),
+    listaId: integer('lista_id')
+      .notNull()
+      .references(() => liste.id, { onDelete: 'cascade' }),
+    // 'standard' quando non si distingue, oppure 'on' / 'off' per allenamento.
+    giorno: text('giorno').notNull().default('standard'),
+    fascia: text('fascia').notNull(),
+    riga: integer('riga').notNull(),
+    ordine: integer('ordine').notNull().default(0),
+    alimentoId: integer('alimento_id').references(() => alimenti.id, { onDelete: 'set null' }),
+    testoGrezzo: text('testo_grezzo'),
+    quantita: numeric('quantita', { precision: 8, scale: 2 }).notNull(),
+    unita: text('unita').notNull().default('g'),
+  },
+  (t) => [index('lista_voci_lista_idx').on(t.listaId, t.giorno, t.fascia)],
+)
+
+export type ListaVoce = typeof listaVoci.$inferSelect
+export type NuovaListaVoce = typeof listaVoci.$inferInsert
+
+/**
+ * Un giorno reale. L'obiettivo si **fotografa** qui invece di ricalcolarlo:
+ * se fra un mese cambi la lista, lo storico deve restare confrontabile con
+ * quello che valeva allora.
+ */
+export const giornate = pgTable(
+  'giornate',
+  {
+    id: serial('id').primaryKey(),
+    data: date('data').notNull(),
+    tipoGiorno: text('tipo_giorno').notNull().default('standard'),
+    listaId: integer('lista_id').references(() => liste.id, { onDelete: 'set null' }),
+    obiettivo: jsonb('obiettivo')
+      .$type<{ kcal: number; proteine: number; carboidrati: number; grassi: number }>()
+      .notNull()
+      .default({ kcal: 0, proteine: 0, carboidrati: 0, grassi: 0 }),
+    creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('giornate_data_idx').on(t.data)],
+)
+
+export type Giornata = typeof giornate.$inferSelect
+
+/** Un pasto di una giornata: cosa era previsto e cosa hai mangiato davvero. */
+export const giornataPasti = pgTable(
+  'giornata_pasti',
+  {
+    id: serial('id').primaryKey(),
+    giornataId: integer('giornata_id')
+      .notNull()
+      .references(() => giornate.id, { onDelete: 'cascade' }),
+    fascia: text('fascia').notNull(),
+    // 'previsto' | 'mangiato' | 'saltato' | 'fuori_piano'
+    stato: text('stato').notNull().default('previsto'),
+    bloccato: boolean('bloccato').notNull().default(false),
+    previsti: jsonb('previsti')
+      .$type<{ ruolo: string; alimentoId: number | null; nome: string; quantita: number; unita: string }[]>()
+      .notNull()
+      .default([]),
+    consumati: jsonb('consumati')
+      .$type<{ alimentoId: number | null; nome: string; quantita: number; unita: string; kcal: number; proteine: number; carboidrati: number; grassi: number }[]>()
+      .notNull()
+      .default([]),
+    ricettaId: integer('ricetta_id').references(() => ricette.id, { onDelete: 'set null' }),
+    registratoIl: timestamp('registrato_il', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('giornata_pasti_posto_idx').on(t.giornataId, t.fascia)],
+)
+
+export type GiornataPasto = typeof giornataPasti.$inferSelect
+
+/** Cosa c'e' gia' in casa: viene sottratto dalla lista della spesa. */
+export const dispensa = pgTable(
+  'dispensa',
+  {
+    id: serial('id').primaryKey(),
+    alimentoId: integer('alimento_id')
+      .notNull()
+      .references(() => alimenti.id, { onDelete: 'cascade' }),
+    quantita: numeric('quantita', { precision: 8, scale: 2 }).notNull(),
+    unita: text('unita').notNull().default('g'),
+    aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('dispensa_alimento_idx').on(t.alimentoId)],
+)
+
+export type VoceDispensa = typeof dispensa.$inferSelect
+
+/**
+ * La lista della spesa e' derivata dal piano e non si salva. Si salva solo
+ * cosa hai gia' messo nel carrello, per settimana.
+ */
+export const spesaSpuntati = pgTable(
+  'spesa_spuntati',
+  {
+    id: serial('id').primaryKey(),
+    settimana: date('settimana').notNull(),
+    alimentoId: integer('alimento_id').references(() => alimenti.id, { onDelete: 'cascade' }),
+    vocelibera: text('voce_libera'),
+    spuntato: boolean('spuntato').notNull().default(true),
+  },
+  (t) => [index('spesa_spuntati_settimana_idx').on(t.settimana)],
+)
+
+export type SpesaSpuntato = typeof spesaSpuntati.$inferSelect
+
+/** Un peso, se decidi di tracciarlo. Serve al resoconto per la visita. */
+export const pesi = pgTable(
+  'pesi',
+  {
+    id: serial('id').primaryKey(),
+    data: date('data').notNull(),
+    kg: numeric('kg', { precision: 5, scale: 2 }).notNull(),
+  },
+  (t) => [uniqueIndex('pesi_data_idx').on(t.data)],
+)
+
+export type Peso = typeof pesi.$inferSelect

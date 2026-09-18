@@ -72,3 +72,25 @@ export type VoceAlimento = {
   unita: 'g' | 'ml'
   etichette?: Etichetta[]
 }
+
+/** Il reparto del supermercato: ordina la lista della spesa sul percorso fisico. */
+export const REPARTI = [
+  'ortofrutta',
+  'macelleria',
+  'pescheria',
+  'frigo',
+  'panetteria',
+  'surgelati',
+  'dispensa',
+] as const
+export type Reparto = (typeof REPARTI)[number]
+
+export const NOME_REPARTO: Record<Reparto, string> = {
+  ortofrutta: 'Ortofrutta',
+  macelleria: 'Carne',
+  pescheria: 'Pesce',
+  frigo: 'Banco frigo',
+  panetteria: 'Panetteria',
+  surgelati: 'Surgelati',
+  dispensa: 'Dispensa',
+}
