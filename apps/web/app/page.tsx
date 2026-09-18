@@ -6,6 +6,7 @@ import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/m
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 import { type AlternativeDiPasto, alternativeDei, chiaveComponente } from '@/lib/nutrizione/alternative'
+import { offertePerAlimenti } from '@/lib/offerte/archivio'
 import { NOME_LIVELLO } from '@/lib/ricettario/modello'
 import { type RicettaDelPasto, ricetteDeiPasti } from '@/lib/ricettario/scelta'
 
@@ -73,10 +74,12 @@ function SchedaPasto({
   pasto,
   ricetta,
   alternative,
+  inOfferta,
 }: {
   pasto: Pasto
   ricetta?: RicettaDelPasto
   alternative: AlternativeDiPasto
+  inOfferta: Set<number>
 }) {
   const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
   const registrato = pasto.stato !== 'previsto'
@@ -133,7 +136,14 @@ function SchedaPasto({
               return (
                 <li key={`${c.ruolo}-${c.nome}`} className="rounded-controllo bg-fondo px-3 py-2">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm text-inchiostro">{c.nome}</span>
+                    <span className="text-sm text-inchiostro">
+                      {c.nome}
+                      {c.alimentoId !== null && inOfferta.has(c.alimentoId) ? (
+                        <span className="pillola ml-2 bg-basilico-tenue text-basilico-scuro">
+                          in offerta
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
                       {c.quantita === 0 ? 'q.b.' : `${c.quantita} ${c.unita}`}
                     </span>
@@ -287,6 +297,7 @@ export default async function Oggi() {
 
   let ricette = new Map<number, RicettaDelPasto>()
   let alternative: AlternativeDiPasto = new Map()
+  let inOfferta = new Set<number>()
 
   try {
     lista = await listaAttiva()
@@ -297,6 +308,16 @@ export default async function Oggi() {
 
       ricette = await ricetteDeiPasti(previsti)
       alternative = await alternativeDei(previsti)
+
+      const ids = previsti.flatMap((p) =>
+        p.previsti.map((c) => c.alimentoId).filter((id): id is number => id !== null),
+      )
+
+      inOfferta = new Set(
+        [...(await offertePerAlimenti(ids)).entries()]
+          .filter(([, offerte]) => offerte.some((o) => o.certa))
+          .map(([id]) => id),
+      )
     }
   } catch (errore) {
     console.error('lettura della giornata fallita:', errore)
@@ -407,6 +428,7 @@ export default async function Oggi() {
                       pasto={pasto}
                       ricetta={ricette.get(pasto.id)}
                       alternative={alternative}
+                      inOfferta={inOfferta}
                     />
                   ))}
                 </div>

@@ -151,8 +151,12 @@ Questa e' la parte che regge l'app, ed e' stata rifatta dopo che il primo piano 
 Adesso il piano si costruisce dagli alimenti, in tre strati:
 
 1. **`alimenti`** — il vocabolario, in `packages/db/src/alimenti/vocabolario.ts` e seminato a ogni deploy. Ogni voce ha gruppo, ruoli che puo' coprire, fasce, porzione tipica ed **etichette** (lattosio, glutine, pane, maiale, carne rossa, pesce, uova, frutta a guscio, fritto, proteico, zuccheri)
-2. **Schemi di pasto** — `apps/web/lib/nutrizione/schemi.ts`. Un pranzo vuole base + proteina + verdura + grasso, una colazione latticino + cereale + semi. Sono la struttura, non il contenuto
-3. **Il compositore** — `apps/web/lib/nutrizione/componi.ts`. Sceglie uno schema della fascia e riempie ogni posto pescando prima fra gli alimenti spuntati nel wizard, poi fra quelli che l'impostazione favorisce, poi fra tutti
+2. **La tua lista** — `liste` e `lista_voci`, riempite dal PDF del nutrizionista o a mano da `/ingredienti`. Ogni riga e' un posto in una fascia, con dentro le alternative equivalenti e i grammi
+3. **Il compositore** — `apps/web/lib/giornata/componi.ts`. Per ogni riga della fascia pesca **una** alternativa e le applica il moltiplicatore del tipo di giorno
+
+La scelta fra alternative non e' un caso cieco: `lib/nutrizione/preferenze.ts` la inclina verso quello che mangi davvero (solo sopra `PASTI_MINIMI` pasti registrati - sotto, "mangi sempre il pollo" vuol dire che e' uscito due volte) e verso quello che e' in offerta questa settimana. I pesi cambiano **la frequenza, mai l'insieme**: le alternative restano quelle della tua lista, e un alimento con peso basso esce lo stesso ogni tanto, altrimenti dopo un mese mangeresti sempre le stesse quattro cose.
+
+Le **sostituzioni equivalenti** (`lib/nutrizione/sostituzioni.ts`) rispondono a "non ho il pollo, ho il merluzzo". Non si cambia a peso - il merluzzo ha meno proteine, e 150 g di merluzzo al posto di 150 g di pollo perdono mezza porzione - si cambia a nutriente, e quale nutriente comanda dipende dal ruolo: proteina a proteine, base a carboidrati, grasso a grassi, verdura a peso perche' li' conta il volume.
 
 ### Il ricettario di casa
 

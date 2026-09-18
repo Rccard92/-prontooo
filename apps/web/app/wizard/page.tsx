@@ -5,8 +5,7 @@ import { db, profilo as tabellaProfilo } from '@prontooo/db'
 
 import { FASCE, NOME_FASCIA } from '@/lib/ricette/fasce'
 import { ESCLUSIONI, IMPOSTAZIONI } from '@/lib/nutrizione/impostazioni'
-import { PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/piano/genera'
-import { GIORNI } from '@/lib/piano/settimana'
+import { GIORNI, PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/profilo/leggi'
 
 import { Testata } from '../componenti/testata'
 

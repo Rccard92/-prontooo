@@ -206,55 +206,6 @@ export const profilo = pgTable('profilo', {
 
 export type Profilo = typeof profilo.$inferSelect
 
-/** Una settimana pianificata, identificata dal lunedi'. */
-export const piani = pgTable(
-  'piani',
-  {
-    id: serial('id').primaryKey(),
-    inizioSettimana: date('inizio_settimana').notNull(),
-    creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex('piani_inizio_settimana_idx').on(t.inizioSettimana)],
-)
-
-export type Piano = typeof piani.$inferSelect
-
-/**
- * Un pasto del piano. `bloccato` e' quello che regge "blocca e rigenera":
- * rigenerando la settimana, i pasti bloccati restano dove sono.
- */
-export const pianiPasti = pgTable(
-  'piani_pasti',
-  {
-    id: serial('id').primaryKey(),
-    pianoId: integer('piano_id')
-      .notNull()
-      .references(() => piani.id, { onDelete: 'cascade' }),
-    giorno: integer('giorno').notNull(),
-    fascia: text('fascia').notNull(),
-    ricettaId: integer('ricetta_id').references(() => ricette.id, { onDelete: 'set null' }),
-    porzioni: integer('porzioni').notNull().default(2),
-    bloccato: boolean('bloccato').notNull().default(false),
-    // Di cosa e' fatto il pasto: ruolo, alimento e grammi. E' questa la
-    // sostanza; la ricetta, quando c'e', e' solo un modo di cucinarli.
-    componenti: jsonb('componenti')
-      .$type<{ ruolo: string; alimentoId: number; nome: string; quantita: number; unita: string }[]>()
-      .notNull()
-      .default([]),
-  },
-  (t) => [uniqueIndex('piani_pasti_posto_idx').on(t.pianoId, t.giorno, t.fascia)],
-)
-
-export type PianoPasto = typeof pianiPasti.$inferSelect
-
-/**
- * Il vocabolario degli alimenti: cosa si compra e si mette in tavola, con la
- * porzione tipica e il ruolo che copre dentro un pasto.
- *
- * E' questo che permette di rispettare davvero "senza lattosio" o "senza
- * glutine": l'etichetta sta sull'alimento, non sulla ricetta. Il contenuto
- * arriva dal seed, non dall'utente.
- */
 export const alimenti = pgTable(
   'alimenti',
   {

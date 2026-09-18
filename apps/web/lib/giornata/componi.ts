@@ -11,6 +11,7 @@ import {
 } from '@prontooo/db'
 
 import { vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
+import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '../lista/modello'
 import { FASCE, eFascia } from '../ricette/fasce'
 
@@ -23,17 +24,6 @@ export function oggi(): string {
   return `${romana.getFullYear()}-${String(romana.getMonth() + 1).padStart(2, '0')}-${String(romana.getDate()).padStart(2, '0')}`
 }
 
-function mescola<T>(elenco: T[]): T[] {
-  const copia = [...elenco]
-
-  for (let i = copia.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copia[i], copia[j]] = [copia[j]!, copia[i]!]
-  }
-
-  return copia
-}
-
 /** Il ruolo di un alimento dentro il pasto: il primo che copre. */
 function ruoloDi(alimento: Alimento | null): string {
   return alimento?.ruoli[0] ?? 'base'
@@ -42,16 +32,18 @@ function ruoloDi(alimento: Alimento | null): string {
 /**
  * Compone i pasti di un giorno dalla lista di ingredienti.
  *
- * Da ogni riga sceglie **una** alternativa a caso: sono equivalenti per
- * costruzione, le ha messe insieme il nutrizionista o tu. Il caso e' quello
- * che rende utile il pulsante "cambia".
+ * Da ogni riga sceglie **una** alternativa: sono equivalenti per costruzione,
+ * le ha messe insieme il nutrizionista o tu. Il caso e' quello che rende utile
+ * il pulsante "cambia", ma non e' un caso cieco - e' inclinato verso quello
+ * che mangi davvero e quello che e' in offerta. La scelta resta dentro la
+ * lista: i pesi cambiano la frequenza, mai l'insieme.
  */
 export async function componiGiorno(tipoGiorno: TipoGiorno) {
   const lista = await listaAttiva()
 
   if (!lista) return null
 
-  const voci = await vociDi(lista.id)
+  const [voci, pesi] = await Promise.all([vociDi(lista.id), pesiDiScelta()])
   const moltiplicatori = MOLTIPLICATORI[tipoGiorno]
 
   const pasti = FASCE.map((fascia) => {
@@ -59,7 +51,7 @@ export async function componiGiorno(tipoGiorno: TipoGiorno) {
 
     const componenti: Componente[] = righe
       .map((riga) => {
-        const scelta = mescola(riga.voci)[0]
+        const scelta = scegliPesato(riga.voci, pesi)
 
         if (!scelta) return null
 
