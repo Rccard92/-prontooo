@@ -141,17 +141,19 @@ export function leggiDieta(testo: string): EsitoLettura {
     // Una riga senza numeri e' un "a piacere": limone, rucola, aceto. Buttarla
     // vorrebbe dire perdere meta' del contorno di una dieta vera.
     if (lette.every((l) => l === null)) {
+      const fasciaCorrente = fascia
+
       if (sembraAlimento(contenuto)) {
-        const numeroRigaLibera = prossimaRiga(fascia)
+        const numeroRigaLibera = prossimaRiga(fasciaCorrente)
 
         alternative.forEach((nome, i) => {
-          const chiave = `${fascia}|${nome.toLowerCase()}`
+          const chiave = `${fasciaCorrente}|${nome.toLowerCase()}`
 
           if (visti.has(chiave)) return
 
           visti.add(chiave)
           voci.push({
-            fascia,
+            fascia: fasciaCorrente,
             riga: numeroRigaLibera,
             ordine: i,
             testo: ripulisciAPiacere(nome),
