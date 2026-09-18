@@ -61,6 +61,14 @@ Produzione: <https://web-production-ad6b7.up.railway.app>
 Il database dentro Postgres si chiama ancora `cassetta`, il nome di lavoro di prima: rinominarlo vuol dire ricreare il volume, e finche' non ci sono dati veri non vale la pena.
 Il Postgres ha anche un proxy TCP pubblico (`DATABASE_PUBLIC_URL`), serve per lavorare in locale e per `db:studio`. Se un giorno non serve piu', va tolto.
 
+## Chi e' chi
+
+Ogni persona ha il suo pannello: la sua lista, le sue giornate, il suo peso. Le tabelle personali portano `utente_id`, quelle condivise no - il vocabolario degli alimenti, il catalogo, i volantini sono fatti uguali per tutti.
+
+La regola che tiene: **`utenteId` e' un parametro obbligatorio** delle funzioni che leggono o scrivono dati personali, non una cosa che ognuna si legge dalla sessione. Dimenticarsene sarebbe una query senza filtro, cioe' i dati di un altro; cosi' invece non compila. E dove un id arriva da un form - un pasto da spuntare, una voce da cambiare - si controlla il proprietario **prima** di toccare: un id non e' una prova di proprieta'.
+
+Il primo che si iscrive entra senza invito. Dal secondo in poi serve `CODICE_INVITO`, perche' l'indirizzo e' pubblico.
+
 ## Regole di lavoro
 
 - Ogni fase della roadmap finisce deployata e funzionante prima che inizi la successiva
@@ -83,7 +91,13 @@ Stanno in `apps/web/lib/offerte/`. Un volantino non e' un documento, e' un manif
 
 `agganciaOfferta` non basta che agganci: deve dire **quanto** ci crede. Il punteggio mette insieme quanto del nome dell'alimento e' dentro il nome dell'offerta (pesa il doppio: il volantino ha sempre marca e formato in piu') e quanto del nome dell'offerta e' spiegato dall'alimento (che e' quello che scarta "Gelato al pistacchio" per "Pistacchi"). Sotto `SOGLIA_CERTA` l'offerta si mostra come **da verificare**, mai come certa, e il consiglio su dove andare si fa solo sulle certe.
 
-Il consiglio delle tappe e' prudente per scelta: due tappe si consigliano solo se rendono almeno tre euro o quattro cose in piu'. La raccolta automatica dei volantini non c'e': gli indirizzi cambiano ogni settimana, e un raccoglitore che non si puo' provare e' peggio di nessun raccoglitore.
+Il consiglio delle tappe e' prudente per scelta: due tappe si consigliano solo se rendono almeno tre euro o quattro cose in piu'.
+
+I volantini li scarica il worker (`apps/worker/volantini.py`), dentro il ciclo che gia' gira: nessun servizio in piu' e nessun cron. Un volantino dura una settimana, quindi prima di muoversi si guarda in database se per quell'insegna ce n'e' gia' uno fresco - nel caso normale il giro costa una query. Il PDF non si legge nel worker: si passa a `POST /api/interno/volantino`, perche' il lettore deve restare uno solo, come per le ricette.
+
+Le pagine dei volantini cambiano spesso e il PDF non sta sempre nello stesso posto, quindi non si cerca un indirizzo preciso: si prende la pagina e si cercano **tutti** i link a un PDF, anche dentro i blob JSON, scartando informative e regolamenti. Quando una fonte smette di funzionare i log lo dicono con chiarezza invece di tacere, ed e' li' che si va a guardare.
+
+Conad non sta nel codice ma in `VOLANTINO_CONAD_URL`, e non e' pigrizia: e' una cooperativa, il volantino cambia per cooperativa regionale e per negozio, e scriverne uno fisso qui dentro vorrebbe dire mostrare prezzi che non sono quelli che paghi.
 
 ## L'app sul telefono
 
@@ -140,7 +154,7 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
 
-Fatto: catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, volantini e offerte con soglia di confidenza, PWA installabile che regge senza rete, promemoria push, storico e peso, import manuale come attrezzo da officina.
+Fatto: login multiutente, scelta degli ingredienti per macro-categorie, volantini scaricati da soli, catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, volantini e offerte con soglia di confidenza, PWA installabile che regge senza rete, promemoria push, storico e peso, import manuale come attrezzo da officina.
 
 Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti delle **ricette**, e quindi allergeni sulle ricette, reparti e lista della spesa.
 

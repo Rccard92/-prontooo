@@ -33,12 +33,23 @@ export default async function Offerte() {
 
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Offerte</h1>
-        <p className="mt-1 max-w-xl text-fumo">
-          Carica il volantino del tuo punto vendita. Quello che riconosco finisce accanto alla
-          spesa, il resto te lo faccio vedere e decidi tu.
+        <p className="mt-1 max-w-2xl text-fumo">
+          I volantini li scarico da solo, una volta a settimana, e quello che riconosco finisce
+          accanto alla spesa. Qui sotto vedi cosa ho trovato e correggi gli agganci che non mi
+          convincono.
         </p>
 
-        <form action={caricaVolantino} className="scheda mt-6 flex flex-col gap-4 p-5">
+        <details className="scheda mt-6 p-5">
+          <summary className="cursor-pointer font-semibold text-inchiostro">
+            Caricarne uno a mano
+          </summary>
+          <p className="mt-2 text-sm text-fumo">
+            Serve quando un&rsquo;insegna non si lascia scaricare, o per il tuo Conad: e&rsquo; una
+            cooperativa, il volantino cambia per negozio, e l&rsquo;unico modo di avere i prezzi
+            veri è puntare al tuo punto vendita.
+          </p>
+
+          <form action={caricaVolantino} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-2 sm:flex-row">
             <label className="flex flex-1 flex-col gap-1">
               <span className="text-sm font-semibold text-inchiostro">Insegna</span>
@@ -98,11 +109,8 @@ export default async function Offerte() {
             Carica il volantino
           </button>
 
-          <p className="text-sm text-fumo">
-            Conad cambia per cooperativa e per negozio: scrivi il punto vendita, o i prezzi che
-            vedi non sono quelli che paghi.
-          </p>
-        </form>
+          </form>
+        </details>
 
         {incerte.length > 0 ? (
           <section className="mt-8">
