@@ -41,11 +41,12 @@ precedente.
 | Repo, Railway, Postgres, deploy automatico | Finito |
 | Catalogo ricette che si riempie da solo dalle sitemap | Funziona |
 | Vocabolario di 189 alimenti con ruoli, fasce, etichette e valori CREA | Funziona |
-| La tua lista di ingredienti: PDF del nutrizionista **o** scelta a mano | Funziona |
+| La tua lista di ingredienti: PDF del nutrizionista **o** spunta per categorie | Funziona |
 | Giornata ON / OFF, registro dei consumi, ricalibrazione | Funziona |
 | Lista della spesa derivata, dispensa, reparti | Funziona |
 | Ricettario per componenti e modalità cucina | Funziona |
-| Volantini, offerte con soglia di confidenza, dove conviene andare | Funziona, da provare su un volantino vero |
+| Offerte con soglia di confidenza, dove conviene andare | Funziona |
+| Volantini scaricati dal worker da solo | Trova le pagine; il PDF dipende dall'insegna |
 | PWA installabile, offline, promemoria push | Funziona, da provare sul telefono |
 | Storico, peso, resoconto per la visita | Funziona |
 | Sostituzioni equivalenti, scelta che impara e guarda le offerte | Funziona |
@@ -55,8 +56,11 @@ Manca soltanto quello che ha bisogno della chiave Anthropic: la **normalizzazion
 ingredienti delle ricette del catalogo**, e quindi gli allergeni sulle ricette. Tutto il resto
 gira senza chiave, per scelta.
 
-Quello che resta da provare non si prova da qui: un volantino vero del punto vendita giusto, i
-promemoria su un telefono vero, l'app installata. Sono tre prove che tocca fare a te.
+Sui volantini la raccolta automatica trova le pagine giuste da sola, partendo dalla home. Quello
+che trova dentro dipende dall'insegna: chi pubblica un PDF si legge, chi fa solo sfogliare no, e
+per quelli resta il caricamento a mano finche' non trovo la strada dei loro dati.
+
+Restano due prove che da qui non posso fare: i promemoria su un telefono vero e l'app installata.
 
 ---
 
