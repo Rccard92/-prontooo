@@ -16,7 +16,7 @@ import { type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giorn
 import { ricalibra } from '@/lib/giornata/ricalibra'
 import { nutrientiDi } from '@/lib/lista/modello'
 import { PIATTI_FUORI } from '@/lib/giornata/piatti'
-import { ricettaSuccessiva } from '@/lib/ricettario/scelta'
+import { ricettaDelPasto, ricettaSuccessiva } from '@/lib/ricettario/scelta'
 
 export async function generaOggi(dati: FormData) {
   const tipo = String(dati.get('tipo') ?? '') as TipoGiorno
@@ -71,6 +71,59 @@ export async function cambiaRicetta(dati: FormData) {
   await db()
     .update(giornataPasti)
     .set({ ricettaLibro: prossima })
+    .where(eq(giornataPasti.id, id))
+
+  revalidatePath('/')
+  revalidatePath(`/cucina/${id}`)
+}
+
+/**
+ * Cambia un solo componente del pasto con un equivalente.
+ *
+ * "Non ho il pollo, ho il merluzzo": cambia quell'ingrediente e basta, con la
+ * quantita' che regge lo stesso nutriente. Il resto del pasto non si tocca -
+ * rigenerare tutto per un ingrediente sarebbe rifare il lavoro da capo.
+ */
+export async function sostituisciComponente(dati: FormData) {
+  const id = Number(dati.get('pasto'))
+  const indice = Number(dati.get('indice'))
+  const alimentoId = Number(dati.get('alimento'))
+  const quantita = Number(dati.get('quantita'))
+
+  if (!Number.isInteger(id) || !Number.isInteger(indice)) return
+  if (!Number.isInteger(alimentoId) || !Number.isFinite(quantita) || quantita <= 0) return
+
+  const [pasto] = await db().select().from(giornataPasti).where(eq(giornataPasti.id, id)).limit(1)
+
+  if (!pasto || pasto.stato !== 'previsto') return
+
+  const vecchio = pasto.previsti[indice]
+
+  if (!vecchio) return
+
+  const [nuovo] = await db().select().from(alimenti).where(eq(alimenti.id, alimentoId)).limit(1)
+
+  if (!nuovo) return
+
+  const previsti = pasto.previsti.map((c, i) =>
+    i === indice
+      ? {
+          ...c,
+          alimentoId: nuovo.id,
+          nome: nuovo.nome,
+          quantita: Math.round(quantita),
+          unita: nuovo.unita,
+        }
+      : c,
+  )
+
+  // I componenti sono cambiati, quindi la ricetta scelta prima puo' non
+  // calzare piu': si rifa' la scelta invece di tenersene una sbagliata.
+  const ricetta = await ricettaDelPasto(pasto.fascia, previsti, null)
+
+  await db()
+    .update(giornataPasti)
+    .set({ previsti, ricettaLibro: ricetta?.id ?? null })
     .where(eq(giornataPasti.id, id))
 
   revalidatePath('/')

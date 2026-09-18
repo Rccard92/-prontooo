@@ -5,6 +5,7 @@ import { leggiGiornata, oggi } from '@/lib/giornata/componi'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
+import { type AlternativeDiPasto, alternativeDei, chiaveComponente } from '@/lib/nutrizione/alternative'
 import { NOME_LIVELLO } from '@/lib/ricettario/modello'
 import { type RicettaDelPasto, ricetteDeiPasti } from '@/lib/ricettario/scelta'
 
@@ -12,6 +13,7 @@ import {
   annullaRegistrazione,
   cambiaPasto,
   cambiaRicetta,
+  sostituisciComponente,
   cambiaTipoGiorno,
   generaOggi,
   registraFuori,
@@ -67,7 +69,15 @@ function Barra({ nome, valore, obiettivo, colore }: { nome: string; valore: numb
   )
 }
 
-function SchedaPasto({ pasto, ricetta }: { pasto: Pasto; ricetta?: RicettaDelPasto }) {
+function SchedaPasto({
+  pasto,
+  ricetta,
+  alternative,
+}: {
+  pasto: Pasto
+  ricetta?: RicettaDelPasto
+  alternative: AlternativeDiPasto
+}) {
   const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
   const registrato = pasto.stato !== 'previsto'
   const kcalConsumate = pasto.consumati.reduce((t, c) => t + c.kcal, 0)
@@ -117,17 +127,58 @@ function SchedaPasto({ pasto, ricetta }: { pasto: Pasto; ricetta?: RicettaDelPas
           </ul>
         ) : (
           <ul className="mt-3 flex flex-col gap-1.5">
-            {pasto.previsti.map((c) => (
-              <li
-                key={`${c.ruolo}-${c.nome}`}
-                className="rounded-controllo flex items-baseline justify-between gap-3 bg-fondo px-3 py-2"
-              >
-                <span className="text-sm text-inchiostro">{c.nome}</span>
-                <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
-                  {c.quantita === 0 ? 'q.b.' : `${c.quantita} ${c.unita}`}
-                </span>
-              </li>
-            ))}
+            {pasto.previsti.map((c, indice) => {
+              const cambi = alternative.get(chiaveComponente(pasto.id, indice)) ?? []
+
+              return (
+                <li key={`${c.ruolo}-${c.nome}`} className="rounded-controllo bg-fondo px-3 py-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm text-inchiostro">{c.nome}</span>
+                    <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
+                      {c.quantita === 0 ? 'q.b.' : `${c.quantita} ${c.unita}`}
+                    </span>
+                  </div>
+
+                  {cambi.length > 0 ? (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-xs font-semibold text-fumo">
+                        Non ce l&rsquo;ho
+                      </summary>
+                      <ul className="mt-2 flex flex-col gap-1">
+                        {cambi.map((alternativa) => (
+                          <li key={alternativa.id}>
+                            <form action={sostituisciComponente} className="flex items-center gap-2">
+                              <input type="hidden" name="pasto" value={pasto.id} />
+                              <input type="hidden" name="indice" value={indice} />
+                              <input type="hidden" name="alimento" value={alternativa.id} />
+                              <input type="hidden" name="quantita" value={alternativa.quantita} />
+                              <button
+                                type="submit"
+                                className="rounded-controllo flex w-full items-baseline justify-between gap-3 bg-bianco px-3 py-1.5 text-left hover:bg-basilico-tenue"
+                              >
+                                <span className="text-sm text-inchiostro">
+                                  {alternativa.nome}
+                                  {alternativa.fuoriLista ? (
+                                    <span className="text-fumo"> · non in lista</span>
+                                  ) : null}
+                                </span>
+                                <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
+                                  {alternativa.quantita} {alternativa.unita}
+                                </span>
+                              </button>
+                            </form>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-xs text-fumo">
+                        Le quantità non sono le stesse: reggono lo stesso nutriente, non lo stesso
+                        peso.
+                      </p>
+                    </details>
+                  ) : null}
+                </li>
+              )
+            })}
           </ul>
         )}
 
@@ -235,15 +286,17 @@ export default async function Oggi() {
   let lista = null
 
   let ricette = new Map<number, RicettaDelPasto>()
+  let alternative: AlternativeDiPasto = new Map()
 
   try {
     lista = await listaAttiva()
     giorno = await leggiGiornata()
 
     if (giorno) {
-      ricette = await ricetteDeiPasti(
-        giorno.pasti.filter((p) => p.stato === 'previsto'),
-      )
+      const previsti = giorno.pasti.filter((p) => p.stato === 'previsto')
+
+      ricette = await ricetteDeiPasti(previsti)
+      alternative = await alternativeDei(previsti)
     }
   } catch (errore) {
     console.error('lettura della giornata fallita:', errore)
@@ -349,7 +402,12 @@ export default async function Oggi() {
               <>
                 <div className="mt-6 flex flex-col gap-4">
                   {giorno.pasti.map((pasto) => (
-                    <SchedaPasto key={pasto.id} pasto={pasto} ricetta={ricette.get(pasto.id)} />
+                    <SchedaPasto
+                      key={pasto.id}
+                      pasto={pasto}
+                      ricetta={ricette.get(pasto.id)}
+                      alternative={alternative}
+                    />
                   ))}
                 </div>
 

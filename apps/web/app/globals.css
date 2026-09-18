@@ -114,3 +114,37 @@
   font-size: 0.8125rem;
   font-weight: 600;
 }
+
+/*
+ * La stampa. Serve a una cosa sola: il resoconto per la visita, salvato in PDF
+ * dal telefono. Quindi fondo bianco, niente ombre, e le tabelle che non si
+ * spezzano a meta' fra due pagine.
+ */
+@media print {
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  .scheda {
+    box-shadow: none;
+    border: none;
+  }
+
+  table {
+    break-inside: auto;
+  }
+
+  tr,
+  h2 {
+    break-inside: avoid;
+  }
+
+  h2 {
+    break-after: avoid;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}

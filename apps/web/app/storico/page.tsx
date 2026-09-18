@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { desc } from 'drizzle-orm'
 
 import { db, pesi } from '@prontooo/db'
@@ -67,6 +68,10 @@ export default async function Storico() {
         </p>
 
         <Promemoria chiavePubblica={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''} />
+
+        <Link href="/resoconto" className="bottone-chiaro mt-4 inline-block hover:bg-basilico hover:text-bianco">
+          Il resoconto per la visita
+        </Link>
 
         {!dati || dati.giorniSeguiti === 0 ? (
           <div className="scheda mt-6 px-6 py-12 text-center">

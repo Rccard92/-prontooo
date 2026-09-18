@@ -19,9 +19,30 @@ export type GiornoStorico = {
   tipoGiorno: string
   obiettivo: Nutrienti | null
   consumato: Nutrienti
-  pasti: { fascia: string; stato: string; titolo: string | null }[]
+  pasti: {
+    fascia: string
+    stato: string
+    titolo: string | null
+    previsto: string | null
+    kcal: number
+  }[]
   registrati: number
   totali: number
+}
+
+/** "Al posto della cena prevista hai mangiato una pizza", contato. */
+export type FuoriPiano = {
+  fascia: string
+  previsto: string
+  mangiato: string
+  quante: number
+}
+
+export type Settimana = {
+  inizio: string
+  giorni: number
+  aderenza: number
+  mediaKcal: number
 }
 
 export type RigaFascia = {
@@ -42,6 +63,13 @@ export type Resoconto = {
   aderenza: number
   /** La fascia dove caschi piu' spesso, se ce n'e' una che spicca. */
   puntoDebole: string | null
+  /** Settimana per settimana: e' li' che si vede se stai migliorando. */
+  settimane: Settimana[]
+  /** Cosa hai mangiato al posto di cosa, dal caso piu' frequente. */
+  fuoriPiano: FuoriPiano[]
+  mediaProteine: number
+  mediaCarboidrati: number
+  mediaGrassi: number
 }
 
 /** La data di `quanti` giorni prima di `data`. */
@@ -92,6 +120,8 @@ export async function resoconto(giorni = 30, fine?: string): Promise<Resoconto> 
         // Il titolo del pasto e' il suo componente principale: e' quello che
         // ti fa riconoscere la giornata scorrendo l'elenco.
         titolo: (r.consumati ?? []).map((c) => c.nome)[0] ?? (r.previsti ?? [])[0]?.nome ?? null,
+        previsto: (r.previsti ?? [])[0]?.nome ?? null,
+        kcal: Math.round((r.consumati ?? []).reduce((t, c) => t + c.kcal, 0)),
       })
 
       giorno.totali += 1
@@ -164,5 +194,93 @@ export async function resoconto(giorni = 30, fine?: string): Promise<Resoconto> 
         : Math.round(conKcal.reduce((t, g) => t + g.consumato.kcal, 0) / conKcal.length),
     aderenza,
     puntoDebole: peggiore && media - peggiore.aderenza >= 10 ? peggiore.fascia : null,
+    settimane: perSettimana(seguiti),
+    fuoriPiano: contaFuoriPiano(seguiti),
+    mediaProteine: mediaDi(conKcal, 'proteine'),
+    mediaCarboidrati: mediaDi(conKcal, 'carboidrati'),
+    mediaGrassi: mediaDi(conKcal, 'grassi'),
   }
+}
+
+function mediaDi(giorni: GiornoStorico[], campo: keyof Nutrienti): number {
+  if (giorni.length === 0) return 0
+
+  return Math.round(giorni.reduce((t, g) => t + g.consumato[campo], 0) / giorni.length)
+}
+
+/** Il lunedi' della settimana di una data. */
+function lunediDi(data: string): string {
+  const [a, m, g] = data.split('-').map(Number)
+  const d = new Date(Date.UTC(a ?? 2026, (m ?? 1) - 1, g ?? 1))
+
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Settimana per settimana.
+ *
+ * Il numero di un mese intero non dice se stai migliorando o peggiorando, e
+ * quello e' esattamente cio' che serve sapere alla visita.
+ */
+function perSettimana(giorni: GiornoStorico[]): Settimana[] {
+  const per = new Map<string, GiornoStorico[]>()
+
+  for (const giorno of giorni) {
+    const inizio = lunediDi(giorno.data)
+
+    per.set(inizio, [...(per.get(inizio) ?? []), giorno])
+  }
+
+  return [...per.entries()]
+    .map(([inizio, suoi]) => {
+      const pasti = suoi.flatMap((g) => g.pasti)
+      const conKcal = suoi.filter((g) => g.consumato.kcal > 0)
+
+      return {
+        inizio,
+        giorni: suoi.length,
+        aderenza:
+          pasti.length === 0
+            ? 0
+            : Math.round((pasti.filter((p) => p.stato === 'mangiato').length / pasti.length) * 100),
+        mediaKcal:
+          conKcal.length === 0
+            ? 0
+            : Math.round(conKcal.reduce((t, g) => t + g.consumato.kcal, 0) / conKcal.length),
+      }
+    })
+    .sort((a, b) => b.inizio.localeCompare(a.inizio))
+}
+
+/**
+ * Cosa hai mangiato al posto di cosa, dal caso piu' frequente.
+ *
+ * E' la riga piu' utile del resoconto: un pasto saltato una volta e' la vita,
+ * lo stesso pasto sostituito dalla stessa cosa per tre settimane e' il piano
+ * che non ti sta bene, e va cambiato quello.
+ */
+function contaFuoriPiano(giorni: GiornoStorico[]): FuoriPiano[] {
+  const conta = new Map<string, FuoriPiano>()
+
+  for (const giorno of giorni) {
+    for (const pasto of giorno.pasti) {
+      if (pasto.stato !== 'fuori_piano' && pasto.stato !== 'saltato') continue
+
+      const previsto = pasto.previsto ?? 'quello che c\'era'
+      const mangiato = pasto.stato === 'saltato' ? 'niente, saltato' : (pasto.titolo ?? 'altro')
+      const chiave = `${pasto.fascia}|${previsto}|${mangiato}`
+      const gia = conta.get(chiave)
+
+      conta.set(
+        chiave,
+        gia
+          ? { ...gia, quante: gia.quante + 1 }
+          : { fascia: pasto.fascia, previsto, mangiato, quante: 1 },
+      )
+    }
+  }
+
+  return [...conta.values()].sort((a, b) => b.quante - a.quante).slice(0, 12)
 }
