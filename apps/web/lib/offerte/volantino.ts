@@ -134,6 +134,49 @@ export function leggiRiga(riga: string): OffertaGrezza | null {
   }
 }
 
+/** Sopra questa lunghezza una "riga" non e' una riga: e' mezza pagina. */
+const RIGA_TROPPO_LUNGA = 200
+
+/**
+ * Rimette le righe dove un PDF non le ha messe.
+ *
+ * Un volantino e' fatto di riquadri, non di righe di testo, e a seconda di
+ * come e' stato impaginato l'estrazione puo' restituire una riga sola lunga
+ * migliaia di caratteri. Un lettore che ragiona per righe li' dentro non trova
+ * niente.
+ *
+ * Allora si taglia dove finisce un prezzo: in un volantino il prezzo e' la
+ * fine di un prodotto e l'inizio del prossimo, sempre.
+ */
+export function spezzaRigheLunghe(righe: string[]): string[] {
+  const esito: string[] = []
+
+  for (const riga of righe) {
+    if (riga.length <= RIGA_TROPPO_LUNGA) {
+      esito.push(riga)
+      continue
+    }
+
+    let resto = riga
+
+    while (resto.length > 0) {
+      const prezzo = PREZZO.exec(resto)
+
+      if (!prezzo || prezzo.index === undefined) {
+        esito.push(resto.trim())
+        break
+      }
+
+      const taglio = prezzo.index + prezzo[0].length
+
+      esito.push(resto.slice(0, taglio).trim())
+      resto = resto.slice(taglio).trim()
+    }
+  }
+
+  return esito.filter((r) => r.length > 0)
+}
+
 /**
  * Tutte le offerte di un volantino.
  *
@@ -142,10 +185,12 @@ export function leggiRiga(riga: string): OffertaGrezza | null {
  * impaginati quasi tutti i volantini.
  */
 export function leggiVolantino(testo: string): OffertaGrezza[] {
-  const righe = testo
-    .split(/\r?\n/)
-    .map((r) => r.replace(/\s+/g, ' ').trim())
-    .filter((r) => r.length > 0)
+  const righe = spezzaRigheLunghe(
+    testo
+      .split(/\r?\n/)
+      .map((r) => r.replace(/\s+/g, ' ').trim())
+      .filter((r) => r.length > 0),
+  )
 
   const offerte: OffertaGrezza[] = []
   const viste = new Set<string>()

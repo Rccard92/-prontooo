@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { SOGLIA_CERTA, agganciaOfferta, eCerta } from './aggancia'
-import { leggiRiga, leggiVolantino } from './volantino'
+import { leggiRiga, leggiVolantino, spezzaRigheLunghe } from './volantino'
 
 const ALIMENTI = [
   { id: 1, nome: 'Petto di pollo' },
@@ -108,6 +108,48 @@ pag. 3
     const offerte = leggiVolantino('Zucchine 500 g 1,29\nZucchine 500 g 1,29')
 
     assert.equal(offerte.length, 1)
+  })
+})
+
+describe('spezzaRigheLunghe', () => {
+  it('lascia stare le righe normali', () => {
+    assert.deepEqual(spezzaRigheLunghe(['Zucchine 500 g 1,29']), ['Zucchine 500 g 1,29'])
+  })
+
+  it('taglia dopo ogni prezzo quando il PDF da una riga sola lunghissima', () => {
+    const unicaRiga =
+      'ORTOFRUTTA Zucchine 1 kg 1,49 Pomodori ciliegino 500 g 1,99 Mele Golden 1 kg 1,29 ' +
+      'MACELLERIA Petto di pollo 1,00 kg 8,90 Fesa di tacchino 400 g 4,29 ' +
+      'Merluzzo surgelato 400 g 3,99 Yogurt greco 2 x 150 g 1,79 ' +
+      'Olio extravergine 1 l 6,90 Pasta di semola 500 g 0,89 Riso Carnaroli 1 kg 2,49'
+
+    assert.ok(unicaRiga.length > 200, 'la riga di prova deve essere lunga')
+
+    const spezzate = spezzaRigheLunghe([unicaRiga])
+
+    assert.ok(spezzate.length >= 8, `spezzate in ${spezzate.length}`)
+    assert.ok(spezzate.every((r) => r.length <= 200))
+  })
+
+  it('da quella riga unica escono le offerte vere', () => {
+    const unicaRiga =
+      'ORTOFRUTTA Zucchine 1 kg 1,49 Pomodori ciliegino 500 g 1,99 ' +
+      'MACELLERIA Fesa di tacchino 400 g 4,29 Merluzzo surgelato 400 g 3,99 ' +
+      'Yogurt greco 2 x 150 g 1,79 Olio extravergine 1 l 6,90 ' +
+      'Pasta di semola 500 g 0,89 Riso Carnaroli 1 kg 2,49 Mele Golden 1 kg 1,29'
+
+    const nomi = leggiVolantino(unicaRiga).map((o) => o.nomeGrezzo.toLowerCase())
+
+    assert.ok(nomi.some((n) => n.includes('zucchine')), nomi.join(' | '))
+    assert.ok(nomi.some((n) => n.includes('tacchino')), nomi.join(' | '))
+    assert.ok(nomi.some((n) => n.includes('olio')), nomi.join(' | '))
+  })
+
+  it('non perde il testo quando dopo l ultimo prezzo resta qualcosa', () => {
+    const lunga = 'x'.repeat(190) + ' Zucchine 1,49 Pomodori senza prezzo qui'
+    const spezzate = spezzaRigheLunghe([lunga])
+
+    assert.ok(spezzate.join(' ').includes('Pomodori senza prezzo qui'))
   })
 })
 
