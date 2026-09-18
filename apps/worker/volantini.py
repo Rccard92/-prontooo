@@ -157,6 +157,37 @@ def pdf_nella_pagina(cliente: httpx.Client, pagina: str) -> list[str]:
     return visti
 
 
+# Indirizzi che possono servire un volantino sfogliabile.
+SEMBRA_DATI = re.compile(r"(\.json|/api/|/graphql|leaflet|flyer|volantin|issuu|publitas)", re.I)
+
+
+def indizi(cliente: httpx.Client, pagina: str, quanti: int = 8) -> list[str]:
+    """Gli indirizzi che una pagina di volantino sfogliabile usa per i suoi dati.
+
+    Non serve all'app: serve a me, per capire dove va a prendere le offerte una
+    pagina che non offre il PDF. Costa una richiesta e si stampa solo quando il
+    PDF non c'e'.
+    """
+    risposta = cliente.get(pagina, timeout=30)
+    risposta.raise_for_status()
+
+    trovati: list[str] = []
+
+    for grezzo in re.findall(r"""["'(](https?://[^"'()\s]{10,200})["')]""", risposta.text):
+        if not SEMBRA_DATI.search(grezzo):
+            continue
+
+        pulito = grezzo.replace("&amp;", "&")
+
+        if pulito not in trovati:
+            trovati.append(pulito)
+
+        if len(trovati) >= quanti:
+            break
+
+    return trovati
+
+
 def gia_fresco(connessione: psycopg.Connection, insegna: str) -> bool:
     with connessione.cursor() as cursore:
         cursore.execute(
@@ -251,8 +282,20 @@ def raccogli_volantini(url_db: str) -> list[str]:
             if not indirizzi:
                 righe.append(
                     f"{fonte.insegna}: nessun PDF nelle pagine dei volantini."
-                    " Probabilmente il volantino si sfoglia e basta: resta il caricamento a mano."
+                    " Probabilmente il volantino si sfoglia e basta."
                 )
+
+                # Se non c'e' un PDF, il volantino sfogliabile prende i dati da
+                # qualche parte. Qui si stampa da dove: e' l'unico modo che ho
+                # per capire come arrivarci, visto che quei siti da dove
+                # lavoro io non si aprono.
+                try:
+                    righe.extend(
+                        f"{fonte.insegna}: indizio {u}" for u in indizi(cliente, pagine[0])
+                    )
+                except httpx.HTTPError:
+                    pass
+
                 continue
 
             preso = False
