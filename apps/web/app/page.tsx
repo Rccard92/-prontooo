@@ -21,6 +21,7 @@ import {
   saltaPasto,
   spuntaPasto,
 } from './azioni-giornata'
+import { AvvisoAperto } from './componenti/avviso-aperto'
 import { Testata, durata } from './componenti/testata'
 
 export const dynamic = 'force-dynamic'
@@ -350,6 +351,8 @@ export default async function Oggi() {
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Oggi</h1>
         <p className="mt-1 text-sm text-fumo">{etichettaData}</p>
+
+        <AvvisoAperto />
 
         {!lista ? (
           <div className="scheda mt-6 px-6 py-12 text-center">
