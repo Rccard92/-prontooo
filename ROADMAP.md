@@ -32,24 +32,31 @@ contro cosa era previsto. È un di più, non il centro.
 
 ## 2. Dove siamo
 
-L'impianto regge, il prodotto no. Push su `main` ricostruisce e sostituisce il deploy da solo,
-le migrazioni girano prima di ogni rilascio, e se falliscono resta in piedi la versione
-precedente. Quella parte è finita.
+Tutte e sette le fasi sono in produzione. Push su `main` ricostruisce e sostituisce il deploy da
+solo, le migrazioni girano prima di ogni rilascio, e se falliscono resta in piedi la versione
+precedente.
 
 | Pezzo | Stato |
 |---|---|
 | Repo, Railway, Postgres, deploy automatico | Finito |
 | Catalogo ricette che si riempie da solo dalle sitemap | Funziona |
-| Vocabolario di 124 alimenti con ruoli, fasce, etichette | Funziona |
-| Wizard del profilo | Funziona |
-| Piano settimanale composto dagli alimenti | Grezzo: non conosce nessun numero |
-| Pagina ricetta, import manuale | Funziona |
+| Vocabolario di 189 alimenti con ruoli, fasce, etichette e valori CREA | Funziona |
+| La tua lista di ingredienti: PDF del nutrizionista **o** scelta a mano | Funziona |
+| Giornata ON / OFF, registro dei consumi, ricalibrazione | Funziona |
+| Lista della spesa derivata, dispensa, reparti | Funziona |
+| Ricettario per componenti e modalità cucina | Funziona |
+| Volantini, offerte con soglia di confidenza, dove conviene andare | Funziona, da provare su un volantino vero |
+| PWA installabile, offline, promemoria push | Funziona, da provare sul telefono |
+| Storico, peso, resoconto per la visita | Funziona |
+| Sostituzioni equivalenti, scelta che impara e guarda le offerte | Funziona |
+| Passphrase di accesso | Pronta, si accende impostando `APP_PASSPHRASE` su Railway |
 
-Non c'è: valori nutrizionali, piano del nutrizionista, registro dei consumi, ricalibrazione,
-giorno di allenamento, lista della spesa, offerte, password.
+Manca soltanto quello che ha bisogno della chiave Anthropic: la **normalizzazione degli
+ingredienti delle ricette del catalogo**, e quindi gli allergeni sulle ricette. Tutto il resto
+gira senza chiave, per scelta.
 
-**Il buco vero è che l'app non conosce nessun numero.** Sa comporre un pranzo con riso, pollo
-e zucchine, ma non sa che sono 620 kcal. Senza quello non esiste niente del resto.
+Quello che resta da provare non si prova da qui: un volantino vero del punto vendita giusto, i
+promemoria su un telefono vero, l'app installata. Sono tre prove che tocca fare a te.
 
 ---
 
@@ -328,13 +335,17 @@ delle foto dei piatti, condivisione social.
 ## 13. Ordine di lavoro
 
 ```
-Fase 1  Il piano è tuo        →  e con lei la passphrase
-Fase 2  La giornata           →  qui l'app diventa quella che usi ogni giorno
-Fase 3  Settimana e spesa     →  qui diventa utile al supermercato
-Fase 4  Ricette al servizio   →  serve la chiave
-Fase 5  Volantini e offerte   →  il pezzo fragile, in due tempi
-Fase 6  Uso reale             →  PWA e promemoria
-Fase 7  Resoconto e ingegno   →  la parte che fa restare
+Fase 1  Il piano è tuo        →  fatta
+Fase 2  La giornata           →  fatta
+Fase 3  Settimana e spesa     →  fatta
+Fase 4  Ricette al servizio   →  fatta col ricettario, senza chiave
+Fase 5  Volantini e offerte   →  fatta a mano; la raccolta automatica no
+Fase 6  Uso reale             →  fatta
+Fase 7  Resoconto e ingegno   →  fatta
+
+Resta fuori, e sta scritto dove: la normalizzazione delle ricette del catalogo (serve
+ANTHROPIC_API_KEY) e la raccolta automatica dei volantini (gli indirizzi cambiano ogni
+settimana, e un raccoglitore che non si può provare è peggio di nessun raccoglitore).
 ```
 
 Una fase finisce **in produzione e funzionante** prima che cominci la successiva.
