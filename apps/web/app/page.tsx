@@ -5,10 +5,13 @@ import { leggiGiornata, oggi } from '@/lib/giornata/componi'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
+import { NOME_LIVELLO } from '@/lib/ricettario/modello'
+import { type RicettaDelPasto, ricetteDeiPasti } from '@/lib/ricettario/scelta'
 
 import {
   annullaRegistrazione,
   cambiaPasto,
+  cambiaRicetta,
   cambiaTipoGiorno,
   generaOggi,
   registraFuori,
@@ -36,6 +39,12 @@ const dataLunga = new Intl.DateTimeFormat('it-IT', {
 
 type Pasto = NonNullable<Awaited<ReturnType<typeof leggiGiornata>>>['pasti'][number]
 
+const stileLivello: Record<string, string> = {
+  calza: 'bg-basilico-tenue text-basilico-scuro',
+  vicina: 'bg-limone-tenue text-inchiostro',
+  adattabile: 'bg-limone-tenue text-inchiostro',
+}
+
 function Barra({ nome, valore, obiettivo, colore }: { nome: string; valore: number; obiettivo: number; colore: string }) {
   const percentuale = obiettivo > 0 ? Math.min(100, Math.round((valore / obiettivo) * 100)) : 0
   const oltre = obiettivo > 0 && valore > obiettivo
@@ -58,7 +67,7 @@ function Barra({ nome, valore, obiettivo, colore }: { nome: string; valore: numb
   )
 }
 
-function SchedaPasto({ pasto }: { pasto: Pasto }) {
+function SchedaPasto({ pasto, ricetta }: { pasto: Pasto; ricetta?: RicettaDelPasto }) {
   const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
   const registrato = pasto.stato !== 'previsto'
   const kcalConsumate = pasto.consumati.reduce((t, c) => t + c.kcal, 0)
@@ -82,11 +91,14 @@ function SchedaPasto({ pasto }: { pasto: Pasto }) {
           ) : null}
         </div>
 
-        {pasto.ricettaId && !registrato ? (
-          <Link href={`/ricette/${pasto.ricettaId}`} className="mt-2 block">
-            <h3 className="text-lg leading-snug font-bold text-inchiostro">{pasto.titolo}</h3>
-            <p className="cifre mt-0.5 text-xs text-fumo">
-              Idea per cucinarli{pasto.minutiTotali ? ` · ${durata(pasto.minutiTotali)}` : ''}
+        {ricetta && !registrato ? (
+          <Link href={`/cucina/${pasto.id}`} className="mt-2 block">
+            <h3 className="text-lg leading-snug font-bold text-inchiostro">{ricetta.titolo}</h3>
+            <p className="cifre mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-fumo">
+              <span className={`pillola ${stileLivello[ricetta.livello]}`}>
+                {NOME_LIVELLO[ricetta.livello]}
+              </span>
+              <span>{durata(ricetta.minuti)}</span>
             </p>
           </Link>
         ) : null}
@@ -119,6 +131,16 @@ function SchedaPasto({ pasto }: { pasto: Pasto }) {
           </ul>
         )}
 
+        {pasto.ricettaId && !registrato ? (
+          <Link
+            href={`/ricette/${pasto.ricettaId}`}
+            className="mt-3 block text-xs text-fumo hover:text-basilico"
+          >
+            Spunto dal catalogo: {pasto.titolo}
+            {pasto.minutiTotali ? ` · ${durata(pasto.minutiTotali)}` : ''}
+          </Link>
+        ) : null}
+
         {registrato ? (
           <form action={annullaRegistrazione} className="mt-3">
             <input type="hidden" name="pasto" value={pasto.id} />
@@ -135,10 +157,23 @@ function SchedaPasto({ pasto }: { pasto: Pasto }) {
                   L&rsquo;ho mangiato
                 </button>
               </form>
+              {ricetta ? (
+                <Link href={`/cucina/${pasto.id}`} className="bottone-chiaro hover:bg-basilico hover:text-bianco">
+                  Cucina
+                </Link>
+              ) : null}
+              {ricetta && ricetta.alternative.length > 0 ? (
+                <form action={cambiaRicetta}>
+                  <input type="hidden" name="pasto" value={pasto.id} />
+                  <button type="submit" className="pillola bg-fondo text-fumo">
+                    Altra ricetta
+                  </button>
+                </form>
+              ) : null}
               <form action={cambiaPasto}>
                 <input type="hidden" name="pasto" value={pasto.id} />
-                <button type="submit" className="bottone-chiaro hover:bg-basilico hover:text-bianco">
-                  Cambia
+                <button type="submit" className="pillola bg-fondo text-fumo">
+                  Cambia gli alimenti
                 </button>
               </form>
               <form action={saltaPasto}>
@@ -199,9 +234,17 @@ export default async function Oggi() {
   let giorno = null
   let lista = null
 
+  let ricette = new Map<number, RicettaDelPasto>()
+
   try {
     lista = await listaAttiva()
     giorno = await leggiGiornata()
+
+    if (giorno) {
+      ricette = await ricetteDeiPasti(
+        giorno.pasti.filter((p) => p.stato === 'previsto'),
+      )
+    }
   } catch (errore) {
     console.error('lettura della giornata fallita:', errore)
 
@@ -306,7 +349,7 @@ export default async function Oggi() {
               <>
                 <div className="mt-6 flex flex-col gap-4">
                   {giorno.pasti.map((pasto) => (
-                    <SchedaPasto key={pasto.id} pasto={pasto} />
+                    <SchedaPasto key={pasto.id} pasto={pasto} ricetta={ricette.get(pasto.id)} />
                   ))}
                 </div>
 

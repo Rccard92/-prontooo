@@ -1,0 +1,1 @@
+ALTER TABLE "giornata_pasti" ADD COLUMN "ricetta_libro" text;

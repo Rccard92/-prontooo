@@ -16,6 +16,7 @@ import { type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giorn
 import { ricalibra } from '@/lib/giornata/ricalibra'
 import { nutrientiDi } from '@/lib/lista/modello'
 import { PIATTI_FUORI } from '@/lib/giornata/piatti'
+import { ricettaSuccessiva } from '@/lib/ricettario/scelta'
 
 export async function generaOggi(dati: FormData) {
   const tipo = String(dati.get('tipo') ?? '') as TipoGiorno
@@ -46,6 +47,34 @@ export async function cambiaPasto(dati: FormData) {
 
   await generaGiornata(giorno.giornata.data, giorno.giornata.tipoGiorno as TipoGiorno)
   revalidatePath('/')
+}
+
+/**
+ * Passa alla ricetta dopo, senza toccare i componenti.
+ *
+ * Cambiare ricetta non deve cambiare quello che mangi: i grammi restano
+ * quelli, cambia solo come li cucini.
+ */
+export async function cambiaRicetta(dati: FormData) {
+  const id = Number(dati.get('pasto'))
+
+  if (!Number.isInteger(id)) return
+
+  const [pasto] = await db().select().from(giornataPasti).where(eq(giornataPasti.id, id)).limit(1)
+
+  if (!pasto) return
+
+  const prossima = await ricettaSuccessiva(pasto.fascia, pasto.previsti, pasto.ricettaLibro)
+
+  if (!prossima) return
+
+  await db()
+    .update(giornataPasti)
+    .set({ ricettaLibro: prossima })
+    .where(eq(giornataPasti.id, id))
+
+  revalidatePath('/')
+  revalidatePath(`/cucina/${id}`)
 }
 
 /** Ho mangiato quello che c'era scritto. */

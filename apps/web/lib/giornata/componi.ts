@@ -179,6 +179,8 @@ export async function generaGiornata(data = oggi(), tipoGiorno?: TipoGiorno) {
         set: {
           previsti: pasto.componenti,
           ricettaId: await ideaRicetta(pasto.fascia, pasto.componenti),
+          // I componenti sono cambiati: la ricetta scelta prima non vale piu'.
+          ricettaLibro: null,
         },
       })
   }
@@ -238,6 +240,7 @@ export async function leggiGiornata(data = oggi()) {
       bloccato: giornataPasti.bloccato,
       previsti: giornataPasti.previsti,
       consumati: giornataPasti.consumati,
+      ricettaLibro: giornataPasti.ricettaLibro,
       ricettaId: ricette.id,
       titolo: ricette.titolo,
       immagineUrl: ricette.immagineUrl,

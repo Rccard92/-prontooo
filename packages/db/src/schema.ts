@@ -380,6 +380,10 @@ export const giornataPasti = pgTable(
       .notNull()
       .default([]),
     ricettaId: integer('ricetta_id').references(() => ricette.id, { onDelete: 'set null' }),
+    // La ricetta del ricettario di casa, che non sta nel database: e' un id di
+    // testo dentro apps/web/lib/ricettario/libro.ts. Qui si salva solo quale
+    // hai scelto, perche' "cambia ricetta" non deve ricomporre il pasto.
+    ricettaLibro: text('ricetta_libro'),
     registratoIl: timestamp('registrato_il', { withTimezone: true }),
   },
   (t) => [uniqueIndex('giornata_pasti_posto_idx').on(t.giornataId, t.fascia)],

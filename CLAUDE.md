@@ -124,7 +124,7 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
 
-Fatto: catalogo che si riempie da solo dalle sitemap, wizard, piano settimanale composto dagli alimenti, pagina ricetta, import manuale come attrezzo da officina.
+Fatto: catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, import manuale come attrezzo da officina.
 
 Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti delle **ricette**, e quindi allergeni sulle ricette, reparti e lista della spesa.
 
@@ -138,7 +138,17 @@ Adesso il piano si costruisce dagli alimenti, in tre strati:
 2. **Schemi di pasto** — `apps/web/lib/nutrizione/schemi.ts`. Un pranzo vuole base + proteina + verdura + grasso, una colazione latticino + cereale + semi. Sono la struttura, non il contenuto
 3. **Il compositore** — `apps/web/lib/nutrizione/componi.ts`. Sceglie uno schema della fascia e riempie ogni posto pescando prima fra gli alimenti spuntati nel wizard, poi fra quelli che l'impostazione favorisce, poi fra tutti
 
-La ricetta e' diventata un **suggerimento**: `ideaRicetta` cerca in catalogo qualcosa che usi il componente principale. La corrispondenza e' sul testo grezzo, quindi si mostra come "idea per cucinarli" e mai come prescrizione.
+### Il ricettario di casa
+
+Sta in `apps/web/lib/ricettario/`. Una ricetta del catalogo e' un blocco chiuso: porta i suoi ingredienti e i suoi grammi, e per usarla dovresti piegare la tua lista alla sua. Una ricetta del ricettario porta invece **posti** (`{pasta}`, `{verdura}`, `{grasso}`), e i posti li riempiono i componenti del pasto, coi grammi gia' calcolati. La stessa ricetta vale per chiunque e per ogni giorno, e non serve la chiave: e' un elenco scritto a mano in `libro.ts`.
+
+`abbina` assegna un componente per posto - prima i posti stretti, quelli che accettano pochi gruppi, altrimenti un posto largo si prende il componente che serviva a un posto stretto. Il gruppo dell'alimento conta piu' del ruolo: il ruolo lo deduciamo noi, il gruppo sta scritto nel vocabolario.
+
+La compatibilita' ha tre livelli e non e' si'/no, perche' il si'/no butterebbe via quasi tutto: **calza** (usa i componenti del pasto), **vicina** (li usa, qualcuno fuori dal solito), **adattabile** (manca un posto e l'app dice quale). Due posti vuoti non sono un adattamento: e' un'altra ricetta, e la proposta si scarta.
+
+`giornata_pasti.ricetta_libro` tiene quale hai scelto, cosi' "altra ricetta" non ricompone il pasto: i grammi restano quelli, cambia solo come li cucini. Ricomporre il pasto azzera la scelta.
+
+La ricetta del catalogo resta, sotto, come **spunto**: `ideaRicetta` cerca qualcosa che usi il componente principale, la corrispondenza e' sul testo grezzo, e si mostra come "spunto dal catalogo" e mai come prescrizione.
 
 ### Esclusioni e impostazione sono due cose diverse
 
