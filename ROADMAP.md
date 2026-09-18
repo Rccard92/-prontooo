@@ -1,10 +1,11 @@
 # èProntooo — roadmap
 
-Il tuo piano nutrizionale, vivo. Il nutrizionista ti dà un PDF e poi sparisce per tre mesi:
-l'app tiene quel piano, ti dice cosa mangiare oggi, si aggiusta quando sgarri, e a fine mese
-gli riporta cosa hai mangiato davvero.
+**Ti dà le ricette da fare, usando solo gli ingredienti che hai deciso tu.** Quella lista la
+riempi in due modi, a scelta: carichi il PDF del nutrizionista, oppure te la componi da solo
+nell'app. Andare dal nutrizionista non è un requisito.
 
-Non è un ricettario con sopra un calendario. È il pezzo che manca fra la visita e la spesa.
+Non è un ricettario con sopra un calendario, e non è un'app da dietologo. È il pezzo in mezzo:
+da un elenco di ingredienti con i pesi tira fuori **cosa cucinare**, giorno per giorno.
 
 > Questo file è la fonte di verità. Esiste anche come documento leggibile:
 > <https://claude.ai/code/artifact/f9a1fedb-6d4f-4237-9a51-7ba7c53141ef>
@@ -15,12 +16,17 @@ Non è un ricettario con sopra un calendario. È il pezzo che manca fra la visit
 
 Se funzionano questi, l'app è fatta. Tutto il resto sta intorno.
 
-1. **Carichi il PDF e in dieci secondi la tua dieta è dentro**, con i grammi, modificabile.
-2. **Hai mangiato una pizza a pranzo e lo scrivi.** L'app ricalcola la cena e ti dice di
+1. **Dici quali ingredienti puoi usare.** Carichi il PDF e in dieci secondi è dentro, oppure
+   li spunti tu dal vocabolario. Da entrambe le strade esce la stessa cosa: cosa puoi mangiare
+   a colazione, a pranzo, a cena, e in che quantità. Modificabile sempre.
+2. **Apri la giornata e vedi le card.** Una per pasto, con la ricetta, la foto, i grammi e il
+   tempo. Se una non ti va la cambi, e quella nuova sta dentro gli stessi ingredienti.
+3. **Hai mangiato una pizza a pranzo e lo scrivi.** L'app ricalcola la cena e ti dice di
    quanto sei sopra, senza farti la predica e senza farti recuperare domani.
-3. **Sabato apri la lista della spesa**, divisa per reparto, con accanto cosa è in offerta e dove.
-4. **Prima della visita premi un pulsante** e hai il resoconto di cosa hai mangiato davvero
-   contro cosa era previsto.
+4. **Sabato apri la lista della spesa**, divisa per reparto, con accanto cosa è in offerta e dove.
+
+E se dal nutrizionista ci vai: prima della visita, il resoconto di cosa hai mangiato davvero
+contro cosa era previsto. È un di più, non il centro.
 
 ---
 
@@ -94,9 +100,22 @@ non un'entità a sé: tenerle entrambe vorrebbe dire due verità sullo stesso gi
 
 ---
 
-## 4. Fase 1 — Il piano del nutrizionista diventa tuo
+## 4. Fase 1 — La tua lista di ingredienti
 
-Comanda tutte le altre. Senza, la ricalibrazione non ha un obiettivo e la spesa non ha cosa comprare.
+Comanda tutte le altre: le ricette, i grammi, la spesa e la ricalibrazione nascono da qui.
+
+La lista si riempie in **due modi, e portano alla stessa struttura** — per ogni fascia, righe di
+alternative con le quantità:
+
+```
+Carichi il PDF del nutrizionista  ┐
+                                  ├─→  La tua lista di ingredienti  ─→  Le ricette del giorno
+Oppure li scegli tu nell'app      ┘                                     usano solo questi
+```
+
+La strada manuale esiste già a metà: il vocabolario di 124 alimenti e la schermata dove li
+spunti sono in produzione. Le manca di diventare una lista per fascia con le quantità, invece
+che una spunta piatta.
 
 ### 1.1 Numeri sugli alimenti
 
@@ -106,7 +125,7 @@ certificare, e l'app lo dice dove serve. Nessuna chiave API.
 
 *Fatto quando:* ogni pasto composto mostra il suo conto in kcal e macro.
 
-### 1.2 Import del PDF
+### 1.2 Import del PDF — la prima strada
 
 Estrazione del testo, riconoscimento della struttura (giorno → fascia → righe con alternative
 separate da "o"), aggancio nome → alimento in tre passaggi: esatto, approssimato, e il resto lo
@@ -119,7 +138,7 @@ PDF scansionati senza testo selezionabile: serve la lettura in vision, quindi la
 
 *Fatto quando:* carichi una dieta e dopo la conferma la ritrovi tutta dentro l'app.
 
-### 1.3 La sezione digitale, modificabile
+### 1.3 La sezione digitale — la seconda strada, e dove finisce anche la prima
 
 Una schermata per fascia. Per ogni riga, le alternative con i grammi. Si può: cambiare una
 quantità, togliere un'alternativa, aggiungerne una propria, aggiungere o togliere una riga,
@@ -157,8 +176,12 @@ e cosa si mangia ogni giorno. **Va fatta in questa fase, non dopo.**
 
 ### 2.1 Oggi mangi questo
 
-La home diventa il giorno. In cima data e tipo di giorno con interruttore; sotto i pasti in
-ordine, i passati sbiaditi, il prossimo in evidenza, con tutte le alternative del piano.
+La home diventa il giorno. In cima data e tipo di giorno con interruttore; sotto **una card per
+pasto**: foto, nome della ricetta, i grammi dei componenti, il tempo. I pasti passati sbiaditi,
+il prossimo in evidenza.
+
+Forma confermata della schermata principale. Su ogni card due gesti soli: **cambia** (ne arriva
+un'altra dentro gli stessi ingredienti) e **tieni ferma**.
 
 ### 2.2 Il registro
 
@@ -207,7 +230,22 @@ pasto. Non diventa mai un inventario perfetto, e non deve.
 
 ---
 
-## 7. Fase 4 — Le ricette al servizio del piano
+## 7. Fase 4 — Le ricette
+
+**È la fase che dà il prodotto vero**: ricette vincolate agli ingredienti scelti. Le Fasi 1 e 2
+costruiscono il vincolo, questa lo trasforma in cose da cucinare.
+
+### Da dove arrivano le ricette — decisione aperta
+
+| Modo | Come funziona | Chiave | Il problema |
+|---|---|---|---|
+| Filtrare il catalogo | Si tengono le ricette raccolte che usano solo i tuoi ingredienti | Sì | Poche sopravvivono: quasi ogni ricetta vera ha dentro qualcosa fuori lista |
+| Generarle | Dai componenti si genera la ricetta, scritta sui tuoi grammi | Sì | ~2 centesimi a ricetta, una volta sola perché si salva |
+| Ricettario curato | Un centinaio di ricette scritte per componenti, dentro l'app | No | Varietà limitata, ma funziona subito e a costo zero |
+
+**Proposta: il misto.** Catalogo quando una ricetta vera calza, generazione quando non calza
+niente, ricettario curato come rete quando non c'è la chiave. Così l'app funziona anche senza
+chiave, e con la chiave diventa quella giusta.
 
 **4.1 Normalizzazione** (serve la chiave). Ogni riga ingrediente passa una volta all'LLM e
 diventa quantità + unità + alimento canonico. Il risultato si salva e non si rifà mai. Da qui:
