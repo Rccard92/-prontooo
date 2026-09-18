@@ -1,247 +1,303 @@
-# èProntooo — roadmap operativa
+# èProntooo — roadmap
 
-Webapp personale per pianificare i pasti della settimana, generare la lista della spesa e incrociarla con i volantini di Lidl, Eurospin e Conad.
+Il tuo piano nutrizionale, vivo. Il nutrizionista ti dà un PDF e poi sparisce per tre mesi:
+l'app tiene quel piano, ti dice cosa mangiare oggi, si aggiusta quando sgarri, e a fine mese
+gli riporta cosa hai mangiato davvero.
 
-Uso singolo utente, non commerciale. Deploy su Railway.
+Non è un ricettario con sopra un calendario. È il pezzo che manca fra la visita e la spesa.
 
-> Nome: **èProntooo**. Quello che si grida quando la tavola è pronta e bisogna richiamare tutti.
+> Questo file è la fonte di verità. Esiste anche come documento leggibile:
+> <https://claude.ai/code/artifact/f9a1fedb-6d4f-4237-9a51-7ba7c53141ef>
 
 ---
 
-## 1. Stack
+## 1. I quattro momenti che devono funzionare
 
-| Ambito | Scelta | Perché |
+Se funzionano questi, l'app è fatta. Tutto il resto sta intorno.
+
+1. **Carichi il PDF e in dieci secondi la tua dieta è dentro**, con i grammi, modificabile.
+2. **Hai mangiato una pizza a pranzo e lo scrivi.** L'app ricalcola la cena e ti dice di
+   quanto sei sopra, senza farti la predica e senza farti recuperare domani.
+3. **Sabato apri la lista della spesa**, divisa per reparto, con accanto cosa è in offerta e dove.
+4. **Prima della visita premi un pulsante** e hai il resoconto di cosa hai mangiato davvero
+   contro cosa era previsto.
+
+---
+
+## 2. Dove siamo
+
+L'impianto regge, il prodotto no. Push su `main` ricostruisce e sostituisce il deploy da solo,
+le migrazioni girano prima di ogni rilascio, e se falliscono resta in piedi la versione
+precedente. Quella parte è finita.
+
+| Pezzo | Stato |
+|---|---|
+| Repo, Railway, Postgres, deploy automatico | Finito |
+| Catalogo ricette che si riempie da solo dalle sitemap | Funziona |
+| Vocabolario di 124 alimenti con ruoli, fasce, etichette | Funziona |
+| Wizard del profilo | Funziona |
+| Piano settimanale composto dagli alimenti | Grezzo: non conosce nessun numero |
+| Pagina ricetta, import manuale | Funziona |
+
+Non c'è: valori nutrizionali, piano del nutrizionista, registro dei consumi, ricalibrazione,
+giorno di allenamento, lista della spesa, offerte, password.
+
+**Il buco vero è che l'app non conosce nessun numero.** Sa comporre un pranzo con riso, pollo
+e zucchine, ma non sa che sono 620 kcal. Senza quello non esiste niente del resto.
+
+---
+
+## 3. Il modello dati
+
+Tre gruppi: il vocabolario, il piano, la realtà. Il piano è quello che dovresti mangiare, la
+realtà è quello che hai mangiato, e la differenza fra i due è il prodotto.
+
+### Vocabolario
+
+| Tabella | Cosa tiene | Stato |
 |---|---|---|
-| Web | Next.js 15 (App Router) + TypeScript | Un solo servizio per UI e API |
-| Stile | Tailwind v4 con token CSS custom | Nessuna palette di default |
-| DB | Postgres su Railway + pgvector | Serve per il matching semantico offerte |
-| ORM | Drizzle | Migrazioni leggibili, niente runtime pesante |
-| Worker | Servizio Python separato, stesso repo | `recipe-scrapers` e `PyMuPDF` non hanno equivalenti TS validi |
-| Job | Railway cron sul servizio worker | Un giro a settimana per i volantini |
-| File | Volume Railway sul worker | I PDF dei volantini, non servono altrove |
-| LLM | Anthropic API | Normalizzazione ingredienti + lettura volantini |
-| Auth | Cookie con passphrase singola | Utente uno. Non serve altro |
+| `alimenti` | Nome, gruppo, ruoli, fasce, porzione tipica, etichette | Esiste |
+| `alimenti` → macro | kcal, proteine, carboidrati, grassi, fibre per 100g | Da aggiungere |
+| `alimenti` → spesa | Reparto del supermercato, mesi di stagione | Da aggiungere |
+| `alimento_equivalenze` | Quali alimenti si scambiano a parità di ruolo | Nuova |
 
-**Due servizi Railway, un Postgres, un repo.** Il worker non espone HTTP pubblico: scrive solo su DB.
+### Piano
 
----
+| Tabella | Cosa tiene |
+|---|---|
+| `piani_nutrizionali` | Nome, data visita, origine (pdf/manuale), se è attivo |
+| `piano_giorni` | Un giorno-tipo: `on`, `off`, o un giorno della settimana |
+| `piano_pasti` | Un pasto di quel giorno-tipo: fascia e ordine |
+| `piano_componenti` | Una riga del pasto — un ruolo da riempire |
+| `piano_opzioni` | Le alternative di quella riga, con quantità e unità |
 
-## 2. Modello dati (nucleo)
+`piano_opzioni` tiene sia l'alimento riconosciuto sia il **testo grezzo** letto dal PDF. Quando
+l'import non riconosce una voce non la butta: la mostra com'era e l'utente la collega a mano.
 
-Le tabelle che reggono tutto. Il resto si aggiunge dopo.
+### Realtà
 
-- `ingredienti_canonici` — l'ingrediente normalizzato (`ricotta`, `farina 00`), con categoria, reparto supermercato, allergeni, stagionalità
-- `allergeni` — glutine, lattosio, frutta a guscio, uova, pesce, crostacei, soia, sedano...
-- `ricette` — titolo, fonte URL, immagine URL, tempi, porzioni, difficoltà, tipo pasto, testo passaggi
-- `ricetta_ingredienti` — riga grezza + quantità + unità + FK a `ingredienti_canonici`
-- `profilo` — output del wizard (singola riga)
-- `piani` / `piani_pasti` — settimana, giorno, fascia, ricetta, porzioni, stato
-- `dispensa` — cosa c'è già in casa
-- `insegne` / `volantini` / `offerte` — offerta = nome grezzo + prezzo + validità + embedding
-- `offerta_match` — offerta ↔ ingrediente canonico, con punteggio di confidenza
+| Tabella | Cosa tiene |
+|---|---|
+| `giornate` | Data, tipo di giorno, obiettivo del giorno in kcal e macro |
+| `giornata_pasti` | Per fascia: previsto, consumato, stato |
+| `dispensa` | Cosa c'è in casa, quantità e scadenza |
+| `lista_spuntati` | Cosa è già nel carrello, per settimana |
+| `pesi` | Data e chilogrammi, se si traccia |
 
-**Regola non negoziabile:** gli allergeni si derivano da `ingredienti_canonici`, mai dai tag della fonte. Un sito che scrive "senza glutine" non è una fonte attendibile.
+L'obiettivo del giorno si **fotografa** dentro `giornate` invece di ricalcolarlo: cambiando il
+piano, lo storico deve restare confrontabile con quello che valeva allora.
 
----
+### Cosa si butta
 
-## 3. Fasi
-
-### Fase 0 — Fondamenta
-
-Prima di scrivere una riga di logica: repo su GitHub, due servizi su Railway, Postgres collegato, deploy automatico su push, una pagina che risponde in produzione.
-
-Deliverable: `CLAUDE.md` nel repo con stack, convenzioni e regole di design, così ogni sessione parte allineata.
-
-*Fatto quando:* push su `main` → produzione aggiornata, senza intervento manuale.
+Le tabelle `piani` e `piani_pasti` settimanali spariscono. Una settimana è sette `giornate`,
+non un'entità a sé: tenerle entrambe vorrebbe dire due verità sullo stesso giorno.
 
 ---
 
-### Fase 1 — Catalogo ricette
+## 4. Fase 1 — Il piano del nutrizionista diventa tuo
 
-Il pezzo che sblocca tutto il resto.
+Comanda tutte le altre. Senza, la ricalibrazione non ha un obiettivo e la spesa non ha cosa comprare.
 
-- Parser JSON-LD `schema.org/Recipe` via `recipe-scrapers`
-- Endpoint "importa da URL": incolli un link, la ricetta entra nel catalogo
-- Pipeline di normalizzazione: ogni riga ingrediente passa una volta all'LLM e diventa quantità + unità + ingrediente canonico + allergeni
-- Seed: crawl delle sitemap di 2-3 siti fidati, 300-500 ricette importate in batch
-- Schermata catalogo con ricerca e filtri
+### 1.1 Numeri sugli alimenti
 
-*Fatto quando:* 300+ ricette in DB con ingredienti canonici mappati, e l'import da URL funziona in meno di 5 secondi.
+kcal, proteine, carboidrati, grassi, fibre per 100g, più reparto e mesi di stagione, su tutti i
+124 alimenti. Valori dalle tabelle CREA: pubblici e **indicativi**, servono a stimare non a
+certificare, e l'app lo dice dove serve. Nessuna chiave API.
 
-**Attenzione agli allergeni nascosti.** Il mapping ingrediente → allergene va curato a mano per i casi sporchi: salsa di soia e dado contengono glutine, il pesto contiene latte e frutta a guscio, molti insaccati contengono lattosio. Questa tabella è il cuore della correttezza dell'app.
+*Fatto quando:* ogni pasto composto mostra il suo conto in kcal e macro.
 
----
+### 1.2 Import del PDF
 
-### Fase 2 — Wizard di configurazione
+Estrazione del testo, riconoscimento della struttura (giorno → fascia → righe con alternative
+separate da "o"), aggancio nome → alimento in tre passaggi: esatto, approssimato, e il resto lo
+collega l'utente una volta sola.
 
-Il wizard gira una volta e resta modificabile. Cosa chiede:
+**La schermata di conferma non si salta mai.** Un import che sbaglia in silenzio è peggio di uno
+che non funziona.
 
-**Chi mangia**
-- Quante persone, e se ci sono bambini (le porzioni si scalano)
-- Porzioni di default per pasto
+PDF scansionati senza testo selezionabile: serve la lettura in vision, quindi la chiave. Rimandato.
 
-**Cosa evitare**
-- Allergie e intolleranze (esclusione rigida, mai aggirabile)
-- Esclusioni scelte (no pane, no maiale, no carne rossa) — morbide, il sistema può proporre alternative
-- Lista nera ingredienti (il singolo ingrediente che non ti piace)
+*Fatto quando:* carichi una dieta e dopo la conferma la ritrovi tutta dentro l'app.
 
-**Come mangi**
-- Quali pasti pianificare davvero: colazione, spuntino, pranzo, merenda, cena
-- Quali giorni sei fuori a pranzo (quei pasti non entrano nel piano né nella lista)
-- Tempo massimo per fascia (colazione 10 minuti, cena 45)
-- Difficoltà massima accettata
+### 1.3 La sezione digitale, modificabile
 
-**Come cucini**
-- Attrezzatura: forno, friggitrice ad aria, pentola a pressione, planetaria — filtra le ricette che non puoi fare
-- Cucine preferite
-- Quanto ti va di ripetere: ogni quante settimane una ricetta può tornare
+Una schermata per fascia. Per ogni riga, le alternative con i grammi. Si può: cambiare una
+quantità, togliere un'alternativa, aggiungerne una propria, aggiungere o togliere una riga,
+disattivare una fascia.
 
-**Dove compri**
-- Insegne di fiducia e punto vendita specifico
-- Budget settimanale indicativo
+Le modifiche sopravvivono a un reimport: caricando la dieta nuova si mostra il **diff**, non si
+sovrascrive.
 
-**Stile alimentare**
-- Preferenza generale (equilibrato, più verdure, più proteine, più leggero la sera)
-- Nessun target calorico: l'app riepiloga, non prescrive
+*Fatto quando:* modifichi una quantità e la ritrovi il giorno dopo nel piano del giorno.
 
-*Fatto quando:* il profilo salvato cambia concretamente quali ricette il sistema propone.
+### 1.4 Giorno ON / giorno OFF
 
----
+Due giorni-tipo. Nel profilo si dicono i giorni di allenamento, modificabili al volo.
 
-### Fase 3 — Piano settimanale
+| | ON | OFF |
+|---|---|---|
+| Base | Piena | Ridotta |
+| Proteina | Uguale | Uguale |
+| Verdura | Uguale | Aumentata |
+| Grassi aggiunti | Ridotti | Pieni |
 
-- Griglia 7 giorni × fasce attive
-- Generazione automatica del piano rispettando profilo, varietà e anti-ripetizione
-- **Blocca e rigenera**: fissi i pasti che ti piacciono e rigeneri solo il resto
-- Sostituzione singolo pasto con alternative coerenti
-- Drag and drop per spostare un pasto di giorno
-- Salvataggio piano, storico dei piani passati
+Se il nutrizionista ha dato due schemi distinti si usano i suoi. Se ne ha dato uno, ON e OFF
+nascono da quello con i moltiplicatori sopra, e restano modificabili.
 
-**Funzione da non saltare: gli avanzi.** Se una ricetta rende 4 porzioni e siete in 2, il sistema propone il riuso il giorno dopo invece di farti cucinare due volte. Cambia radicalmente l'utilità reale dell'app.
+*Fatto quando:* lo stesso giorno propone due pasti diversi a seconda che ci si alleni o no.
 
-*Fatto quando:* premi un pulsante e ottieni una settimana sensata che rispetta tutte le esclusioni.
+### 1.5 Passphrase
+
+Cookie e una passphrase. Non è una funzione, è che dalla Fase 1 dentro c'è il piano alimentare
+e cosa si mangia ogni giorno. **Va fatta in questa fase, non dopo.**
 
 ---
 
-### Fase 4 — Lista della spesa
+## 5. Fase 2 — La giornata
 
-- **Derivata dal piano, non salvata come entità.** Così l'aggiornamento automatico è gratis per costruzione: cambi una ricetta, la lista cambia da sola
-- Aggregazione per ingrediente canonico con conversione unità (200 g + 1 barattolo + q.b.)
-- **Raggruppamento per reparto** (ortofrutta, banco frigo, dispensa, surgelati) — segue il percorso fisico nel supermercato
-- Dispensa: quello che hai già in casa viene sottratto dalla lista
-- Spunta degli articoli mentre fai la spesa, con stato persistente
-- Aggiunta manuale di voci fuori piano
-- Export testo per condividerla
+### 2.1 Oggi mangi questo
+
+La home diventa il giorno. In cima data e tipo di giorno con interruttore; sotto i pasti in
+ordine, i passati sbiaditi, il prossimo in evidenza, con tutte le alternative del piano.
+
+### 2.2 Il registro
+
+| Modo | Quando | Costo |
+|---|---|---|
+| Spunta | Hai mangiato il previsto | Un tocco |
+| Correggi | Stessa roba, quantità o alternativa diverse | Due tocchi |
+| Scrivi | Eri fuori | Una frase |
+
+Il terzo caso decide se l'app la usi o la abbandoni. Stimare un pasto scritto a parole richiede
+la chiave; senza, resta un elenco di piatti comuni già pesati, scritto a mano.
+
+### 2.3 La ricalibrazione
+
+Obiettivo del giorno meno quanto già consumato; il residuo si ridistribuisce sui pasti che
+mancano mantenendo i ruoli e scalando le quantità.
+
+1. **Non si scende sotto il minimo.** Ogni fascia ha un pavimento: una cena da 200 kcal non è una cena.
+2. **Non si recupera il giorno dopo.** Domani riparte dall'obiettivo pieno.
+3. **Si ricalibra la quantità, non la struttura.** Cambiano i grammi, non il tipo di pasto.
+4. **Le proteine si difendono per ultime.** Prima i grassi aggiunti, poi la base, infine la proteina.
+
+Tono: "oggi sei a +340 kcal", mai "hai sgarrato".
+
+*Fatto quando:* mangi una pizza a pranzo e la cena che ti propone ha senso.
+
+### 2.4 Riepilogo del giorno
+
+Consumato contro obiettivo, in kcal e nei tre macro. Una barra per ognuno. Nessun voto.
+
+---
+
+## 6. Fase 3 — La settimana e la spesa
+
+Sette giornate generate dal piano, con i giorni di allenamento al posto giusto. Si genera il
+giovedì per la settimana dopo, così la spesa si fa col piano in mano.
+
+La lista della spesa è **derivata, non salvata**: somma per alimento, meno la dispensa,
+arrotondata al formato di vendita, raggruppata per reparto nell'ordine in cui si cammina.
+Spunta persistente, voci fuori piano ammesse.
+
+La dispensa si aggiorna in due punti: entra quando spunti la spesa, esce quando registri un
+pasto. Non diventa mai un inventario perfetto, e non deve.
 
 *Fatto quando:* la usi al supermercato dal telefono e non ti serve altro.
 
 ---
 
-### Fase 5 — Volantini e offerte
+## 7. Fase 4 — Le ricette al servizio del piano
 
-Il pezzo più fragile. Si costruisce in due tempi.
+**4.1 Normalizzazione** (serve la chiave). Ogni riga ingrediente passa una volta all'LLM e
+diventa quantità + unità + alimento canonico. Il risultato si salva e non si rifà mai. Da qui:
+allergeni sulle ricette, reparto per la spesa, match ricetta ↔ componenti.
 
-**5a — Caricamento manuale**
-- Carichi il PDF del volantino, il sistema lo parsifica
-- Estrazione testo con PyMuPDF; le pagine senza testo selezionabile vanno all'LLM in vision
-- Ogni offerta diventa: nome grezzo, marca, formato, prezzo, prezzo al kg/l, validità
-- Matching contro la lista della spesa con embedding pgvector + soglia di confidenza
-- Le corrispondenze incerte si mostrano come "da verificare", mai come certe
+**4.2 Compatibilità a livelli**, non sì/no: *calza* (usa quei componenti), *vicina* (stessi
+ruoli, alimenti equivalenti), *adattabile* (ci arrivi togliendo o sostituendo, e l'app dice cosa).
 
-**5b — Raccolta automatica**
-- Cron settimanale che scarica i PDF di Lidl ed Eurospin (testo selezionabile, estrazione diretta)
-- Conad per ultimo: è una cooperativa, il volantino cambia per cooperativa regionale e punto vendita. Va agganciato il punto vendita siciliano corretto, altrimenti i prezzi mostrati non sono quelli che paghi
+**4.3 Quantità adattate** ai grammi del pasto, non a quelle della ricetta.
 
-Vista finale: la lista della spesa divisa per insegna, con quanto risparmi e cosa conviene comprare dove.
-
-*Fatto quando:* apri l'app il sabato e sai in quale dei tre supermercati andare e per cosa.
+**4.4 Modalità cucina**: schermo acceso, un passaggio alla volta, timer.
 
 ---
 
-### Fase 6 — Uso reale
+## 8. Fase 5 — Volantini e offerte
 
-Le cose che fanno la differenza tra un progetto e uno strumento che usi davvero.
+Il pezzo più fragile, in due tempi.
 
-- **PWA installabile** — la apri dal telefono al supermercato come un'app vera, funziona offline sulla lista
-- **Modalità cucina** — schermo sempre acceso, un passaggio alla volta, timer integrati sui tempi di cottura
-- Preferiti e voto ricetta, che retroagiscono sul suggeritore
-- Note personali per ricetta ("io ci metto meno sale")
-- Riepilogo nutrizionale settimanale, informativo
+**5.1 Manuale.** PDF caricato a mano, PyMuPDF per il testo, vision per le pagine senza.
+Ogni offerta: nome grezzo, marca, formato, prezzo, prezzo al kg/l, validità.
 
----
+**5.2 Match** con embedding pgvector e soglia di confidenza. Sotto soglia si mostra
+**da verificare**, mai come certo.
 
-### Fase 7 — Intelligenza
+**5.3 Automatico.** Cron settimanale per Lidl ed Eurospin. Conad per ultimo: è una cooperativa,
+il volantino cambia per cooperativa regionale e punto vendita, e va agganciato quello siciliano
+giusto o i prezzi mostrati non sono quelli che paghi.
 
-- **Piano a partire dalle offerte** — inverti il flusso: il sistema guarda cosa è in promozione questa settimana e costruisce il piano intorno a quello. È la funzione con più valore pratico di tutto il progetto
-- Filtro stagionalità su frutta e verdura per mese
-- Costo stimato della settimana e confronto con le settimane precedenti
-- Suggerimenti basati sullo storico: cosa cucini davvero contro cosa pianifichi
+**5.4 La vista che serve:** la lista divisa per insegna, quanto risparmi, se vale due tappe.
 
 ---
 
-## 4. Fuori scope in v1
+## 9. Fase 6 — Uso reale
 
-Da non costruire, per non affondare: multi-utente, ruoli e permessi, app native, integrazione con la spesa online, riconoscimento foto dei piatti, condivisione social, tracking peso.
+PWA installabile che funziona offline su lista e giornata (al supermercato sottoterra il
+telefono non prende, ed è quando serve). Due promemoria soli: la sera se non hai registrato,
+il giovedì per generare la settimana. Storico consultabile.
 
 ---
 
-## 5. Design
+## 10. Fase 7 — Intelligenza
 
-Direzione scelta e chiusa: **caldo e contemporaneo**, come le app di adesso. Le due direzioni di partenza (etichetta d'agrumi, banco del mercato) sono state provate e scartate: troppo spigolose e fredde.
+**7.1 Il resoconto per la visita.** Un PDF: quanto hai seguito il piano per fascia e settimana,
+dove sistematicamente no, cosa hai mangiato al posto di cosa, l'andamento del peso. È la
+funzione con più valore pratico di tutte.
 
-### Cosa vuol dire
+**7.2 Sostituzioni equivalenti.** 150g di pollo diventano 180g di merluzzo, non 150g.
 
-- Fondo bianco, schede bianche che si staccano con un'ombra leggera
-- Angoli morbidi: 24px sulle superfici, 14px sui controlli, pillole piene sui pulsanti
-- Tre colori vivi presi dal cibo, non dalla tavolozza di un framework
+**7.3 Impara cosa mangi davvero.** Dopo due mesi di registro le proposte si spostano su quello
+che scegli sempre.
+
+**7.4 Il piano che parte dalle offerte.** Si inverte il flusso, restando dentro il piano.
+
+**7.5 Peso e misure.** Era fuori scope quando l'app era un ricettario; col resoconto per il
+nutrizionista dentro, senza peso quel resoconto è monco. Decisione dell'utente.
+
+---
+
+## 11. Le regole che non si violano
+
+- **L'app non è un medico.** Non inventa diete, non stabilisce fabbisogni, non dà consigli
+  nutrizionali. Riorganizza porzioni di alimenti già prescritti dal nutrizionista dell'utente.
+  Dove stima, lo dice
+- **Non si recupera il giorno dopo.** Nessuna compensazione fra giorni
+- **Gli allergeni si derivano dagli alimenti, mai dai tag della fonte.** Finché le ricette non
+  sono normalizzate, l'app dichiara di non conoscerne gli allergeni invece di tacere
+- **Un import non sovrascrive mai in silenzio.** Dieta o volantino: sempre una conferma
+- **Sotto soglia si dice "da verificare".** Vale per le offerte e per la stima di un pasto scritto
+- **I dati sul cibo sono dati personali.** Dietro passphrase, e non escono dal database
+
+---
+
+## 12. Fuori scope
+
+Multiutente, ruoli e permessi, app native, integrazione con la spesa online, riconoscimento
+delle foto dei piatti, condivisione social.
+
+---
+
+## 13. Ordine di lavoro
 
 ```
-Basilico    #1EB85C   azioni, conferme
-Pomodoro    #E8402A   allergeni, errori, scadenze
-Limone      #FFC629   attenzione, evidenziazioni
-Inchiostro  #14261C   testo
-Fumo        #64786C   testo secondario
-Fondo       #F6FAF7   fondo pagina
+Fase 1  Il piano è tuo        →  e con lei la passphrase
+Fase 2  La giornata           →  qui l'app diventa quella che usi ogni giorno
+Fase 3  Settimana e spesa     →  qui diventa utile al supermercato
+Fase 4  Ricette al servizio   →  serve la chiave
+Fase 5  Volantini e offerte   →  il pezzo fragile, in due tempi
+Fase 6  Uso reale             →  PWA e promemoria
+Fase 7  Resoconto e ingegno   →  la parte che fa restare
 ```
 
-- **Marchio e titoli:** Fraunces, un serif morbido, con gli assi SOFT e WONK
-- **Testo e UI:** Plus Jakarta Sans, cifre tabulari dove i numeri si incolonnano
-- Le foto delle ricette vanno grandi, mai francobolli in una griglia
-
-### Regole che restano
-
-- Niente font Inter
-- Niente palette `slate` / `zinc` / `gray`: solo i token qui sopra
-- Niente emoji usate come icone
-- Niente `->` appiccicato al testo dei pulsanti
-- Due sole ombre in tutta l'app, e servono a dire "questa e' una superficie", non a decorare
-- Scala tipografica ampia: forte stacco fra titolo e corpo
-
-### Librerie da usare
-
-Non il kit shadcn di default.
-
-- **Base UI** o **Radix primitives**, vestiti a mano
-- **Motion** per i momenti animati
-- **Embla** per lo scorrimento delle card ricetta
-- **Phosphor Icons** — Lucide e' l'icon set di default di shadcn, si riconosce
-- **Vaul** per i pannelli dal basso su mobile
-- **NumberFlow** per prezzi e porzioni che cambiano
-
----
-
-## 6. Ordine di lavoro
-
-```
-Fase 0  Fondamenta e deploy       →  mezza giornata
-Fase 1  Catalogo ricette          →  il pezzo più lungo, non affrettarlo
-Fase 2  Wizard                    →  veloce, ma definisce tutto il resto
-Fase 3  Piano settimanale
-Fase 4  Lista della spesa         →  qui l'app diventa usabile davvero
-Fase 5a Volantini manuali         →  verifica che il matching funzioni
-Fase 5b Raccolta automatica       →  solo se 5a ha dato buoni risultati
-Fase 6  PWA e modalità cucina
-Fase 7  Piano dalle offerte
-```
-
-La regola: ogni fase finisce in produzione e funzionante prima che inizi la successiva. Niente tre fasi aperte insieme.
+Una fase finisce **in produzione e funzionante** prima che cominci la successiva.
+Niente tre fasi aperte insieme.
