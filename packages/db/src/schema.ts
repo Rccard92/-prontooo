@@ -497,3 +497,43 @@ export const offerte = pgTable(
 )
 
 export type Offerta = typeof offerte.$inferSelect
+
+/**
+ * Un telefono che ha detto sì ai promemoria.
+ *
+ * L'endpoint e' l'indirizzo che il browser da' al server di push: e' unico
+ * per installazione, e quando scade il server di push risponde 410 e la
+ * riga si butta. Le chiavi sono quelle che cifrano il messaggio - senza,
+ * nemmeno chi consegna la notifica puo' leggerla.
+ */
+export const iscrizioniPush = pgTable(
+  'iscrizioni_push',
+  {
+    id: serial('id').primaryKey(),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    creataIl: timestamp('creata_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('iscrizioni_push_endpoint_idx').on(t.endpoint)],
+)
+
+export type IscrizionePush = typeof iscrizioniPush.$inferSelect
+
+/**
+ * L'ultima volta che un promemoria e' partito.
+ *
+ * Serve a non mandarlo due volte: il worker chiama la rotta ogni ora, e senza
+ * questa riga il promemoria della sera arriverebbe a ogni giro fino a
+ * mezzanotte.
+ */
+export const promemoriaMandati = pgTable(
+  'promemoria_mandati',
+  {
+    id: serial('id').primaryKey(),
+    genere: text('genere').notNull(),
+    data: date('data').notNull(),
+    mandatoIl: timestamp('mandato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('promemoria_genere_data_idx').on(t.genere, t.data)],
+)

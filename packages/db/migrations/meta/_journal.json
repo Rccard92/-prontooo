@@ -57,6 +57,13 @@
       "when": 1789764926027,
       "tag": "0007_nervous_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789765472299,
+      "tag": "0008_slippery_black_tom",
+      "breakpoints": true
     }
   ]
 }

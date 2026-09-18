@@ -85,6 +85,14 @@ Stanno in `apps/web/lib/offerte/`. Un volantino non e' un documento, e' un manif
 
 Il consiglio delle tappe e' prudente per scelta: due tappe si consigliano solo se rendono almeno tre euro o quattro cose in piu'. La raccolta automatica dei volantini non c'e': gli indirizzi cambiano ogni settimana, e un raccoglitore che non si puo' provare e' peggio di nessun raccoglitore.
 
+## L'app sul telefono
+
+`apps/web/public/sw.js` e `app/manifest.ts`. Il caso vero non e' "sono offline", e' il supermercato sottoterra con la lista della spesa aperta: le pagine si prendono dalla rete quando c'e' - i dati cambiano, e una lista vecchia e' peggio di nessuna lista - e dalla copia quando la rete non risponde. Le POST non si toccano mai: le azioni del server scrivono sul database, e una POST rigiocata dalla copia scriverebbe due volte.
+
+I promemoria sono due e devono restare due: la sera se non hai registrato niente, il giovedi' per fare la settimana in tempo per la spesa. Un'app che notifica di continuo la spegni, e allora non serve piu'. Prima di mandare si guarda se serve: un promemoria che dice una cosa gia' fatta e' rumore.
+
+Chi decide **se** e **quando** e' il web, in `lib/promemoria/manda.ts`, che ha davanti il database e sa che ore sono a Roma. Il worker bussa e basta a `POST /api/interno/promemoria` una volta per giro, perche' e' l'unica cosa che gira sempre. Senza le chiavi VAPID non si manda niente e non e' un errore: i promemoria sono un di piu'.
+
 ## Design
 
 Direzione scelta: **caldo e contemporaneo**. Fondo bianco, angoli morbidi, ombre leggere, tre colori vivi presi dal cibo. Niente spigoli, niente superfici fredde.
@@ -132,7 +140,7 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
 
-Fatto: catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, import manuale come attrezzo da officina.
+Fatto: catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, volantini e offerte con soglia di confidenza, PWA installabile che regge senza rete, promemoria push, storico e peso, import manuale come attrezzo da officina.
 
 Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti delle **ricette**, e quindi allergeni sulle ricette, reparti e lista della spesa.
 

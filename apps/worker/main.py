@@ -4,7 +4,8 @@ Il worker non espone HTTP: legge fonti esterne e scrive su Postgres. A ogni
 giro fa due cose:
 
 1. riempie il catalogo raccogliendo ricette dalle sitemap delle fonti
-2. lascia un battito, cosi' la pagina di stato sa che e' vivo
+2. bussa alla rotta dei promemoria del web, che decide se ne va mandato uno
+3. lascia un battito, cosi' la pagina di stato sa che e' vivo
 
 Poi dorme e ricomincia. Il ciclo sta qui dentro invece che nel cron di Railway
 di proposito: un servizio a cron con restart NEVER viene creato ma non avviato
@@ -13,8 +14,7 @@ far partire un giro adesso. Un processo che dorme si avvia al deploy, si vede
 nei log e si puo' forzare con un redeploy.
 
 Quando il catalogo e' pieno il giro costa quasi niente: un conteggio sul
-database e via. I volantini dei supermercati arrivano in Fase 5 e si agganciano
-qui, guardando il giorno della settimana.
+database e via.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ import time
 
 import psycopg
 
+from promemoria import bussa
 from raccolta import raccogli
 
 SERVIZIO = "worker"
@@ -64,6 +65,12 @@ def un_giro(url: str) -> None:
     except Exception as errore:  # la raccolta non deve impedire il battito
         print(f"raccolta fallita: {errore}", file=sys.stderr, flush=True)
         messaggio = f"raccolta fallita: {errore}"
+
+    # I promemoria non devono far cadere il giro: sono un di piu'.
+    try:
+        print(bussa(), flush=True)
+    except Exception as errore:
+        print(f"promemoria falliti: {errore}", file=sys.stderr, flush=True)
 
     try:
         batti(url, messaggio)
