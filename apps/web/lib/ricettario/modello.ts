@@ -153,10 +153,13 @@ export function abbina(
   // Due posti vuoti non sono piu' un adattamento: e' un'altra ricetta.
   if (mancanti.length > 1) return null
 
-  // Quello che avanza e si mangia comunque: la frutta e il pane non sono
-  // "avanzi", stanno accanto al piatto. Contano solo i componenti sostanziosi.
+  // Quello che la ricetta non usa e si mangia comunque, accanto al piatto.
+  // Le voci "a piacere" hanno quantita' zero e non sono avanzi di niente.
   const avanzati = liberi.filter((c) => c.quantita > 0)
 
+  // Un solo avanzo non declassa la ricetta: la frutta o il pane stanno
+  // accanto al piatto senza entrarci, ed e' normale. Due sono un pasto che
+  // la ricetta copre solo a meta'.
   const livello: Livello =
     mancanti.length > 0 ? 'adattabile' : ripieghi > 0 || avanzati.length > 1 ? 'vicina' : 'calza'
 
@@ -190,10 +193,10 @@ export function passiDi(abbinamento: Abbinamento): string[] {
 
 /** La lista di quello che serve, coi grammi del pasto. */
 export function occorrente(abbinamento: Abbinamento): string[] {
-  const dai_posti = abbinamento.ricetta.posti
+  const daiPosti = abbinamento.ricetta.posti
     .map((posto) => abbinamento.assegnati.get(posto.chiave))
     .filter((c): c is ComponenteAbbinabile => c !== undefined)
     .map(scrivi)
 
-  return [...dai_posti, ...(abbinamento.ricetta.liberi ?? []).map((l) => `${l} q.b.`)]
+  return [...daiPosti, ...(abbinamento.ricetta.liberi ?? []).map((l) => `${l} q.b.`)]
 }
