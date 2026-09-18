@@ -14,9 +14,9 @@ export type EsitoImport =
 
 /**
  * Indirizzi che il server non deve andare a prendere per conto di chi incolla.
- * L'app e' pubblica finche' non arriva la passphrase, e da dentro Railway la
- * rete privata e' raggiungibile: senza questo filtro il campo "importa" diventa
- * un modo per far bussare il server dove non deve.
+ * Da dentro Railway la rete privata e' raggiungibile: senza questo filtro il
+ * campo "importa" diventa un modo per far bussare il server dove non deve,
+ * e il login non basta a rendere sicura una cosa del genere.
  */
 function indirizzoVietato(host: string): boolean {
   const nome = host.toLowerCase()

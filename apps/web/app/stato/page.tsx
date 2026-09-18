@@ -48,8 +48,8 @@ async function leggiStato(): Promise<Voce[]> {
           },
     ]
   } catch (errore) {
-    // Il dettaglio resta nei log di Railway: l'app e' pubblica finche' non arriva
-    // la passphrase, e un errore di connessione contiene host e utente del database.
+    // Il dettaglio resta nei log di Railway: un errore di connessione contiene
+    // host e utente del database, e non e' roba da mettere su una pagina.
     console.error('lettura stato impianto fallita:', errore)
 
     return [

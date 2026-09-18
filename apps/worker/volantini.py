@@ -10,11 +10,15 @@ si guarda in database se per quell'insegna ce n'e' gia' uno fresco. Il ciclo
 del worker gira ogni mezz'ora e questa funzione, nel caso normale, costa una
 query e basta.
 
-Le pagine dei volantini cambiano spesso, e il PDF non sta sempre nello stesso
-posto. Per questo non si cerca un indirizzo preciso: si prende la pagina e si
-cercano **tutti** i link a un PDF, tenendo il primo che sembra un volantino.
-Quando una fonte smette di funzionare i log lo dicono con chiarezza, invece di
-tacere.
+Gli indirizzi delle pagine dei volantini non si indovinano - il primo giro
+vero ha risposto 404 su tutti e tre i tentativi - quindi si scoprono: si parte
+dalla home dell'insegna, si tengono i link che parlano di volantini, e dentro
+quelli si cercano i PDF. E' lo stesso principio del robots.txt per le ricette:
+il sito dice dove stanno le sue cose, noi non lo immaginiamo.
+
+Alcune insegne il volantino lo fanno solo sfogliare, e un PDF non c'e'. Quando
+succede i log lo dicono con chiarezza invece di tacere, e per quell'insegna
+resta il caricamento a mano.
 """
 
 from __future__ import annotations
@@ -41,8 +45,8 @@ MASSIMO_BYTE = 40 * 1024 * 1024
 @dataclass(frozen=True)
 class FonteVolantino:
     insegna: str
-    # La pagina da cui partire a cercare.
-    pagina: str
+    # Da dove partire a cercare: la home, non una pagina indovinata.
+    radice: str
     # Il punto vendita, quando l'insegna ne ha uno solo che ci interessa.
     punto_vendita: str | None = None
 
@@ -56,9 +60,9 @@ def fonti() -> list[FonteVolantino]:
     uno qui dentro vorrebbe dire mostrare prezzi che non sono quelli che paghi.
     """
     elenco = [
-        FonteVolantino("Lidl", "https://www.lidl.it/c/it-IT/volantini/s10005610"),
-        FonteVolantino("Eurospin", "https://www.eurospin.it/volantini/"),
-        FonteVolantino("MD", "https://www.mdspa.it/volantini/"),
+        FonteVolantino("Lidl", "https://www.lidl.it/"),
+        FonteVolantino("Eurospin", "https://www.eurospin.it/"),
+        FonteVolantino("MD", "https://www.mdspa.it/"),
     ]
 
     conad = os.environ.get("VOLANTINO_CONAD_URL", "").strip()
@@ -78,9 +82,50 @@ def fonti() -> list[FonteVolantino]:
 # Un PDF che non e' il volantino: regolamenti, informative, moduli.
 NON_E_UN_VOLANTINO = re.compile(
     r"(privacy|cookie|informativ|regolament|condizioni|termini|modulo|contratt"
-    r"|bilancio|certificat|allergen|nutrizional)",
+    r"|bilancio|certificat|allergen|nutrizional|etica|sostenibil|lavora)",
     re.IGNORECASE,
 )
+
+# Un link che promette volantini.
+PARLA_DI_VOLANTINI = re.compile(r"volantin|flyer|offerte|promozion|catalog", re.IGNORECASE)
+
+
+def pagine_dei_volantini(cliente: httpx.Client, radice: str) -> list[str]:
+    """Dalla home, gli indirizzi che promettono volantini.
+
+    Si guardano gli `href` e il testo intorno: un menu scrive spesso
+    `href="/c/s10005610"` con dentro la parola "Volantini", e l'indirizzo da
+    solo non direbbe niente.
+    """
+    risposta = cliente.get(radice, timeout=30)
+    risposta.raise_for_status()
+
+    testo = risposta.text
+    candidati: list[str] = []
+
+    # href="..." insieme a quello che c'e' scritto fino alla chiusura del tag.
+    for collegamento, etichetta in re.findall(
+        r"""href=["']([^"'#]+)["'][^>]*>([^<]{0,80})""", testo, re.IGNORECASE
+    ):
+        if not PARLA_DI_VOLANTINI.search(collegamento) and not PARLA_DI_VOLANTINI.search(etichetta):
+            continue
+
+        intero = urljoin(str(risposta.url), collegamento.replace("&amp;", "&"))
+
+        # Solo dentro casa loro: un link a Facebook non ci serve.
+        if urlparse(intero).netloc != urlparse(str(risposta.url)).netloc:
+            continue
+
+        if NON_E_UN_VOLANTINO.search(intero):
+            continue
+
+        if intero not in candidati:
+            candidati.append(intero)
+
+    # Chi dice "volantino" per primo: e' quasi sempre lui.
+    candidati.sort(key=lambda u: 0 if re.search(r"volantin", u, re.I) else 1)
+
+    return candidati
 
 
 def pdf_nella_pagina(cliente: httpx.Client, pagina: str) -> list[str]:
@@ -175,22 +220,43 @@ def raccogli_volantini(url_db: str) -> list[str]:
     with httpx.Client(headers={"user-agent": AGENTE}, follow_redirects=True) as cliente:
         for fonte in da_guardare:
             try:
-                indirizzi = pdf_nella_pagina(cliente, fonte.pagina)
+                pagine = pagine_dei_volantini(cliente, fonte.radice)
             except httpx.HTTPError as errore:
-                righe.append(f"{fonte.insegna}: pagina non raggiunta ({errore})")
+                righe.append(f"{fonte.insegna}: {fonte.radice} non raggiunta ({errore})")
                 continue
+
+            if not pagine:
+                righe.append(f"{fonte.insegna}: dalla home nessun link ai volantini")
+                continue
+
+            righe.append(f"{fonte.insegna}: provo {len(pagine[:4])} pagine, la prima e' {pagine[0]}")
+
+            indirizzi: list[str] = []
+
+            for pagina in pagine[:4]:
+                try:
+                    trovati = pdf_nella_pagina(cliente, pagina)
+                except httpx.HTTPError as errore:
+                    righe.append(f"{fonte.insegna}: {pagina} non aperta ({errore})")
+                    continue
+
+                for indirizzo in trovati:
+                    if indirizzo not in indirizzi:
+                        indirizzi.append(indirizzo)
+
+                # Tre PDF bastano per capire se c'e' quello giusto.
+                if len(indirizzi) >= 3:
+                    break
 
             if not indirizzi:
                 righe.append(
-                    f"{fonte.insegna}: nessun PDF su {fonte.pagina}."
-                    " La pagina e' cambiata o il volantino e' solo sfogliabile."
+                    f"{fonte.insegna}: nessun PDF nelle pagine dei volantini."
+                    " Probabilmente il volantino si sfoglia e basta: resta il caricamento a mano."
                 )
                 continue
 
             preso = False
 
-            # Si provano i primi: il primo link a volte e' un ritaglio o una
-            # copertina, e il volantino vero e' subito dopo.
             for indirizzo in indirizzi[:3]:
                 try:
                     scaricato = cliente.get(indirizzo, timeout=120)
