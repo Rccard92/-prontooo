@@ -72,25 +72,29 @@ export async function spesaConOfferte(settimana = lunediDi()): Promise<Consiglio
     perInsegna.set(chiave, sue)
   }
 
-  const tappe: Tappa[] = [...perInsegna.entries()]
+  const ordinate = [...perInsegna.entries()]
     .map(([chiave, voci]) => {
       const prima = [...voci.values()][0]
 
       return {
-        insegna: prima?.insegna ?? chiave,
-        puntoVendita: prima?.puntoVendita ?? null,
-        quante: voci.size,
-        spesa: Math.round([...voci.values()].reduce((t, o) => t + o.prezzo, 0) * 100) / 100,
+        chiave,
+        voci,
+        tappa: {
+          insegna: prima?.insegna ?? chiave,
+          puntoVendita: prima?.puntoVendita ?? null,
+          quante: voci.size,
+          spesa: Math.round([...voci.values()].reduce((t, o) => t + o.prezzo, 0) * 100) / 100,
+        },
       }
     })
-    .sort((a, b) => b.quante - a.quante || a.spesa - b.spesa)
+    // Prima chi copre piu' cose; a pari copertura, chi costa meno. L'ordine e'
+    // uno solo: quello mostrato e quello su cui si fa il conto del guadagno.
+    .sort((a, b) => b.tappa.quante - a.tappa.quante || a.tappa.spesa - b.tappa.spesa)
 
-  const chiavi = [...perInsegna.keys()].sort(
-    (a, b) => perInsegna.get(b)!.size - perInsegna.get(a)!.size,
-  )
+  const tappe: Tappa[] = ordinate.map((o) => o.tappa)
 
-  const prima = chiavi[0] ? perInsegna.get(chiavi[0])! : new Map<number, OffertaPerAlimento>()
-  const seconda = chiavi[1] ? perInsegna.get(chiavi[1])! : new Map<number, OffertaPerAlimento>()
+  const prima = ordinate[0]?.voci ?? new Map<number, OffertaPerAlimento>()
+  const seconda = ordinate[1]?.voci ?? new Map<number, OffertaPerAlimento>()
 
   let guadagno = 0
   let soloNellaSeconda = 0
