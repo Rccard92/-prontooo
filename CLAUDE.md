@@ -77,6 +77,14 @@ Il Postgres ha anche un proxy TCP pubblico (`DATABASE_PUBLIC_URL`), serve per la
 - Un match offerta ↔ ingrediente sotto soglia di confidenza si mostra come "da verificare", mai come certo
 - Conad varia per cooperativa regionale e punto vendita: va usato sempre il volantino del punto vendita configurato
 
+## I volantini
+
+Stanno in `apps/web/lib/offerte/`. Un volantino non e' un documento, e' un manifesto: il testo che ne esce e' a pezzi, senza un ordine affidabile, col prezzo che a volte precede il prodotto e a volte lo segue. Quindi non si cerca una struttura - non c'e' - si cerca **il prezzo**, e intorno al prezzo si guarda cosa c'e'. Le righe senza prezzo sono slogan, orari, indirizzi, e si buttano.
+
+`agganciaOfferta` non basta che agganci: deve dire **quanto** ci crede. Il punteggio mette insieme quanto del nome dell'alimento e' dentro il nome dell'offerta (pesa il doppio: il volantino ha sempre marca e formato in piu') e quanto del nome dell'offerta e' spiegato dall'alimento (che e' quello che scarta "Gelato al pistacchio" per "Pistacchi"). Sotto `SOGLIA_CERTA` l'offerta si mostra come **da verificare**, mai come certa, e il consiglio su dove andare si fa solo sulle certe.
+
+Il consiglio delle tappe e' prudente per scelta: due tappe si consigliano solo se rendono almeno tre euro o quattro cose in piu'. La raccolta automatica dei volantini non c'e': gli indirizzi cambiano ogni settimana, e un raccoglitore che non si puo' provare e' peggio di nessun raccoglitore.
+
 ## Design
 
 Direzione scelta: **caldo e contemporaneo**. Fondo bianco, angoli morbidi, ombre leggere, tre colori vivi presi dal cibo. Niente spigoli, niente superfici fredde.

@@ -11,6 +11,7 @@ export {
   ingredientiCanonici,
   liste,
   listaVoci,
+  offerte,
   pesi,
   piani,
   pianiPasti,
@@ -18,6 +19,7 @@ export {
   ricettaIngredienti,
   ricette,
   spesaSpuntati,
+  volantini,
 } from './schema'
 export type {
   Alimento,
@@ -33,6 +35,7 @@ export type {
   NuovoAlimento,
   NuovoAllergene,
   NuovoRicettaIngrediente,
+  Offerta,
   Peso,
   Piano,
   PianoPasto,
@@ -41,4 +44,5 @@ export type {
   RicettaIngrediente,
   SpesaSpuntato,
   VoceDispensa,
+  Volantino,
 } from './schema'

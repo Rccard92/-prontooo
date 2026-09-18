@@ -321,7 +321,7 @@ const SINONIMI: Record<string, string> = {
   'condiriso': 'mais scatola',
 }
 
-function normalizza(testo: string): string {
+export function normalizza(testo: string): string {
   const base = testo
     .toLowerCase()
     .normalize('NFD')

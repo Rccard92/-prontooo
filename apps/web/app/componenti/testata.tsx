@@ -4,7 +4,7 @@ import Link from 'next/link'
 export function Testata({
   attiva,
 }: {
-  attiva?: 'oggi' | 'ingredienti' | 'spesa' | 'ricette' | 'settimana' | 'catalogo' | 'wizard'
+  attiva?: 'oggi' | 'ingredienti' | 'spesa' | 'offerte' | 'ricette' | 'settimana' | 'catalogo' | 'wizard'
 }) {
   const voce = 'rounded-full px-3 py-1.5 text-sm font-semibold text-fumo'
   const voceAttiva =
@@ -14,6 +14,7 @@ export function Testata({
     { href: '/', nome: 'Oggi', chiave: 'oggi' },
     { href: '/ingredienti', nome: 'Ingredienti', chiave: 'ingredienti' },
     { href: '/spesa', nome: 'Spesa', chiave: 'spesa' },
+    { href: '/offerte', nome: 'Offerte', chiave: 'offerte' },
     { href: '/ricette', nome: 'Ricette', chiave: 'catalogo' },
   ]
 

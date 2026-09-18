@@ -438,3 +438,62 @@ export const pesi = pgTable(
 )
 
 export type Peso = typeof pesi.$inferSelect
+
+/**
+ * Un volantino caricato: una settimana, un'insegna, un punto vendita.
+ *
+ * Il punto vendita non e' un dettaglio. Conad e' una cooperativa e il
+ * volantino cambia per cooperativa regionale e per negozio: senza il punto
+ * vendita giusto i prezzi mostrati non sono quelli che paghi.
+ */
+export const volantini = pgTable(
+  'volantini',
+  {
+    id: serial('id').primaryKey(),
+    insegna: text('insegna').notNull(),
+    puntoVendita: text('punto_vendita'),
+    validoDal: date('valido_dal'),
+    validoAl: date('valido_al'),
+    nomeFile: text('nome_file'),
+    caricatoIl: timestamp('caricato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('volantini_validita_idx').on(t.validoAl)],
+)
+
+export type Volantino = typeof volantini.$inferSelect
+
+/**
+ * Una riga del volantino agganciata - forse - a un alimento del vocabolario.
+ *
+ * `confidenza` da 0 a 1 e' quanto ci crediamo. Sotto soglia l'offerta si
+ * mostra come **da verificare**, mai come certa: un prezzo sbagliato mostrato
+ * come sicuro e' peggio di nessun prezzo.
+ */
+export const offerte = pgTable(
+  'offerte',
+  {
+    id: serial('id').primaryKey(),
+    volantinoId: integer('volantino_id')
+      .notNull()
+      .references(() => volantini.id, { onDelete: 'cascade' }),
+    rigaGrezza: text('riga_grezza').notNull(),
+    nomeGrezzo: text('nome_grezzo').notNull(),
+    marca: text('marca'),
+    // "500 g", "1 l", "conf. 2 x 125 g": come sta scritto sul volantino.
+    formato: text('formato'),
+    prezzo: numeric('prezzo', { precision: 8, scale: 2 }).notNull(),
+    // Al kg o al litro, che e' l'unico modo per confrontare due offerte.
+    prezzoUnitario: numeric('prezzo_unitario', { precision: 8, scale: 2 }),
+    unitaPrezzo: text('unita_prezzo'),
+    alimentoId: integer('alimento_id').references(() => alimenti.id, { onDelete: 'set null' }),
+    confidenza: numeric('confidenza', { precision: 3, scale: 2 }).notNull().default('0'),
+    // Vero quando l'aggancio l'hai confermato tu: allora e' certo per sempre.
+    confermato: boolean('confermato').notNull().default(false),
+  },
+  (t) => [
+    index('offerte_volantino_idx').on(t.volantinoId),
+    index('offerte_alimento_idx').on(t.alimentoId),
+  ],
+)
+
+export type Offerta = typeof offerte.$inferSelect

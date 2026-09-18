@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
-import { type GruppoSpesa, listaSpesa, lunediDi } from '@/lib/spesa/calcola'
+import { lunediDi } from '@/lib/spesa/calcola'
+import { type ConsiglioSpesa, spesaConOfferte } from '@/lib/spesa/offerte'
 
 import { Testata } from '../componenti/testata'
 
@@ -22,15 +23,23 @@ function etichetta(data: string, piu = 0): string {
 
 export default async function Spesa() {
   const settimana = lunediDi()
-  let gruppi: GruppoSpesa[]
-
-  try {
-    gruppi = await listaSpesa(settimana)
-  } catch (errore) {
-    console.error('calcolo della lista fallito:', errore)
-    gruppi = []
+  const vuota: ConsiglioSpesa = {
+    gruppi: [],
+    tappe: [],
+    guadagnoSeconda: 0,
+    soloNellaSeconda: 0,
+    valeDueTappe: false,
   }
 
+  let consiglio = vuota
+
+  try {
+    consiglio = await spesaConOfferte(settimana)
+  } catch (errore) {
+    console.error('calcolo della lista fallito:', errore)
+  }
+
+  const { gruppi, tappe } = consiglio
   const totale = gruppi.reduce((t, g) => t + g.voci.length, 0)
   const presi = gruppi.reduce((t, g) => t + g.voci.filter((v) => v.spuntato).length, 0)
 
@@ -66,6 +75,37 @@ export default async function Spesa() {
           </form>
         ) : (
           <>
+            {tappe.length > 0 ? (
+              <section className="scheda mt-6 p-5">
+                <h2 className="font-marchio text-xl text-inchiostro">Dove conviene</h2>
+
+                <ul className="mt-3 flex flex-col gap-1.5">
+                  {tappe.map((t) => (
+                    <li
+                      key={`${t.insegna}-${t.puntoVendita ?? ''}`}
+                      className="rounded-controllo flex flex-wrap items-baseline justify-between gap-2 bg-fondo px-3 py-2"
+                    >
+                      <span className="text-inchiostro">
+                        {t.insegna}
+                        {t.puntoVendita ? <span className="text-fumo"> · {t.puntoVendita}</span> : null}
+                      </span>
+                      <span className="cifre text-sm text-fumo">
+                        {t.quante} cose · {t.spesa.toFixed(2)} €
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <p className="mt-3 text-sm text-fumo">
+                  {tappe.length < 2
+                    ? 'Una tappa sola: tutto quello che è in offerta sta qui.'
+                    : consiglio.valeDueTappe
+                      ? `La seconda tappa vale la pena: risparmi ${consiglio.guadagnoSeconda.toFixed(2)} € e ci trovi altre ${consiglio.soloNellaSeconda} cose.`
+                      : 'Fermati alla prima. La seconda tappa non recupera il tempo che costa.'}
+                </p>
+              </section>
+            ) : null}
+
             <div className="mt-6 flex flex-col gap-5">
               {gruppi.map((gruppo) => (
                 <section key={gruppo.reparto} className="scheda p-5">
@@ -107,6 +147,17 @@ export default async function Spesa() {
                         <span className="cifre shrink-0 text-base font-bold text-inchiostro">
                           {voce.daComprare} {voce.unita}
                         </span>
+
+                        {voce.migliore ? (
+                          <span className="cifre pillola shrink-0 bg-basilico-tenue text-basilico-scuro">
+                            {voce.migliore.insegna} {voce.migliore.prezzo.toFixed(2)} €
+                          </span>
+                        ) : voce.offerte.length > 0 ? (
+                          <span className="cifre pillola shrink-0 bg-limone-tenue text-inchiostro">
+                            {voce.offerte[0]!.insegna} {voce.offerte[0]!.prezzo.toFixed(2)} € · da
+                            verificare
+                          </span>
+                        ) : null}
 
                         <form action={aggiungiInDispensa} className="flex items-center gap-1">
                           <input type="hidden" name="alimento" value={voce.alimentoId} />
