@@ -234,10 +234,23 @@ def indizi(cliente: httpx.Client, pagina: str, quanti: int = 8) -> list[str]:
 
 
 def gia_fresco(connessione: psycopg.Connection, insegna: str) -> bool:
+    """Per quest'insegna c'e' gia' un volantino buono?
+
+    Due tempi diversi apposta. Un volantino da cui abbiamo cavato offerte vale
+    per giorni: non si tocca. Uno arrivato vuoto - PDF tutto immagini, o il
+    lettore che non ce l'ha fatta - si riprova il giorno dopo: il problema
+    potrebbe essere nostro, e quando lo sistemo deve ripartire da solo senza
+    che nessuno vada a cancellare righe a mano.
+
+    Quello che non si fa mai e' riprovarlo ogni giro: sono decine di MB.
+    """
     with connessione.cursor() as cursore:
         cursore.execute(
-            "select 1 from volantini"
-            " where insegna = %s and caricato_il > now() - make_interval(days => %s)"
+            "select 1 from volantini v"
+            " where v.insegna = %s"
+            "   and v.caricato_il > now() - make_interval("
+            "         days => case when exists (select 1 from offerte o where o.volantino_id = v.id)"
+            "                      then %s else 1 end)"
             " limit 1",
             (insegna, GIORNI_FRESCHEZZA),
         )
