@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { asc } from 'drizzle-orm'
 
 import { alimenti as tabellaAlimenti, db } from '@prontooo/db'
 import { NOME_FASCIA as NOMI, FASCE } from '@/lib/ricette/fasce'
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { listaAttiva, righePerFascia, tutteLeListe, vociDi } from '@/lib/lista/archivio'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '@/lib/lista/modello'
 
@@ -13,7 +15,6 @@ import {
   collegaAlimento,
   eliminaLista,
   leggiPdf,
-  listaVuota,
   rendiAttiva,
   togliVoce,
 } from './azioni'
@@ -52,16 +53,19 @@ function Vuoto() {
           </button>
         </form>
 
-        <form action={listaVuota} className="rounded-controllo bg-fondo p-5">
+        <div className="rounded-controllo bg-fondo p-5">
           <h3 className="text-base font-bold text-inchiostro">Me la faccio da solo</h3>
           <p className="mt-1 text-sm text-fumo">
-            Parti da una lista vuota e spunti gli alimenti che vuoi usare, pasto per pasto. Nessun
-            nutrizionista richiesto.
+            Spunti quello che ti piace, diviso per categoria, e i pasti li costruisco io: ogni
+            alimento finisce solo nei pasti dove ha senso. Nessun nutrizionista richiesto.
           </p>
-          <button type="submit" className="bottone-chiaro mt-4 w-full hover:bg-basilico hover:text-bianco">
-            Comincia da zero
-          </button>
-        </form>
+          <Link
+            href="/ingredienti/gusti"
+            className="bottone-chiaro mt-4 block w-full text-center hover:bg-basilico hover:text-bianco"
+          >
+            Scegli cosa ti piace
+          </Link>
+        </div>
       </div>
     </div>
   )
@@ -70,12 +74,18 @@ function Vuoto() {
 export default async function Ingredienti({
   searchParams,
 }: {
-  searchParams: Promise<{ errore?: string; importate?: string; dacollegare?: string }>
+  searchParams: Promise<{
+    errore?: string
+    importate?: string
+    dacollegare?: string
+    salvati?: string
+  }>
 }) {
-  const { errore, importate, dacollegare } = await searchParams
-  const lista = await listaAttiva()
-  const liste = await tutteLeListe()
-  const voci = lista ? await vociDi(lista.id) : []
+  const { errore, importate, dacollegare, salvati } = await searchParams
+  const utenteId = await utenteObbligatorio()
+  const lista = await listaAttiva(utenteId)
+  const liste = await tutteLeListe(utenteId)
+  const voci = lista ? await vociDi(utenteId, lista.id) : []
   const vocabolario = await db()
     .select({ id: tabellaAlimenti.id, nome: tabellaAlimenti.nome, fasce: tabellaAlimenti.fasce })
     .from(tabellaAlimenti)
@@ -97,6 +107,12 @@ export default async function Ingredienti({
         {errore ? (
           <p className="rounded-controllo bg-pomodoro-tenue mt-5 px-4 py-3 text-sm text-pomodoro">
             {errore}
+          </p>
+        ) : null}
+
+        {salvati ? (
+          <p className="rounded-controllo mt-5 bg-basilico-tenue px-4 py-3 text-sm text-basilico-scuro">
+            Salvati {salvati} alimenti, e i pasti sono costruiti. Da qui puoi correggere i grammi.
           </p>
         ) : null}
 
@@ -122,6 +138,14 @@ export default async function Ingredienti({
                   {voci.length} voci · circa {totaleGiorno.kcal} kcal al giorno · {totaleGiorno.proteine}g
                   proteine
                 </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/ingredienti/gusti"
+                  className="bottone-chiaro hover:bg-basilico hover:text-bianco"
+                >
+                  Cambia i gusti
+                </Link>
               </div>
               <form action={leggiPdf} className="flex items-center gap-2">
                 <input

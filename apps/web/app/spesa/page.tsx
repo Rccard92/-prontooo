@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { lunediDi } from '@/lib/spesa/calcola'
 import { type ConsiglioSpesa, spesaConOfferte } from '@/lib/spesa/offerte'
 
@@ -34,7 +35,7 @@ export default async function Spesa() {
   let consiglio = vuota
 
   try {
-    consiglio = await spesaConOfferte(settimana)
+    consiglio = await spesaConOfferte(await utenteObbligatorio(), settimana)
   } catch (errore) {
     console.error('calcolo della lista fallito:', errore)
   }

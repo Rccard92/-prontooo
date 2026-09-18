@@ -1,10 +1,21 @@
 import { config } from 'dotenv'
-import { sql } from 'drizzle-orm'
+import { asc, isNull, sql } from 'drizzle-orm'
 
 import { NUTRIENTI } from './alimenti/nutrienti'
 import { VOCABOLARIO } from './alimenti/vocabolario'
 import { db } from './client'
-import { alimenti, allergeni, type NuovoAllergene } from './schema'
+import {
+  alimenti,
+  allergeni,
+  dispensa,
+  giornate,
+  liste,
+  type NuovoAllergene,
+  pesi,
+  profilo,
+  spesaSpuntati,
+  utenti,
+} from './schema'
 
 config({ path: ['../../.env', '.env'], quiet: true })
 
@@ -103,6 +114,56 @@ async function seedAlimenti() {
   )
 }
 
+
+/**
+ * Adotta le righe rimaste senza proprietario.
+ *
+ * Prima del login c'era un utente solo e le sue righe non avevano
+ * `utente_id`. Qui si assegnano al primo utente registrato. Se non c'e'
+ * ancora nessuno non si fa niente: appena qualcuno si iscrive, il deploy
+ * successivo le adotta. Se le righe orfane non ci sono - il caso normale
+ * dopo la prima volta - questa funzione costa cinque conteggi e basta.
+ */
+async function adottaOrfane() {
+  const connessione = db()
+
+  const [primo] = await connessione
+    .select({ id: utenti.id })
+    .from(utenti)
+    .orderBy(asc(utenti.id))
+    .limit(1)
+
+  if (!primo) return
+
+  const tabelle = [
+    ['liste', liste],
+    ['giornate', giornate],
+    ['dispensa', dispensa],
+    ['spesa_spuntati', spesaSpuntati],
+    ['pesi', pesi],
+    ['profilo', profilo],
+  ] as const
+
+  let adottate = 0
+
+  for (const [nome, tabella] of tabelle) {
+    const righe = await connessione
+      .update(tabella)
+      .set({ utenteId: primo.id })
+      .where(isNull(tabella.utenteId))
+      .returning({ id: tabella.id })
+
+    if (righe.length > 0) {
+      console.log(`${nome}: ${righe.length} righe senza proprietario assegnate all utente ${primo.id}`)
+      adottate += righe.length
+    }
+  }
+
+  if (adottate === 0) return
+
+  console.log(`adozione: ${adottate} righe in tutto`)
+}
+
 async function seed() {
   const inseriti = await db()
     .insert(allergeni)
@@ -112,6 +173,7 @@ async function seed() {
 
   await verificaPgvector()
   await seedAlimenti()
+  await adottaOrfane()
 
   console.log(
     inseriti.length === 0

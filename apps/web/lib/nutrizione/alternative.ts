@@ -46,6 +46,7 @@ export function chiaveComponente(pastoId: number, indice: number): string {
  * sul database per mostrare un menu a tendina.
  */
 export async function alternativeDei(
+  utenteId: number,
   pasti: { id: number; previsti: Componente[] }[],
 ): Promise<AlternativeDiPasto> {
   const per: AlternativeDiPasto = new Map()
@@ -54,7 +55,7 @@ export async function alternativeDei(
 
   const [tutti, [impostazioni]] = await Promise.all([
     vocabolario(),
-    db().select().from(profilo).where(eq(profilo.id, 1)).limit(1),
+    db().select().from(profilo).where(eq(profilo.utenteId, utenteId)).limit(1),
   ])
 
   const perId = new Map(tutti.map((a) => [a.id, a]))

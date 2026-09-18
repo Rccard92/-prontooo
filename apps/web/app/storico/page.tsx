@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 
 import { db, pesi } from '@prontooo/db'
 
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { resoconto } from '@/lib/giornata/storico'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 import { NOME_TIPO_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
@@ -45,9 +46,16 @@ export default async function Storico() {
   let dati: Awaited<ReturnType<typeof resoconto>> | null = null
   let misure: { id: number; data: string; kg: string }[] = []
 
+  const utenteId = await utenteObbligatorio()
+
   try {
-    dati = await resoconto(30)
-    misure = await db().select().from(pesi).orderBy(desc(pesi.data)).limit(12)
+    dati = await resoconto(utenteId, 30)
+    misure = await db()
+      .select()
+      .from(pesi)
+      .where(eq(pesi.utenteId, utenteId))
+      .orderBy(desc(pesi.data))
+      .limit(12)
   } catch (errore) {
     console.error('lettura dello storico fallita:', errore)
   }

@@ -81,7 +81,11 @@ function indietro(data: string, quanti: number): string {
 }
 
 /** Il resoconto di un periodo, di base gli ultimi trenta giorni. */
-export async function resoconto(giorni = 30, fine?: string): Promise<Resoconto> {
+export async function resoconto(
+  utenteId: number,
+  giorni = 30,
+  fine?: string,
+): Promise<Resoconto> {
   const a = fine ?? new Date().toISOString().slice(0, 10)
   const da = indietro(a, giorni - 1)
 
@@ -97,7 +101,7 @@ export async function resoconto(giorni = 30, fine?: string): Promise<Resoconto> 
     })
     .from(giornate)
     .leftJoin(giornataPasti, eq(giornataPasti.giornataId, giornate.id))
-    .where(and(gte(giornate.data, da), lte(giornate.data, a)))
+    .where(and(eq(giornate.utenteId, utenteId), gte(giornate.data, da), lte(giornate.data, a)))
     .orderBy(desc(giornate.data), asc(giornataPasti.id))
 
   const perGiorno = new Map<string, GiornoStorico>()

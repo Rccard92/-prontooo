@@ -16,8 +16,7 @@ import {
  * `piani_pasti` sono spariti. Il profilo invece serve ancora - dice quali
  * fasce vuoi, cosa escludi e su cosa e' tarata la porzione.
  */
-export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl'> = {
-  id: 1,
+export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl' | 'id' | 'utenteId'> = {
   adulti: 2,
   bambini: 0,
   porzioniDefault: 2,
@@ -31,8 +30,12 @@ export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl'> = {
   settimaneAntiRipetizione: 3,
 }
 
-export async function leggiProfilo(): Promise<Profilo | null> {
-  const [riga] = await db().select().from(tabellaProfilo).where(eq(tabellaProfilo.id, 1)).limit(1)
+export async function leggiProfilo(utenteId: number): Promise<Profilo | null> {
+  const [riga] = await db()
+    .select()
+    .from(tabellaProfilo)
+    .where(eq(tabellaProfilo.utenteId, utenteId))
+    .limit(1)
 
   return riga ?? null
 }

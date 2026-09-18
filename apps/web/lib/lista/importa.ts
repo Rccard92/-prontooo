@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, ne } from 'drizzle-orm'
 
 import { type NuovaListaVoce, alimenti, db, liste, listaVoci } from '@prontooo/db'
 
@@ -56,6 +56,7 @@ export type VoceDaSalvare = {
 
 /** Salva una lista nuova e la rende attiva. */
 export async function salvaLista(
+  utenteId: number,
   nome: string,
   origine: 'pdf' | 'manuale',
   voci: VoceDaSalvare[],
@@ -65,13 +66,17 @@ export async function salvaLista(
 
   const [lista] = await connessione
     .insert(liste)
-    .values({ nome, origine, attiva: true })
+    .values({ utenteId, nome, origine, attiva: true })
     .returning({ id: liste.id })
 
   if (!lista) throw new Error('creazione della lista fallita')
 
-  await connessione.update(liste).set({ attiva: false })
-  await connessione.update(liste).set({ attiva: true }).where(eq(liste.id, lista.id))
+  // Le altre liste di questo utente si spengono: ce n'e' sempre una sola
+  // attiva, e solo fra le sue.
+  await connessione
+    .update(liste)
+    .set({ attiva: false })
+    .where(and(eq(liste.utenteId, utenteId), ne(liste.id, lista.id)))
 
   if (voci.length > 0) {
     const righe: NuovaListaVoce[] = voci.map((v) => ({

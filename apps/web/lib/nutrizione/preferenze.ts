@@ -34,14 +34,20 @@ const PESO_MASSIMO = 2.5
 const PESO_MINIMO = 0.4
 
 /** Quante volte ogni alimento e' finito in un pasto che hai spuntato. */
-async function abitudini(): Promise<{ conteggi: Map<number, number>; pasti: number }> {
+async function abitudini(utenteId: number): Promise<{ conteggi: Map<number, number>; pasti: number }> {
   const daQuando = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10)
 
   const righe = await db()
     .select({ consumati: giornataPasti.consumati })
     .from(giornataPasti)
     .innerJoin(giornate, eq(giornate.id, giornataPasti.giornataId))
-    .where(and(eq(giornataPasti.stato, 'mangiato'), gte(giornate.data, daQuando)))
+    .where(
+      and(
+        eq(giornate.utenteId, utenteId),
+        eq(giornataPasti.stato, 'mangiato'),
+        gte(giornate.data, daQuando),
+      ),
+    )
 
   const conteggi = new Map<number, number>()
 
@@ -89,10 +95,10 @@ export function pesoDaAbitudine(volte: number, media: number): number {
   return Math.min(PESO_MASSIMO, Math.max(PESO_MINIMO, 0.6 + rapporto * 0.5))
 }
 
-export async function pesiDiScelta(): Promise<Pesi> {
+export async function pesiDiScelta(utenteId: number): Promise<Pesi> {
   const pesi: Pesi = new Map()
 
-  const [{ conteggi, pasti }, offerti] = await Promise.all([abitudini(), inOfferta()])
+  const [{ conteggi, pasti }, offerti] = await Promise.all([abitudini(utenteId), inOfferta()])
 
   if (pasti >= PASTI_MINIMI && conteggi.size > 0) {
     const media = [...conteggi.values()].reduce((t, v) => t + v, 0) / conteggi.size

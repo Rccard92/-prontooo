@@ -1,9 +1,9 @@
 'use server'
 
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
-import { alimenti, db, giornataPasti } from '@prontooo/db'
+import { alimenti, db, giornataPasti, giornate } from '@prontooo/db'
 
 import {
   generaGiornata,
@@ -12,40 +12,66 @@ import {
   leggiGiornata,
   oggi,
 } from '@/lib/giornata/componi'
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giornata/modello'
+import { PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { ricalibra } from '@/lib/giornata/ricalibra'
 import { nutrientiDi } from '@/lib/lista/modello'
-import { PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { ricettaDelPasto, ricettaSuccessiva } from '@/lib/ricettario/scelta'
 
+/**
+ * Legge un pasto **solo se e' di questo utente**.
+ *
+ * L'id arriva da un campo nascosto di un form, e un id non e' una prova di
+ * proprieta': senza questo controllo bastava cambiare un numero per spuntare
+ * la cena di un altro.
+ */
+async function pastoDi(utenteId: number, pastoId: number) {
+  const [riga] = await db()
+    .select({ pasto: giornataPasti })
+    .from(giornataPasti)
+    .innerJoin(giornate, eq(giornate.id, giornataPasti.giornataId))
+    .where(and(eq(giornataPasti.id, pastoId), eq(giornate.utenteId, utenteId)))
+    .limit(1)
+
+  return riga?.pasto ?? null
+}
+
 export async function generaOggi(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const tipo = String(dati.get('tipo') ?? '') as TipoGiorno
 
-  await generaGiornata(oggi(), ['standard', 'on', 'off'].includes(tipo) ? tipo : undefined)
+  await generaGiornata(
+    utenteId,
+    oggi(),
+    ['standard', 'on', 'off'].includes(tipo) ? tipo : undefined,
+  )
   revalidatePath('/')
 }
 
 export async function cambiaTipoGiorno(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const tipo = String(dati.get('tipo') ?? '') as TipoGiorno
 
   if (!['standard', 'on', 'off'].includes(tipo)) return
 
-  await generaGiornata(oggi(), tipo)
+  await generaGiornata(utenteId, oggi(), tipo)
   revalidatePath('/')
 }
 
 /** Cambia il pasto: ripesca le alternative restando nella stessa fascia. */
 export async function cambiaPasto(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
 
   if (!Number.isInteger(id)) return
 
-  const giorno = await leggiGiornata()
+  const giorno = await leggiGiornata(utenteId)
   const pasto = giorno?.pasti.find((p) => p.id === id)
 
   if (!giorno || !pasto) return
 
-  await generaGiornata(giorno.giornata.data, giorno.giornata.tipoGiorno as TipoGiorno)
+  await generaGiornata(utenteId, giorno.giornata.data, giorno.giornata.tipoGiorno as TipoGiorno)
   revalidatePath('/')
 }
 
@@ -56,11 +82,12 @@ export async function cambiaPasto(dati: FormData) {
  * quelli, cambia solo come li cucini.
  */
 export async function cambiaRicetta(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
 
   if (!Number.isInteger(id)) return
 
-  const [pasto] = await db().select().from(giornataPasti).where(eq(giornataPasti.id, id)).limit(1)
+  const pasto = await pastoDi(utenteId, id)
 
   if (!pasto) return
 
@@ -85,6 +112,7 @@ export async function cambiaRicetta(dati: FormData) {
  * rigenerare tutto per un ingrediente sarebbe rifare il lavoro da capo.
  */
 export async function sostituisciComponente(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
   const indice = Number(dati.get('indice'))
   const alimentoId = Number(dati.get('alimento'))
@@ -93,7 +121,7 @@ export async function sostituisciComponente(dati: FormData) {
   if (!Number.isInteger(id) || !Number.isInteger(indice)) return
   if (!Number.isInteger(alimentoId) || !Number.isFinite(quantita) || quantita <= 0) return
 
-  const [pasto] = await db().select().from(giornataPasti).where(eq(giornataPasti.id, id)).limit(1)
+  const pasto = await pastoDi(utenteId, id)
 
   if (!pasto || pasto.stato !== 'previsto') return
 
@@ -132,11 +160,12 @@ export async function sostituisciComponente(dati: FormData) {
 
 /** Ho mangiato quello che c'era scritto. */
 export async function spuntaPasto(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
 
   if (!Number.isInteger(id)) return
 
-  const [pasto] = await db().select().from(giornataPasti).where(eq(giornataPasti.id, id)).limit(1)
+  const pasto = await pastoDi(utenteId, id)
 
   if (!pasto) return
 
@@ -147,31 +176,33 @@ export async function spuntaPasto(dati: FormData) {
     .set({ stato: 'mangiato', consumati, registratoIl: new Date() })
     .where(eq(giornataPasti.id, id))
 
-  await applicaRicalibrazione()
+  await applicaRicalibrazione(utenteId)
   revalidatePath('/')
 }
 
 export async function saltaPasto(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
 
-  if (!Number.isInteger(id)) return
+  if (!Number.isInteger(id) || !(await pastoDi(utenteId, id))) return
 
   await db()
     .update(giornataPasti)
     .set({ stato: 'saltato', consumati: [], registratoIl: new Date() })
     .where(eq(giornataPasti.id, id))
 
-  await applicaRicalibrazione()
+  await applicaRicalibrazione(utenteId)
   revalidatePath('/')
 }
 
 /** Ero fuori: scelgo un piatto dall'elenco e l'app stima cosa ho mangiato. */
 export async function registraFuori(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
   const piatto = String(dati.get('piatto') ?? '')
   const quante = Number(dati.get('porzioni') ?? 1) || 1
 
-  if (!Number.isInteger(id)) return
+  if (!Number.isInteger(id) || !(await pastoDi(utenteId, id))) return
 
   const scelto = PIATTI_FUORI.find((p) => p.nome === piatto)
 
@@ -195,21 +226,22 @@ export async function registraFuori(dati: FormData) {
     .set({ stato: 'fuori_piano', consumati, registratoIl: new Date() })
     .where(eq(giornataPasti.id, id))
 
-  await applicaRicalibrazione()
+  await applicaRicalibrazione(utenteId)
   revalidatePath('/')
 }
 
 export async function annullaRegistrazione(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const id = Number(dati.get('pasto'))
 
-  if (!Number.isInteger(id)) return
+  if (!Number.isInteger(id) || !(await pastoDi(utenteId, id))) return
 
   await db()
     .update(giornataPasti)
     .set({ stato: 'previsto', consumati: [], registratoIl: null })
     .where(eq(giornataPasti.id, id))
 
-  await applicaRicalibrazione()
+  await applicaRicalibrazione(utenteId)
   revalidatePath('/')
 }
 
@@ -240,8 +272,8 @@ async function consumatiDaComponenti(componenti: typeof giornataPasti.$inferSele
  * Non tocca quelli gia' mangiati e non compensa sul giorno dopo: quello che
  * resta fuori dalla giornata resta fuori, e si dice.
  */
-async function applicaRicalibrazione(): Promise<void> {
-  const giorno = await leggiGiornata()
+async function applicaRicalibrazione(utenteId: number): Promise<void> {
+  const giorno = await leggiGiornata(utenteId)
 
   if (!giorno) return
 

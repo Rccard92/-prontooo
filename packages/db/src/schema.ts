@@ -14,6 +14,30 @@ import {
 } from 'drizzle-orm/pg-core'
 
 /**
+ * Chi usa l'app. Ognuno ha il suo pannello: la sua dieta, i suoi giorni, il
+ * suo peso. Non si vedono fra loro, e non e' una questione di permessi - e'
+ * che due diete diverse nella stessa tabella sono due diete sbagliate.
+ *
+ * La password si salva come scrypt con sale per riga. Non ci sono librerie:
+ * scrypt sta dentro Node, ed e' la funzione giusta per questo.
+ */
+export const utenti = pgTable(
+  'utenti',
+  {
+    id: serial('id').primaryKey(),
+    nome: text('nome').notNull(),
+    // Minuscolo sempre: e' la chiave con cui si entra.
+    email: text('email').notNull(),
+    hash: text('hash').notNull(),
+    creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
+    ultimoAccesso: timestamp('ultimo_accesso', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('utenti_email_idx').on(t.email)],
+)
+
+export type Utente = typeof utenti.$inferSelect
+
+/**
  * Vocabolario degli allergeni.
  *
  * Regola di dominio: un allergene si attribuisce a una ricetta passando dagli
@@ -182,8 +206,14 @@ export type NuovoRicettaIngrediente = typeof ricettaIngredienti.$inferInsert
  * e' un'altra cosa: sono preferenze, e si applicano con una ricerca sul testo
  * della riga ingrediente. Approssimata, e dichiarata tale nella UI.
  */
+/**
+ * Le impostazioni di un utente. `id` e' l'id dell'utente, non una chiave sua:
+ * un utente ha un profilo e un profilo ha un utente, e tenere due numeri
+ * diversi per la stessa cosa e' solo un modo per farli divergere.
+ */
 export const profilo = pgTable('profilo', {
   id: integer('id').primaryKey(),
+  utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
   adulti: integer('adulti').notNull().default(2),
   bambini: integer('bambini').notNull().default(0),
   porzioniDefault: integer('porzioni_default').notNull().default(2),
@@ -246,6 +276,7 @@ export type NuovoAlimento = typeof alimenti.$inferInsert
  */
 export const liste = pgTable('liste', {
   id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
   nome: text('nome').notNull(),
   // 'pdf' oppure 'manuale': serve solo a raccontare da dove viene.
   origine: text('origine').notNull().default('manuale'),
@@ -296,6 +327,7 @@ export const giornate = pgTable(
   'giornate',
   {
     id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
     data: date('data').notNull(),
     tipoGiorno: text('tipo_giorno').notNull().default('standard'),
     listaId: integer('lista_id').references(() => liste.id, { onDelete: 'set null' }),
@@ -305,7 +337,7 @@ export const giornate = pgTable(
       .default({ kcal: 0, proteine: 0, carboidrati: 0, grassi: 0 }),
     creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('giornate_data_idx').on(t.data)],
+  (t) => [uniqueIndex('giornate_data_idx').on(t.utenteId, t.data)],
 )
 
 export type Giornata = typeof giornate.$inferSelect
@@ -347,6 +379,7 @@ export const dispensa = pgTable(
   'dispensa',
   {
     id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
     alimentoId: integer('alimento_id')
       .notNull()
       .references(() => alimenti.id, { onDelete: 'cascade' }),
@@ -354,7 +387,7 @@ export const dispensa = pgTable(
     unita: text('unita').notNull().default('g'),
     aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('dispensa_alimento_idx').on(t.alimentoId)],
+  (t) => [uniqueIndex('dispensa_alimento_idx').on(t.utenteId, t.alimentoId)],
 )
 
 export type VoceDispensa = typeof dispensa.$inferSelect
@@ -367,12 +400,13 @@ export const spesaSpuntati = pgTable(
   'spesa_spuntati',
   {
     id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
     settimana: date('settimana').notNull(),
     alimentoId: integer('alimento_id').references(() => alimenti.id, { onDelete: 'cascade' }),
     vocelibera: text('voce_libera'),
     spuntato: boolean('spuntato').notNull().default(true),
   },
-  (t) => [index('spesa_spuntati_settimana_idx').on(t.settimana)],
+  (t) => [index('spesa_spuntati_settimana_idx').on(t.utenteId, t.settimana)],
 )
 
 export type SpesaSpuntato = typeof spesaSpuntati.$inferSelect
@@ -382,10 +416,11 @@ export const pesi = pgTable(
   'pesi',
   {
     id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
     data: date('data').notNull(),
     kg: numeric('kg', { precision: 5, scale: 2 }).notNull(),
   },
-  (t) => [uniqueIndex('pesi_data_idx').on(t.data)],
+  (t) => [uniqueIndex('pesi_data_idx').on(t.utenteId, t.data)],
 )
 
 export type Peso = typeof pesi.$inferSelect
@@ -461,6 +496,7 @@ export const iscrizioniPush = pgTable(
   'iscrizioni_push',
   {
     id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
     endpoint: text('endpoint').notNull(),
     p256dh: text('p256dh').notNull(),
     auth: text('auth').notNull(),
@@ -482,9 +518,10 @@ export const promemoriaMandati = pgTable(
   'promemoria_mandati',
   {
     id: serial('id').primaryKey(),
+    utenteId: integer('utente_id').references(() => utenti.id, { onDelete: 'cascade' }),
     genere: text('genere').notNull(),
     data: date('data').notNull(),
     mandatoIl: timestamp('mandato_il', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('promemoria_genere_data_idx').on(t.genere, t.data)],
+  (t) => [uniqueIndex('promemoria_genere_data_idx').on(t.utenteId, t.genere, t.data)],
 )

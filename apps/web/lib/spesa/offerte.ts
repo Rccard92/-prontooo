@@ -39,8 +39,11 @@ function confrontabile(offerta: OffertaPerAlimento): number {
   return offerta.prezzoUnitario ?? offerta.prezzo
 }
 
-export async function spesaConOfferte(settimana = lunediDi()): Promise<ConsiglioSpesa> {
-  const gruppi = await listaSpesa(settimana)
+export async function spesaConOfferte(
+  utenteId: number,
+  settimana = lunediDi(),
+): Promise<ConsiglioSpesa> {
+  const gruppi = await listaSpesa(utenteId, settimana)
   const ids = gruppi.flatMap((g) => g.voci.map((v) => v.alimentoId))
   const per = await offertePerAlimenti(ids)
 

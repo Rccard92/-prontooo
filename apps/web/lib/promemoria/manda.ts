@@ -63,7 +63,10 @@ function piuGiorni(data: string, quanti: number): string {
  * Un promemoria che dice una cosa che hai gia' fatto e' rumore: prima di
  * mandare si guarda se serve davvero.
  */
-export async function promemoriaDovuto(quando = new Date()): Promise<Genere | null> {
+export async function promemoriaDovuto(
+  utenteId: number,
+  quando = new Date(),
+): Promise<Genere | null> {
   const { ora, giornoSettimana, data } = adessoARoma(quando)
   const connessione = db()
 
@@ -71,7 +74,13 @@ export async function promemoriaDovuto(quando = new Date()): Promise<Genere | nu
     const [riga] = await connessione
       .select({ quanti: count() })
       .from(promemoriaMandati)
-      .where(and(eq(promemoriaMandati.genere, genere), eq(promemoriaMandati.data, giorno)))
+      .where(
+        and(
+          eq(promemoriaMandati.utenteId, utenteId),
+          eq(promemoriaMandati.genere, genere),
+          eq(promemoriaMandati.data, giorno),
+        ),
+      )
 
     return (riga?.quanti ?? 0) > 0
   }
@@ -83,7 +92,13 @@ export async function promemoriaDovuto(quando = new Date()): Promise<Genere | nu
     const [quante] = await connessione
       .select({ quanti: count() })
       .from(giornate)
-      .where(and(gte(giornate.data, lunedi), lte(giornate.data, piuGiorni(lunedi, 6))))
+      .where(
+        and(
+          eq(giornate.utenteId, utenteId),
+          gte(giornate.data, lunedi),
+          lte(giornate.data, piuGiorni(lunedi, 6)),
+        ),
+      )
 
     if ((quante?.quanti ?? 0) < 5) return 'settimana'
   }
@@ -94,7 +109,13 @@ export async function promemoriaDovuto(quando = new Date()): Promise<Genere | nu
       .select({ quanti: count() })
       .from(giornataPasti)
       .innerJoin(giornate, eq(giornate.id, giornataPasti.giornataId))
-      .where(and(eq(giornate.data, data), ne(giornataPasti.stato, 'previsto')))
+      .where(
+        and(
+          eq(giornate.utenteId, utenteId),
+          eq(giornate.data, data),
+          ne(giornataPasti.stato, 'previsto'),
+        ),
+      )
 
     if ((registrati?.quanti ?? 0) === 0) return 'sera'
   }
@@ -102,10 +123,14 @@ export async function promemoriaDovuto(quando = new Date()): Promise<Genere | nu
   return null
 }
 
-export type EsitoInvio = { genere: Genere | null; mandati: number; scadute: number }
+export type EsitoInvio = { mandati: number; scadute: number; utenti: number }
 
 /**
- * Manda il promemoria dovuto a tutti i telefoni iscritti.
+ * Manda a ognuno il promemoria che serve a lui.
+ *
+ * Si parte dagli iscritti, non dagli utenti: chi non ha acceso le notifiche
+ * non fa fare nemmeno una query in piu'. Poi per ogni utente si decide
+ * separatamente - la giornata in bianco e' la sua, non di tutti.
  *
  * Senza le chiavi VAPID non si manda niente e non e' un errore: i promemoria
  * sono un di piu', l'app funziona lo stesso.
@@ -113,16 +138,21 @@ export type EsitoInvio = { genere: Genere | null; mandati: number; scadute: numb
 export async function mandaPromemoria(quando = new Date()): Promise<EsitoInvio> {
   const pubblica = process.env.VAPID_PUBLIC_KEY
   const privata = process.env.VAPID_PRIVATE_KEY
+  const fermo: EsitoInvio = { mandati: 0, scadute: 0, utenti: 0 }
 
-  if (!pubblica || !privata) return { genere: null, mandati: 0, scadute: 0 }
-
-  const genere = await promemoriaDovuto(quando)
-
-  if (!genere) return { genere: null, mandati: 0, scadute: 0 }
+  if (!pubblica || !privata) return fermo
 
   const iscritti = await db().select().from(iscrizioniPush)
 
-  if (iscritti.length === 0) return { genere, mandati: 0, scadute: 0 }
+  if (iscritti.length === 0) return fermo
+
+  const perUtente = new Map<number, typeof iscritti>()
+
+  for (const iscritto of iscritti) {
+    if (iscritto.utenteId === null) continue
+
+    perUtente.set(iscritto.utenteId, [...(perUtente.get(iscritto.utenteId) ?? []), iscritto])
+  }
 
   const webpush = (await import('web-push')).default
 
@@ -132,43 +162,56 @@ export async function mandaPromemoria(quando = new Date()): Promise<EsitoInvio> 
     privata,
   )
 
-  const corpo = JSON.stringify(TESTI[genere])
-  let mandati = 0
-  let scadute = 0
+  const { data } = adessoARoma(quando)
+  const esito: EsitoInvio = { mandati: 0, scadute: 0, utenti: 0 }
 
-  for (const iscritto of iscritti) {
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: iscritto.endpoint,
-          keys: { p256dh: iscritto.p256dh, auth: iscritto.auth },
-        },
-        corpo,
-      )
-      mandati += 1
-    } catch (errore) {
-      const stato = (errore as { statusCode?: number }).statusCode
+  for (const [utenteId, suoi] of perUtente) {
+    const genere = await promemoriaDovuto(utenteId, quando)
 
-      // 404 e 410: quel telefono non c'e' piu'. La riga si butta, altrimenti
-      // ogni giro riprova a bussare a una porta che non esiste.
-      if (stato === 404 || stato === 410) {
-        await db().delete(iscrizioniPush).where(eq(iscrizioniPush.endpoint, iscritto.endpoint))
-        scadute += 1
-      } else {
-        console.error('promemoria non consegnato:', errore)
+    if (!genere) continue
+
+    const corpo = JSON.stringify(TESTI[genere])
+    let almenoUno = false
+
+    for (const iscritto of suoi) {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: iscritto.endpoint,
+            keys: { p256dh: iscritto.p256dh, auth: iscritto.auth },
+          },
+          corpo,
+        )
+        esito.mandati += 1
+        almenoUno = true
+      } catch (errore) {
+        const stato = (errore as { statusCode?: number }).statusCode
+
+        // 404 e 410: quel telefono non c'e' piu'. La riga si butta, altrimenti
+        // ogni giro riprova a bussare a una porta che non esiste.
+        if (stato === 404 || stato === 410) {
+          await db().delete(iscrizioniPush).where(eq(iscrizioniPush.endpoint, iscritto.endpoint))
+          esito.scadute += 1
+        } else {
+          console.error('promemoria non consegnato:', errore)
+        }
       }
     }
+
+    // Si segna solo se e' arrivato a qualcuno: se sono fallite tutte le
+    // consegne, il promemoria di oggi non e' stato dato e va riprovato.
+    if (!almenoUno) continue
+
+    esito.utenti += 1
+
+    await db()
+      .insert(promemoriaMandati)
+      .values({ utenteId, genere, data })
+      .onConflictDoUpdate({
+        target: [promemoriaMandati.utenteId, promemoriaMandati.genere, promemoriaMandati.data],
+        set: { mandatoIl: sql`now()` },
+      })
   }
 
-  const { data } = adessoARoma(quando)
-
-  await db()
-    .insert(promemoriaMandati)
-    .values({ genere, data })
-    .onConflictDoUpdate({
-      target: [promemoriaMandati.genere, promemoriaMandati.data],
-      set: { mandatoIl: sql`now()` },
-    })
-
-  return { genere, mandati, scadute }
+  return esito
 }

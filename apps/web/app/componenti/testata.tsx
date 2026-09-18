@@ -1,10 +1,15 @@
 import Link from 'next/link'
 
+import { esciDallApp } from '../entra/azioni'
+
 /** Testata unica dell'app: bianca, appoggiata sul fondo, le voci sono pillole. */
 export function Testata({
   attiva,
+  nome,
 }: {
   attiva?: 'oggi' | 'ingredienti' | 'spesa' | 'offerte' | 'storico' | 'ricette' | 'settimana' | 'catalogo' | 'wizard'
+  /** Chi sta guardando: si mostra solo dove serve saperlo. */
+  nome?: string
 }) {
   const voce = 'rounded-full px-3 py-1.5 text-sm font-semibold text-fumo'
   const voceAttiva =
@@ -24,12 +29,18 @@ export function Testata({
         <Link href="/" className="font-marchio text-2xl leading-none text-inchiostro">
           èProntooo
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex flex-wrap items-center gap-1">
           {voci.map((v) => (
             <Link key={v.href} href={v.href} className={attiva === v.chiave ? voceAttiva : voce}>
               {v.nome}
             </Link>
           ))}
+
+          <form action={esciDallApp}>
+            <button type="submit" className={voce} title={nome ? `Sei entrato come ${nome}` : undefined}>
+              {nome ? `Esci (${nome})` : 'Esci'}
+            </button>
+          </form>
         </nav>
       </div>
     </header>

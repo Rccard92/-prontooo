@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { desc, gte } from 'drizzle-orm'
+import { and, desc, eq, gte } from 'drizzle-orm'
 
 import { db, pesi } from '@prontooo/db'
 
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { resoconto } from '@/lib/giornata/storico'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 
@@ -49,12 +50,14 @@ export default async function Resoconto({
 
   const da = new Date(Date.now() - giorni * 24 * 3600 * 1000).toISOString().slice(0, 10)
 
+  const utenteId = await utenteObbligatorio()
+
   try {
-    dati = await resoconto(giorni)
+    dati = await resoconto(utenteId, giorni)
     misure = await db()
       .select({ data: pesi.data, kg: pesi.kg })
       .from(pesi)
-      .where(gte(pesi.data, da))
+      .where(and(eq(pesi.utenteId, utenteId), gte(pesi.data, da)))
       .orderBy(desc(pesi.data))
   } catch (errore) {
     console.error('resoconto non calcolato:', errore)

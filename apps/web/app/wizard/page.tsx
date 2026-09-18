@@ -5,6 +5,7 @@ import { db, profilo as tabellaProfilo } from '@prontooo/db'
 
 import { FASCE, NOME_FASCIA } from '@/lib/ricette/fasce'
 import { ESCLUSIONI, IMPOSTAZIONI } from '@/lib/nutrizione/impostazioni'
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { GIORNI, PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/profilo/leggi'
 
 import { Testata } from '../componenti/testata'
@@ -44,8 +45,12 @@ async function salva(dati: FormData) {
 
   const impostazione = String(dati.get('impostazione') ?? 'equilibrata')
 
+  const utenteId = await utenteObbligatorio()
+
   const valori = {
-    id: 1,
+    // Il profilo porta l'id dell'utente: uno e uno solo per pannello.
+    id: utenteId,
+    utenteId,
     adulti: numero(dati, 'adulti', 2),
     bambini: numero(dati, 'bambini', 0),
     porzioniDefault: numero(dati, 'porzioni', 2),
@@ -134,8 +139,14 @@ const NOME_GRUPPO: Record<string, string> = {
 }
 
 export default async function Wizard() {
-  const salvato = await leggiProfilo()
-  const p = salvato ?? { ...PROFILO_PREDEFINITO, aggiornatoIl: new Date() }
+  const utenteId = await utenteObbligatorio()
+  const salvato = await leggiProfilo(utenteId)
+  const p = salvato ?? {
+    ...PROFILO_PREDEFINITO,
+    id: utenteId,
+    utenteId,
+    aggiornatoIl: new Date(),
+  }
   const alimenti = await leggiAlimenti()
   const scelti = new Set(p.alimentiScelti)
 

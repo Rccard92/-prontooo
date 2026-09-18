@@ -49,7 +49,7 @@ precedente.
 | PWA installabile, offline, promemoria push | Funziona, da provare sul telefono |
 | Storico, peso, resoconto per la visita | Funziona |
 | Sostituzioni equivalenti, scelta che impara e guarda le offerte | Funziona |
-| Passphrase di accesso | Pronta, si accende impostando `APP_PASSPHRASE` su Railway |
+| Login multiutente: ognuno il suo pannello | Funziona |
 
 Manca soltanto quello che ha bisogno della chiave Anthropic: la **normalizzazione degli
 ingredienti delle ricette del catalogo**, e quindi gli allergeni sulle ricette. Tutto il resto

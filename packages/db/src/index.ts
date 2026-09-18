@@ -19,6 +19,7 @@ export {
   ricettaIngredienti,
   ricette,
   spesaSpuntati,
+  utenti,
   volantini,
 } from './schema'
 export type {
@@ -42,6 +43,7 @@ export type {
   Ricetta,
   RicettaIngrediente,
   SpesaSpuntato,
+  Utente,
   VoceDispensa,
   Volantino,
 } from './schema'

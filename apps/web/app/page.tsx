@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
+import { utenteCorrente } from '@/lib/accesso/sessione'
 import { GRUPPI_FUORI, PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { leggiGiornata, oggi } from '@/lib/giornata/componi'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
@@ -21,7 +23,6 @@ import {
   saltaPasto,
   spuntaPasto,
 } from './azioni-giornata'
-import { AvvisoAperto } from './componenti/avviso-aperto'
 import { Testata, durata } from './componenti/testata'
 
 export const dynamic = 'force-dynamic'
@@ -193,15 +194,6 @@ function SchedaPasto({
           </ul>
         )}
 
-        {pasto.ricettaId && !registrato ? (
-          <Link
-            href={`/ricette/${pasto.ricettaId}`}
-            className="mt-3 block text-xs text-fumo hover:text-basilico"
-          >
-            Spunto dal catalogo: {pasto.titolo}
-            {pasto.minutiTotali ? ` · ${durata(pasto.minutiTotali)}` : ''}
-          </Link>
-        ) : null}
 
         {registrato ? (
           <form action={annullaRegistrazione} className="mt-3">
@@ -300,15 +292,21 @@ export default async function Oggi() {
   let alternative: AlternativeDiPasto = new Map()
   let inOfferta = new Set<number>()
 
+  const utente = await utenteCorrente()
+
+  if (!utente) redirect('/entra')
+
+  const utenteId = utente.id
+
   try {
-    lista = await listaAttiva()
-    giorno = await leggiGiornata()
+    lista = await listaAttiva(utenteId)
+    giorno = await leggiGiornata(utenteId)
 
     if (giorno) {
       const previsti = giorno.pasti.filter((p) => p.stato === 'previsto')
 
       ricette = await ricetteDeiPasti(previsti)
-      alternative = await alternativeDei(previsti)
+      alternative = await alternativeDei(utenteId, previsti)
 
       const ids = previsti.flatMap((p) =>
         p.previsti.map((c) => c.alimentoId).filter((id): id is number => id !== null),
@@ -346,13 +344,11 @@ export default async function Oggi() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="oggi" />
+      <Testata attiva="oggi" nome={utente.nome} />
 
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Oggi</h1>
         <p className="mt-1 text-sm text-fumo">{etichettaData}</p>
-
-        <AvvisoAperto />
 
         {!lista ? (
           <div className="scheda mt-6 px-6 py-12 text-center">

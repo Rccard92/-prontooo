@@ -5,10 +5,12 @@ import { revalidatePath } from 'next/cache'
 
 import { db, dispensa, giornate, spesaSpuntati } from '@prontooo/db'
 
+import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { generaGiornata } from '@/lib/giornata/componi'
 import { lunediDi } from '@/lib/spesa/calcola'
 
 export async function spunta(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const alimentoId = Number(dati.get('alimento'))
   const settimana = String(dati.get('settimana') ?? lunediDi())
   const ora = dati.get('spuntato') !== 'si'
@@ -20,7 +22,13 @@ export async function spunta(dati: FormData) {
   const [esistente] = await connessione
     .select()
     .from(spesaSpuntati)
-    .where(and(eq(spesaSpuntati.settimana, settimana), eq(spesaSpuntati.alimentoId, alimentoId)))
+    .where(
+      and(
+        eq(spesaSpuntati.utenteId, utenteId),
+        eq(spesaSpuntati.settimana, settimana),
+        eq(spesaSpuntati.alimentoId, alimentoId),
+      ),
+    )
     .limit(1)
 
   if (esistente) {
@@ -29,14 +37,16 @@ export async function spunta(dati: FormData) {
       .set({ spuntato: ora })
       .where(eq(spesaSpuntati.id, esistente.id))
   } else {
-    await connessione.insert(spesaSpuntati).values({ settimana, alimentoId, spuntato: ora })
+    await connessione
+      .insert(spesaSpuntati)
+      .values({ utenteId, settimana, alimentoId, spuntato: ora })
   }
 
   revalidatePath('/spesa')
 }
 
-
 export async function aggiungiInDispensa(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const alimentoId = Number(dati.get('alimento'))
   const quantita = Number(String(dati.get('quantita')).replace(',', '.'))
 
@@ -45,13 +55,15 @@ export async function aggiungiInDispensa(dati: FormData) {
   const connessione = db()
 
   if (quantita === 0) {
-    await connessione.delete(dispensa).where(eq(dispensa.alimentoId, alimentoId))
+    await connessione
+      .delete(dispensa)
+      .where(and(eq(dispensa.utenteId, utenteId), eq(dispensa.alimentoId, alimentoId)))
   } else {
     await connessione
       .insert(dispensa)
-      .values({ alimentoId, quantita: String(quantita), aggiornatoIl: new Date() })
+      .values({ utenteId, alimentoId, quantita: String(quantita), aggiornatoIl: new Date() })
       .onConflictDoUpdate({
-        target: dispensa.alimentoId,
+        target: [dispensa.utenteId, dispensa.alimentoId],
         set: { quantita: String(quantita), aggiornatoIl: new Date() },
       })
   }
@@ -61,6 +73,7 @@ export async function aggiungiInDispensa(dati: FormData) {
 
 /** Prepara le sette giornate della settimana, cosi' la lista ha cosa sommare. */
 export async function preparaSettimana(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
   const settimana = String(dati.get('settimana') ?? lunediDi())
   const [a, m, g] = settimana.split('-').map(Number)
 
@@ -69,9 +82,13 @@ export async function preparaSettimana(dati: FormData) {
       .toISOString()
       .slice(0, 10)
 
-    const [esistente] = await db().select().from(giornate).where(eq(giornate.data, data)).limit(1)
+    const [esistente] = await db()
+      .select()
+      .from(giornate)
+      .where(and(eq(giornate.utenteId, utenteId), eq(giornate.data, data)))
+      .limit(1)
 
-    if (!esistente) await generaGiornata(data)
+    if (!esistente) await generaGiornata(utenteId, data)
   }
 
   revalidatePath('/spesa')

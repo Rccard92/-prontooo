@@ -38,12 +38,12 @@ function ruoloDi(alimento: Alimento | null): string {
  * che mangi davvero e quello che e' in offerta. La scelta resta dentro la
  * lista: i pesi cambiano la frequenza, mai l'insieme.
  */
-export async function componiGiorno(tipoGiorno: TipoGiorno) {
-  const lista = await listaAttiva()
+export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
+  const lista = await listaAttiva(utenteId)
 
   if (!lista) return null
 
-  const [voci, pesi] = await Promise.all([vociDi(lista.id), pesiDiScelta()])
+  const [voci, pesi] = await Promise.all([vociDi(utenteId, lista.id), pesiDiScelta(utenteId)])
   const moltiplicatori = MOLTIPLICATORI[tipoGiorno]
 
   const pasti = FASCE.map((fascia) => {
@@ -115,30 +115,35 @@ export async function kcalDi(componenti: Componente[]): Promise<number> {
 }
 
 /** Crea o rigenera la giornata di una data, tenendo i pasti bloccati. */
-export async function generaGiornata(data = oggi(), tipoGiorno?: TipoGiorno) {
+export async function generaGiornata(
+  utenteId: number,
+  data = oggi(),
+  tipoGiorno?: TipoGiorno,
+) {
   const connessione = db()
 
   const [esistente] = await connessione
     .select()
     .from(giornate)
-    .where(eq(giornate.data, data))
+    .where(and(eq(giornate.utenteId, utenteId), eq(giornate.data, data)))
     .limit(1)
 
   const tipo = tipoGiorno ?? ((esistente?.tipoGiorno as TipoGiorno) || 'standard')
-  const composto = await componiGiorno(tipo)
+  const composto = await componiGiorno(utenteId, tipo)
 
   if (!composto) return null
 
   const [giornata] = await connessione
     .insert(giornate)
     .values({
+      utenteId,
       data,
       tipoGiorno: tipo,
       listaId: composto.listaId,
       obiettivo: composto.obiettivo,
     })
     .onConflictDoUpdate({
-      target: giornate.data,
+      target: [giornate.utenteId, giornate.data],
       set: { tipoGiorno: tipo, listaId: composto.listaId, obiettivo: composto.obiettivo },
     })
     .returning({ id: giornate.id })
@@ -219,8 +224,12 @@ export async function ideaRicetta(fascia: string, componenti: Componente[]): Pro
 }
 
 /** La giornata con dentro i pasti, pronta da mostrare. */
-export async function leggiGiornata(data = oggi()) {
-  const [giornata] = await db().select().from(giornate).where(eq(giornate.data, data)).limit(1)
+export async function leggiGiornata(utenteId: number, data = oggi()) {
+  const [giornata] = await db()
+    .select()
+    .from(giornate)
+    .where(and(eq(giornate.utenteId, utenteId), eq(giornate.data, data)))
+    .limit(1)
 
   if (!giornata) return null
 

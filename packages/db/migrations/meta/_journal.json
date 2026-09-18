@@ -71,6 +71,13 @@
       "when": 1789766485515,
       "tag": "0009_naive_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789767542716,
+      "tag": "0010_brown_mister_fear",
+      "breakpoints": true
     }
   ]
 }

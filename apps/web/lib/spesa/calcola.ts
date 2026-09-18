@@ -76,7 +76,10 @@ function arrotondaAllaConfezione(quantita: number, reparto: Reparto): number {
 }
 
 /** La lista della spesa di una settimana, gia' raggruppata per reparto. */
-export async function listaSpesa(settimana = lunediDi()): Promise<GruppoSpesa[]> {
+export async function listaSpesa(
+  utenteId: number,
+  settimana = lunediDi(),
+): Promise<GruppoSpesa[]> {
   const connessione = db()
   const fine = piuGiorni(settimana, 6)
 
@@ -84,7 +87,13 @@ export async function listaSpesa(settimana = lunediDi()): Promise<GruppoSpesa[]>
     .select({ previsti: giornataPasti.previsti, stato: giornataPasti.stato })
     .from(giornataPasti)
     .innerJoin(giornate, eq(giornate.id, giornataPasti.giornataId))
-    .where(and(gte(giornate.data, settimana), lte(giornate.data, fine)))
+    .where(
+      and(
+        eq(giornate.utenteId, utenteId),
+        gte(giornate.data, settimana),
+        lte(giornate.data, fine),
+      ),
+    )
 
   // Quello che hai gia' mangiato non si compra piu'.
   const componenti = pasti
@@ -98,8 +107,16 @@ export async function listaSpesa(settimana = lunediDi()): Promise<GruppoSpesa[]>
 
   const [voci, inCasa, spuntati] = await Promise.all([
     connessione.select().from(alimenti).where(inArray(alimenti.id, ids)),
-    connessione.select().from(dispensa).where(inArray(dispensa.alimentoId, ids)),
-    connessione.select().from(spesaSpuntati).where(eq(spesaSpuntati.settimana, settimana)),
+    connessione
+      .select()
+      .from(dispensa)
+      .where(and(eq(dispensa.utenteId, utenteId), inArray(dispensa.alimentoId, ids))),
+    connessione
+      .select()
+      .from(spesaSpuntati)
+      .where(
+        and(eq(spesaSpuntati.utenteId, utenteId), eq(spesaSpuntati.settimana, settimana)),
+      ),
   ])
 
   const perId = new Map<number, Alimento>(voci.map((a) => [a.id, a]))
