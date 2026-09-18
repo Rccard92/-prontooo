@@ -1,16 +1,20 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 
-import { count, eq as uguale } from 'drizzle-orm'
-
-import { db, pianiPasti, ricette } from '@prontooo/db'
-
-import { cambiaPasto, generaPiano, leggiPiano, leggiProfilo } from '@/lib/piano/genera'
-import { GIORNI, dataDelGiorno, lunediDi } from '@/lib/piano/settimana'
-import { NOME_RUOLO } from '@/lib/nutrizione/componi'
+import { GRUPPI_FUORI, PIATTI_FUORI } from '@/lib/giornata/piatti'
+import { leggiGiornata, oggi } from '@/lib/giornata/componi'
+import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
+import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 
+import {
+  annullaRegistrazione,
+  cambiaPasto,
+  cambiaTipoGiorno,
+  generaOggi,
+  registraFuori,
+  saltaPasto,
+  spuntaPasto,
+} from './azioni-giornata'
 import { Testata, durata } from './componenti/testata'
 
 export const dynamic = 'force-dynamic'
@@ -23,133 +27,188 @@ const stileFascia: Record<string, string> = {
   cena: 'bg-pomodoro-tenue text-pomodoro',
 }
 
-async function genera() {
-  'use server'
+const dataLunga = new Intl.DateTimeFormat('it-IT', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+})
 
-  await generaPiano()
-  revalidatePath('/')
-}
+type Pasto = NonNullable<Awaited<ReturnType<typeof leggiGiornata>>>['pasti'][number]
 
-async function cambia(dati: FormData) {
-  'use server'
-
-  const id = Number(dati.get('pasto'))
-
-  if (Number.isInteger(id)) await cambiaPasto(id)
-
-  revalidatePath('/')
-}
-
-async function blocca(dati: FormData) {
-  'use server'
-
-  const id = Number(dati.get('pasto'))
-  const nuovo = dati.get('bloccato') !== 'si'
-
-  if (Number.isInteger(id)) {
-    await db().update(pianiPasti).set({ bloccato: nuovo }).where(uguale(pianiPasti.id, id))
-  }
-
-  revalidatePath('/')
-}
-
-type Pasto = NonNullable<Awaited<ReturnType<typeof leggiPiano>>>['pasti'][number]
-
-function Pasto({ pasto }: { pasto: Pasto }) {
-  const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
+function Barra({ nome, valore, obiettivo, colore }: { nome: string; valore: number; obiettivo: number; colore: string }) {
+  const percentuale = obiettivo > 0 ? Math.min(100, Math.round((valore / obiettivo) * 100)) : 0
+  const oltre = obiettivo > 0 && valore > obiettivo
 
   return (
-    <div className="scheda p-4">
-      <div className="flex items-center justify-between gap-3">
-        <span
-          className={`pillola ${stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'}`}
-        >
-          {nome}
+    <div>
+      <div className="flex items-baseline justify-between text-sm">
+        <span className="font-semibold text-inchiostro">{nome}</span>
+        <span className={`cifre ${oltre ? 'text-pomodoro' : 'text-fumo'}`}>
+          {Math.round(valore)} / {Math.round(obiettivo)}
         </span>
-
-        <form action={blocca}>
-          <input type="hidden" name="pasto" value={pasto.id} />
-          <input type="hidden" name="bloccato" value={pasto.bloccato ? 'si' : 'no'} />
-          <button
-            type="submit"
-            className={`pillola ${pasto.bloccato ? 'bg-limone text-inchiostro' : 'bg-fondo text-fumo'}`}
-          >
-            {pasto.bloccato ? 'Tenuto fermo' : 'Tieni fermo'}
-          </button>
-        </form>
       </div>
-
-      {pasto.componenti.length === 0 ? (
-        <p className="mt-3 text-base text-fumo">
-          Niente di adatto: le esclusioni tolgono troppo per questa fascia.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-1.5">
-          {pasto.componenti.map((c) => (
-            <li
-              key={`${c.ruolo}-${c.alimentoId}`}
-              className="rounded-controllo flex items-baseline justify-between gap-3 bg-fondo px-3 py-2"
-            >
-              <span className="text-base text-inchiostro">
-                {c.nome}
-                <span className="ml-2 text-xs text-fumo">{NOME_RUOLO[c.ruolo] ?? c.ruolo}</span>
-              </span>
-              <span className="cifre shrink-0 text-base font-bold text-inchiostro">
-                {c.quantita} {c.unita}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {pasto.ricettaId ? (
-        <Link
-          href={`/ricette/${pasto.ricettaId}`}
-          className="rounded-controllo mt-3 flex items-center gap-3 bg-basilico-tenue px-3 py-2"
-        >
-          {pasto.immagineUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
-            <img
-              src={pasto.immagineUrl}
-              alt=""
-              loading="lazy"
-              className="size-10 shrink-0 rounded-full object-cover"
-            />
-          ) : null}
-          <span className="min-w-0">
-            <span className="block text-xs font-semibold text-basilico-scuro">Idea per cucinarli</span>
-            <span className="block truncate text-sm text-inchiostro">{pasto.titolo}</span>
-          </span>
-        </Link>
-      ) : null}
-
-      <form action={cambia} className="mt-3">
-        <input type="hidden" name="pasto" value={pasto.id} />
-        <button type="submit" className="bottone-chiaro hover:bg-basilico hover:text-bianco">
-          Cambia pasto
-        </button>
-      </form>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-fondo">
+        <div
+          className={`h-full rounded-full ${oltre ? 'bg-pomodoro' : colore}`}
+          style={{ width: `${percentuale}%` }}
+        />
+      </div>
     </div>
   )
 }
 
-export default async function Settimana() {
-  let profiloSalvato = null
-  let piano = null
-  let quanteRicette = 0
+function SchedaPasto({ pasto }: { pasto: Pasto }) {
+  const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
+  const registrato = pasto.stato !== 'previsto'
+  const kcalConsumate = pasto.consumati.reduce((t, c) => t + c.kcal, 0)
+
+  return (
+    <article className={`scheda overflow-hidden ${registrato ? 'opacity-70' : ''}`}>
+      {pasto.immagineUrl && !registrato ? (
+        // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
+        <img src={pasto.immagineUrl} alt="" loading="lazy" className="h-40 w-full object-cover" />
+      ) : null}
+
+      <div className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className={`pillola ${stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'}`}>
+            {nome}
+          </span>
+          {registrato ? (
+            <span className="cifre text-sm font-bold text-inchiostro">
+              {pasto.stato === 'saltato' ? 'saltato' : `${kcalConsumate} kcal`}
+            </span>
+          ) : null}
+        </div>
+
+        {pasto.ricettaId && !registrato ? (
+          <Link href={`/ricette/${pasto.ricettaId}`} className="mt-2 block">
+            <h3 className="text-lg leading-snug font-bold text-inchiostro">{pasto.titolo}</h3>
+            <p className="cifre mt-0.5 text-xs text-fumo">
+              Idea per cucinarli{pasto.minutiTotali ? ` · ${durata(pasto.minutiTotali)}` : ''}
+            </p>
+          </Link>
+        ) : null}
+
+        {registrato ? (
+          <ul className="mt-2 flex flex-col gap-1">
+            {pasto.consumati.length === 0 ? (
+              <li className="text-sm text-fumo">Niente.</li>
+            ) : (
+              pasto.consumati.map((c, i) => (
+                <li key={i} className="cifre text-sm text-inchiostro">
+                  {c.nome} · {c.quantita} {c.unita}
+                </li>
+              ))
+            )}
+          </ul>
+        ) : (
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {pasto.previsti.map((c) => (
+              <li
+                key={`${c.ruolo}-${c.nome}`}
+                className="rounded-controllo flex items-baseline justify-between gap-3 bg-fondo px-3 py-2"
+              >
+                <span className="text-sm text-inchiostro">{c.nome}</span>
+                <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
+                  {c.quantita === 0 ? 'q.b.' : `${c.quantita} ${c.unita}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {registrato ? (
+          <form action={annullaRegistrazione} className="mt-3">
+            <input type="hidden" name="pasto" value={pasto.id} />
+            <button type="submit" className="pillola bg-fondo text-fumo">
+              Annulla
+            </button>
+          </form>
+        ) : (
+          <div className="mt-4 flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <form action={spuntaPasto}>
+                <input type="hidden" name="pasto" value={pasto.id} />
+                <button type="submit" className="bottone hover:bg-basilico-scuro">
+                  L&rsquo;ho mangiato
+                </button>
+              </form>
+              <form action={cambiaPasto}>
+                <input type="hidden" name="pasto" value={pasto.id} />
+                <button type="submit" className="bottone-chiaro hover:bg-basilico hover:text-bianco">
+                  Cambia
+                </button>
+              </form>
+              <form action={saltaPasto}>
+                <input type="hidden" name="pasto" value={pasto.id} />
+                <button type="submit" className="pillola bg-fondo text-fumo">
+                  Saltato
+                </button>
+              </form>
+            </div>
+
+            <details className="rounded-controllo bg-fondo px-3 py-2">
+              <summary className="cursor-pointer text-sm font-semibold text-fumo">
+                Ho mangiato fuori
+              </summary>
+              <form action={registraFuori} className="mt-3 flex flex-wrap items-center gap-2">
+                <input type="hidden" name="pasto" value={pasto.id} />
+                <select
+                  name="piatto"
+                  id={`piatto-${pasto.id}`}
+                  className="rounded-controllo flex-1 border border-bordo bg-bianco px-3 py-2 text-sm text-inchiostro outline-none focus:border-basilico"
+                >
+                  {GRUPPI_FUORI.map((gruppo) => (
+                    <optgroup key={gruppo} label={gruppo}>
+                      {PIATTI_FUORI.filter((p) => p.gruppo === gruppo).map((p) => (
+                        <option key={p.nome} value={p.nome}>
+                          {p.nome} · {p.kcal} kcal
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  name="porzioni"
+                  id={`porzioni-${pasto.id}`}
+                  min={0.5}
+                  max={4}
+                  step={0.5}
+                  defaultValue={1}
+                  className="cifre w-16 rounded-controllo border border-bordo bg-bianco px-2 py-2 text-right text-sm text-inchiostro outline-none focus:border-basilico"
+                />
+                <button type="submit" className="bottone-chiaro">
+                  Registra
+                </button>
+              </form>
+              <p className="mt-2 text-xs text-fumo">
+                Sono stime: una pizza cambia di duecento calorie fra un posto e l&rsquo;altro.
+              </p>
+            </details>
+          </div>
+        )}
+      </div>
+    </article>
+  )
+}
+
+export default async function Oggi() {
+  let giorno = null
+  let lista = null
 
   try {
-    profiloSalvato = await leggiProfilo()
-    piano = await leggiPiano()
-    const [c] = await db().select({ n: count() }).from(ricette)
-    quanteRicette = c?.n ?? 0
+    lista = await listaAttiva()
+    giorno = await leggiGiornata()
   } catch (errore) {
-    console.error('lettura della settimana fallita:', errore)
+    console.error('lettura della giornata fallita:', errore)
 
     return (
       <div className="min-h-dvh bg-fondo">
-        <Testata attiva="settimana" />
-        <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+        <Testata attiva="oggi" />
+        <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
           <div className="scheda px-6 py-12 text-center">
             <h1 className="font-marchio text-2xl text-pomodoro">Il database non risponde</h1>
             <p className="mt-2 text-base text-fumo">Il dettaglio sta nei log del deploy.</p>
@@ -159,63 +218,106 @@ export default async function Settimana() {
     )
   }
 
-  if (!profiloSalvato) redirect('/wizard')
+  const data = oggi()
+  const [anno, mese, giornoMese] = data.split('-').map(Number)
+  const etichettaData = dataLunga.format(new Date(Date.UTC(anno ?? 2026, (mese ?? 1) - 1, giornoMese ?? 1)))
 
-  const inizio = lunediDi()
+  const obiettivo = giorno?.giornata.obiettivo
+  const consumato = giorno?.consumato
+  const sforato = obiettivo && consumato ? Math.round(consumato.kcal - obiettivo.kcal) : 0
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="settimana" />
+      <Testata attiva="oggi" />
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">La settimana</h1>
-            <p className="cifre mt-1 text-sm text-fumo">
-              dal {dataDelGiorno(inizio, 0)} al {dataDelGiorno(inizio, 6)}
-            </p>
-          </div>
+      <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+        <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Oggi</h1>
+        <p className="mt-1 text-sm text-fumo">{etichettaData}</p>
 
-          <form action={genera}>
-            <button type="submit" className="bottone hover:bg-basilico-scuro">
-              {piano ? 'Rigenera la settimana' : 'Genera la settimana'}
-            </button>
-          </form>
-        </div>
-
-        {piano === null ? (
-          <div className="scheda mt-6 px-6 py-10 text-center">
-            <h2 className="font-marchio text-2xl text-inchiostro">Nessun piano per questa settimana</h2>
+        {!lista ? (
+          <div className="scheda mt-6 px-6 py-12 text-center">
+            <h2 className="font-marchio text-2xl text-inchiostro">Prima gli ingredienti</h2>
             <p className="mx-auto mt-2 max-w-md text-base text-fumo">
-              Premi Genera la settimana: compongo i pasti con gli alimenti che hai scelto e i grammi
-              giusti. Le {quanteRicette} ricette in catalogo servono come idee per cucinarli.
+              Dimmi cosa puoi mangiare e da lì costruisco le giornate. Carichi il PDF del
+              nutrizionista o te la componi da solo.
             </p>
+            <Link href="/ingredienti" className="bottone mt-6 hover:bg-basilico-scuro">
+              Vai agli ingredienti
+            </Link>
           </div>
         ) : (
-          <div className="mt-8 flex flex-col gap-8">
-            {GIORNI.map((giorno, indice) => {
-              const delGiorno = piano.pasti.filter((p) => p.giorno === indice)
+          <>
+            <form action={cambiaTipoGiorno} className="scheda mt-5 flex flex-wrap items-center gap-2 p-4">
+              {TIPI_GIORNO.map((tipo) => {
+                const attivo = (giorno?.giornata.tipoGiorno ?? 'standard') === tipo
 
-              if (delGiorno.length === 0) return null
+                return (
+                  <button
+                    key={tipo}
+                    type="submit"
+                    name="tipo"
+                    value={tipo}
+                    className={`pillola ${attivo ? 'bg-basilico text-bianco' : 'bg-fondo text-fumo'}`}
+                  >
+                    {NOME_TIPO_GIORNO[tipo as TipoGiorno]}
+                  </button>
+                )
+              })}
+            </form>
 
-              return (
-                <section key={giorno}>
-                  <h2 className="font-marchio text-xl text-inchiostro">
-                    {giorno}{' '}
-                    <span className="cifre text-base font-normal text-fumo">
-                      {dataDelGiorno(inizio, indice)}
+            {giorno && obiettivo && consumato ? (
+              <div className="scheda mt-5 p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="text-base font-bold text-inchiostro">Come va la giornata</h2>
+                  {sforato > 60 ? (
+                    <span className="cifre pillola bg-pomodoro-tenue text-pomodoro">
+                      sei a +{sforato} kcal
                     </span>
-                  </h2>
+                  ) : null}
+                </div>
 
-                  <div className="mt-3 flex flex-col gap-3">
-                    {delGiorno.map((pasto) => (
-                      <Pasto key={pasto.id} pasto={pasto} />
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
+                <div className="mt-4 flex flex-col gap-3">
+                  <Barra nome="Calorie" valore={consumato.kcal} obiettivo={obiettivo.kcal} colore="bg-basilico" />
+                  <Barra nome="Proteine" valore={consumato.proteine} obiettivo={obiettivo.proteine} colore="bg-basilico" />
+                  <Barra nome="Carboidrati" valore={consumato.carboidrati} obiettivo={obiettivo.carboidrati} colore="bg-limone" />
+                  <Barra nome="Grassi" valore={consumato.grassi} obiettivo={obiettivo.grassi} colore="bg-limone" />
+                </div>
+
+                {sforato > 60 ? (
+                  <p className="mt-4 text-sm text-fumo">
+                    Ho ridotto i pasti che restano dove potevo. Domani si riparte dall&rsquo;obiettivo
+                    pieno: non si recupera.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {!giorno || giorno.pasti.length === 0 ? (
+              <form action={generaOggi} className="scheda mt-5 px-6 py-12 text-center">
+                <h2 className="font-marchio text-2xl text-inchiostro">Non c&rsquo;è ancora la giornata</h2>
+                <p className="mx-auto mt-2 max-w-md text-base text-fumo">
+                  Compongo i pasti dai tuoi ingredienti, con i grammi giusti.
+                </p>
+                <button type="submit" className="bottone mt-6 hover:bg-basilico-scuro">
+                  Prepara la giornata
+                </button>
+              </form>
+            ) : (
+              <>
+                <div className="mt-6 flex flex-col gap-4">
+                  {giorno.pasti.map((pasto) => (
+                    <SchedaPasto key={pasto.id} pasto={pasto} />
+                  ))}
+                </div>
+
+                <form action={generaOggi} className="mt-6">
+                  <button type="submit" className="bottone-chiaro w-full hover:bg-basilico hover:text-bianco">
+                    Rifai la giornata
+                  </button>
+                </form>
+              </>
+            )}
+          </>
         )}
       </main>
     </div>

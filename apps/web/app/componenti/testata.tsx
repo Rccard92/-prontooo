@@ -1,12 +1,21 @@
 import Link from 'next/link'
 
-/**
- * Testata unica dell'app: bianca, appoggiata sul fondo, le voci sono pillole.
- */
-export function Testata({ attiva }: { attiva?: 'settimana' | 'catalogo' | 'wizard' }) {
+/** Testata unica dell'app: bianca, appoggiata sul fondo, le voci sono pillole. */
+export function Testata({
+  attiva,
+}: {
+  attiva?: 'oggi' | 'ingredienti' | 'spesa' | 'ricette' | 'settimana' | 'catalogo' | 'wizard'
+}) {
   const voce = 'rounded-full px-3 py-1.5 text-sm font-semibold text-fumo'
   const voceAttiva =
     'rounded-full bg-basilico-tenue px-3 py-1.5 text-sm font-semibold text-basilico-scuro'
+
+  const voci: { href: string; nome: string; chiave: string }[] = [
+    { href: '/', nome: 'Oggi', chiave: 'oggi' },
+    { href: '/ingredienti', nome: 'Ingredienti', chiave: 'ingredienti' },
+    { href: '/spesa', nome: 'Spesa', chiave: 'spesa' },
+    { href: '/ricette', nome: 'Ricette', chiave: 'catalogo' },
+  ]
 
   return (
     <header className="sticky top-0 z-10 border-b border-bordo bg-bianco/90 backdrop-blur">
@@ -15,15 +24,11 @@ export function Testata({ attiva }: { attiva?: 'settimana' | 'catalogo' | 'wizar
           èProntooo
         </Link>
         <nav className="flex items-center gap-1">
-          <Link href="/" className={attiva === 'settimana' ? voceAttiva : voce}>
-            Settimana
-          </Link>
-          <Link href="/ricette" className={attiva === 'catalogo' ? voceAttiva : voce}>
-            Ricette
-          </Link>
-          <Link href="/wizard" className={attiva === 'wizard' ? voceAttiva : voce}>
-            Preferenze
-          </Link>
+          {voci.map((v) => (
+            <Link key={v.href} href={v.href} className={attiva === v.chiave ? voceAttiva : voce}>
+              {v.nome}
+            </Link>
+          ))}
         </nav>
       </div>
     </header>
