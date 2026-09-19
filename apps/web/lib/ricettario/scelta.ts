@@ -1,6 +1,6 @@
-import { inArray } from 'drizzle-orm'
+import { and, inArray, isNotNull, sql } from 'drizzle-orm'
 
-import { alimenti, db } from '@prontooo/db'
+import { alimenti, db, ricette } from '@prontooo/db'
 
 import type { Componente } from '../giornata/modello'
 import { eFascia } from '../ricette/fasce'
@@ -9,6 +9,7 @@ import { LIBRO } from './libro'
 import {
   type Abbinamento,
   type ComponenteAbbinabile,
+  type RicettaComponibile,
   abbina,
   occorrente,
   passiDi,
@@ -45,18 +46,90 @@ export async function arricchisci(componenti: Componente[]): Promise<ComponenteA
   return unisci(componenti, await leggiAlimenti(ids))
 }
 
+/** Le ricette del catalogo che sono diventate componibili, senza i passi. */
+export const DAL_CATALOGO = 'catalogo-'
+
 /**
- * Le ricette del ricettario che si possono fare con questo pasto, in ordine.
+ * Le ricette del catalogo che la normalizzazione ha convertito.
+ *
+ * Solo quelle con dei posti: una ricetta con `posti` vuoto o non e' ancora
+ * stata letta, o l'abbiamo letta e c'era dentro una riga che non abbiamo
+ * capito. In tutti e due i casi non entra nel piano - resta sfogliabile su
+ * `/ricette`, che e' quello per cui il catalogo e' nato.
+ *
+ * I passi non si leggono qui. Sono il campo piu' pesante della riga e servono
+ * a **una** ricetta - quella scelta - non a tutte le candidate: caricarli per
+ * duecento ricette a ogni apertura della pagina di oggi sarebbe mezzo mega
+ * per niente.
+ */
+export async function catalogoComponibile(): Promise<RicettaComponibile[]> {
+  const righe = await db()
+    .select({
+      id: ricette.id,
+      titolo: ricette.titolo,
+      fasce: ricette.fasce,
+      minuti: ricette.minutiTotali,
+      posti: ricette.posti,
+      immagineUrl: ricette.immagineUrl,
+      fonteNome: ricette.fonteNome,
+      fonteUrl: ricette.fonteUrl,
+    })
+    .from(ricette)
+    .where(
+      and(isNotNull(ricette.normalizzataIl), sql`jsonb_array_length(${ricette.posti}) > 0`),
+    )
+
+  return righe.map((r) => ({
+    // Il prefisso tiene separati i due mondi: `giornata_pasti.ricetta_libro`
+    // salva questa stringa, e senza prefisso l'id 12 del catalogo e l'id 12
+    // del libro sarebbero la stessa cosa.
+    id: `${DAL_CATALOGO}${r.id}`,
+    titolo: r.titolo,
+    fasce: r.fasce.filter(eFascia),
+    minuti: r.minuti ?? 0,
+    posti: r.posti,
+    passi: [],
+    immagineUrl: r.immagineUrl,
+    fonte: { nome: r.fonteNome, url: r.fonteUrl },
+  }))
+}
+
+/** I passi di una ricetta del catalogo: si leggono solo per quella scelta. */
+async function passiDalCatalogo(id: string): Promise<string[]> {
+  const numero = Number(id.slice(DAL_CATALOGO.length))
+
+  if (!Number.isInteger(numero)) return []
+
+  const [riga] = await db()
+    .select({ passaggi: ricette.passaggi })
+    .from(ricette)
+    .where(inArray(ricette.id, [numero]))
+    .limit(1)
+
+  return riga?.passaggi ?? []
+}
+
+/**
+ * Le ricette che si possono fare con questo pasto, in ordine.
  *
  * Prima quelle che calzano, poi le vicine, poi quelle a cui manca un pezzo.
  * A parita' di livello vince chi usa piu' componenti e ne lascia meno fuori.
+ *
+ * `catalogo` sono le ricette raccolte dai siti che la normalizzazione ha
+ * convertito in ricette a posti: arrivano da fuori ma qui dentro valgono
+ * quanto quelle scritte a mano, perche' ormai parlano la stessa lingua.
  */
-export function proposte(fascia: string, componenti: ComponenteAbbinabile[]): Abbinamento[] {
+export function proposte(
+  fascia: string,
+  componenti: ComponenteAbbinabile[],
+  catalogo: RicettaComponibile[] = [],
+): Abbinamento[] {
   if (!eFascia(fascia)) return []
 
   const ordine = { calza: 0, vicina: 1, adattabile: 2 }
 
-  return LIBRO.filter((r) => r.fasce.includes(fascia))
+  return [...LIBRO, ...catalogo]
+    .filter((r) => r.fasce.includes(fascia))
     .map((r) => abbina(r, componenti))
     .filter((a): a is Abbinamento => a !== null)
     .sort((a, b) => ordine[a.livello] - ordine[b.livello] || b.punteggio - a.punteggio)
@@ -74,17 +147,42 @@ function vestila(scelto: Abbinamento, elenco: Abbinamento[]) {
     passi: passiDi(scelto),
     mancanti: scelto.mancanti.map((p) => p.gruppi[0] ?? p.ruolo),
     avanzati: scelto.avanzati.map((c) => c.nome),
+    immagineUrl: scelto.ricetta.immagineUrl ?? null,
+    fonte: scelto.ricetta.fonte ?? null,
     alternative: elenco
       .filter((a) => a.ricetta.id !== scelto.ricetta.id)
       .slice(0, 6)
-      .map((a) => ({ id: a.ricetta.id, titolo: a.ricetta.titolo, livello: a.livello })),
+      .map((a) => ({
+        id: a.ricetta.id,
+        titolo: a.ricetta.titolo,
+        livello: a.livello,
+        immagineUrl: a.ricetta.immagineUrl ?? null,
+      })),
   }
 }
 
 export type RicettaDelPasto = ReturnType<typeof vestila>
 
-function scegli(fascia: string, componenti: ComponenteAbbinabile[], scelta?: string | null) {
-  const elenco = proposte(fascia, componenti)
+/**
+ * I passi di una ricetta del catalogo arrivano solo adesso, per quella scelta.
+ *
+ * `catalogoComponibile` li lascia vuoti apposta: qui si legge la riga giusta
+ * e basta. Se la ricetta viene dal libro scritto a mano non c'e' niente da
+ * leggere, i passi li ha gia'.
+ */
+async function conIPassi(vestita: RicettaDelPasto | null): Promise<RicettaDelPasto | null> {
+  if (!vestita || !vestita.id.startsWith(DAL_CATALOGO)) return vestita
+
+  return { ...vestita, passi: await passiDalCatalogo(vestita.id) }
+}
+
+function scegli(
+  fascia: string,
+  componenti: ComponenteAbbinabile[],
+  scelta: string | null | undefined,
+  catalogo: RicettaComponibile[],
+) {
+  const elenco = proposte(fascia, componenti, catalogo)
 
   if (elenco.length === 0) return null
 
@@ -104,7 +202,12 @@ export async function ricettaDelPasto(
   componenti: Componente[],
   scelta?: string | null,
 ): Promise<RicettaDelPasto | null> {
-  return scegli(fascia, await arricchisci(componenti), scelta)
+  const [arricchiti, catalogo] = await Promise.all([
+    arricchisci(componenti),
+    catalogoComponibile(),
+  ])
+
+  return conIPassi(scegli(fascia, arricchiti, scelta, catalogo))
 }
 
 export type PastoDaVestire = {
@@ -122,12 +225,19 @@ export async function ricetteDeiPasti(
     p.previsti.map((c) => c.alimentoId).filter((i): i is number => i !== null),
   )
 
-  const dati = await leggiAlimenti(ids)
+  const [dati, catalogo] = await Promise.all([leggiAlimenti(ids), catalogoComponibile()])
   const per = new Map<number, RicettaDelPasto>()
 
   for (const pasto of pasti) {
-    const ricetta = scegli(pasto.fascia, unisci(pasto.previsti, dati), pasto.ricettaLibro)
+    const ricetta = scegli(
+      pasto.fascia,
+      unisci(pasto.previsti, dati),
+      pasto.ricettaLibro,
+      catalogo,
+    )
 
+    // Nella scheda del giorno i passi non si mostrano: si mostra la foto e il
+    // titolo, e il procedimento sta dietro al tocco. Quindi qui non si legge.
     if (ricetta) per.set(pasto.id, ricetta)
   }
 
@@ -145,7 +255,11 @@ export async function ricettaSuccessiva(
   componenti: Componente[],
   attuale: string | null,
 ): Promise<string | null> {
-  const elenco = proposte(fascia, await arricchisci(componenti))
+  const [arricchiti, catalogo] = await Promise.all([
+    arricchisci(componenti),
+    catalogoComponibile(),
+  ])
+  const elenco = proposte(fascia, arricchiti, catalogo)
 
   if (elenco.length < 2) return null
 

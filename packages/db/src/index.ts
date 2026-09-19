@@ -39,6 +39,7 @@ export type {
   NuovoRicettaIngrediente,
   Offerta,
   Peso,
+  PostoRicetta,
   Profilo,
   Ricetta,
   RicettaIngrediente,

@@ -4,9 +4,10 @@ Il worker non espone HTTP: legge fonti esterne e scrive su Postgres. A ogni
 giro fa due cose:
 
 1. riempie il catalogo raccogliendo ricette dalle sitemap delle fonti
-2. scarica i volantini delle insegne, quando quelli in casa sono vecchi
-3. bussa alla rotta dei promemoria del web, che decide se ne va mandato uno
-4. lascia un battito, cosi' la pagina di stato sa che e' vivo
+2. fa leggere al web un blocco di ricette non ancora normalizzate
+3. scarica i volantini delle insegne, quando quelli in casa sono vecchi
+4. bussa alla rotta dei promemoria del web, che decide se ne va mandato uno
+5. lascia un battito, cosi' la pagina di stato sa che e' vivo
 
 Poi dorme e ricomincia. Il ciclo sta qui dentro invece che nel cron di Railway
 di proposito: un servizio a cron con restart NEVER viene creato ma non avviato
@@ -27,6 +28,7 @@ import time
 
 import psycopg
 
+from normalizza import bussa as normalizza_un_blocco
 from promemoria import bussa
 from raccolta import raccogli
 from volantini import raccogli_volantini
@@ -68,6 +70,13 @@ def un_giro(url: str) -> None:
     except Exception as errore:  # la raccolta non deve impedire il battito
         print(f"raccolta fallita: {errore}", file=sys.stderr, flush=True)
         messaggio = f"raccolta fallita: {errore}"
+
+    # La normalizzazione non deve far cadere il giro: senza la chiave non
+    # parte, e il catalogo resta sfogliabile com'era.
+    try:
+        print(normalizza_un_blocco(), flush=True)
+    except Exception as errore:
+        print(f"normalizzazione fallita: {errore}", file=sys.stderr, flush=True)
 
     # I volantini costano una query quando in casa ce n'e' gia' uno fresco.
     try:

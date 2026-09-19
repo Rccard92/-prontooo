@@ -67,7 +67,19 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
           </section>
         ) : (
           <>
-            <header className="scheda p-6">
+            <header className="scheda overflow-hidden">
+              {ricetta.immagineUrl ? (
+                <div className="aspect-4/3 w-full overflow-hidden sm:aspect-21/9">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari */}
+                  <img
+                    src={ricetta.immagineUrl}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                </div>
+              ) : null}
+
+              <div className="p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="pillola bg-fondo text-fumo">{nomeFascia}</span>
                 <span className={`pillola ${stileLivello[ricetta.livello]}`}>
@@ -111,6 +123,24 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
                     </button>
                   </form>
                 ) : null}
+              </div>
+
+              {/* Una ricetta di altri si cita, e il link ci deve essere: il
+                  procedimento qui sotto e' parola loro, i grammi sono tuoi. */}
+              {ricetta.fonte ? (
+                <p className="mt-4 text-sm text-fumo">
+                  Ricetta di{' '}
+                  <a
+                    href={ricetta.fonte.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-basilico-scuro underline underline-offset-4"
+                  >
+                    {ricetta.fonte.nome}
+                  </a>
+                  , coi grammi rifatti sui tuoi.
+                </p>
+              ) : null}
               </div>
             </header>
 

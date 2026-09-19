@@ -131,6 +131,20 @@ export const ingredienteAllergene = pgTable(
  * gli allergeni ne' il reparto: va mostrata come "da normalizzare", mai come
  * "senza allergeni".
  */
+/**
+ * Un posto di una ricetta: il buco che un componente del tuo pasto riempie.
+ *
+ * Sta qui e non in `apps/web` perche' lo salviamo dentro la riga: e' il
+ * risultato della normalizzazione, non una cosa che si ricalcola a ogni
+ * lettura.
+ */
+export type PostoRicetta = {
+  chiave: string
+  ruolo: string
+  gruppi: string[]
+  facoltativo?: boolean
+}
+
 export const ricette = pgTable(
   'ricette',
   {
@@ -157,6 +171,16 @@ export const ricette = pgTable(
     // il piano non la usa mai.
     fasce: jsonb('fasce').$type<string[]>().notNull().default([]),
     passaggi: jsonb('passaggi').$type<string[]>().notNull().default([]),
+    // I posti che questa ricetta espone, ricavati dagli ingredienti
+    // normalizzati. E' quello che la fa entrare nel piano: una ricetta del
+    // catalogo porta i suoi grammi, una ricetta a posti porta i tuoi. Vuoto =
+    // non e' ancora convertibile, e resta solo in archivio.
+    // Vedi apps/web/lib/ricette/posti.ts.
+    posti: jsonb('posti').$type<PostoRicetta[]>().notNull().default([]),
+    // Le etichette di tutti i suoi ingredienti messe insieme: glutine,
+    // lattosio, pesce. Si riempie con la normalizzazione, ed e' quello che
+    // permette di dire "questa ricetta non fa per te" senza tirare a indovinare.
+    etichette: jsonb('etichette').$type<string[]>().notNull().default([]),
     normalizzataIl: timestamp('normalizzata_il', { withTimezone: true }),
     importataIl: timestamp('importata_il', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -190,6 +214,13 @@ export const ricettaIngredienti = pgTable(
       () => ingredientiCanonici.id,
       { onDelete: 'set null' },
     ),
+    // L'alimento del vocabolario che questa riga e': lo scrive la
+    // normalizzazione. Nullo vuol dire "non l'ho riconosciuto", ed e' un caso
+    // normale - il sale e il basilico non sono alimenti del vocabolario.
+    alimentoId: integer('alimento_id').references(() => alimenti.id, { onDelete: 'set null' }),
+    // I grammi che ne vuole la ricetta della fonte. Servono a capire le
+    // proporzioni, non a metterteli nel piatto: nel piatto vanno i tuoi.
+    grammi: numeric('grammi', { precision: 10, scale: 2 }),
   },
   (t) => [index('ricetta_ingredienti_ricetta_idx').on(t.ricettaId)],
 )

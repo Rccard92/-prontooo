@@ -87,28 +87,61 @@ function SchedaPasto({
   const registrato = pasto.stato !== 'previsto'
   const kcalConsumate = pasto.consumati.reduce((t, c) => t + c.kcal, 0)
 
+  const stile = stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'
+
   return (
     <article className={`scheda overflow-hidden ${registrato ? 'opacity-70' : ''}`}>
+      {/* La foto sta sopra e sta grande: e' la ricetta, non una decorazione.
+          Un pasto gia' registrato non la porta - li' il piatto e' fatto, e
+          quello che serve e' il conto di cosa hai mangiato. */}
+      {ricetta && !registrato ? (
+        <Link href={`/cucina/${pasto.id}`} className="group block">
+          <div className={`relative aspect-4/3 w-full overflow-hidden ${stile}`}>
+            {ricetta.immagineUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
+              <img
+                src={ricetta.immagineUrl}
+                alt=""
+                loading="lazy"
+                className="size-full object-cover transition-transform group-hover:scale-105"
+              />
+            ) : (
+              // Senza foto non si mette un rettangolo grigio con scritto
+              // "senza foto": si mette il colore della fascia e il nome del
+              // piatto, che e' comunque la cosa che stavi cercando.
+              <div className="flex size-full items-center justify-center px-6">
+                <span className="font-marchio text-center text-2xl leading-tight">
+                  {ricetta.titolo}
+                </span>
+              </div>
+            )}
+
+            <span className={`pillola absolute top-3 left-3 shadow-appoggio ${stile}`}>{nome}</span>
+          </div>
+        </Link>
+      ) : null}
+
       <div className="p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className={`pillola ${stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'}`}>
-            {nome}
-          </span>
-          {registrato ? (
-            <span className="cifre text-sm font-bold text-inchiostro">
-              {pasto.stato === 'saltato' ? 'saltato' : `${kcalConsumate} kcal`}
-            </span>
-          ) : null}
-        </div>
+        {!ricetta || registrato ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className={`pillola ${stile}`}>{nome}</span>
+            {registrato ? (
+              <span className="cifre text-sm font-bold text-inchiostro">
+                {pasto.stato === 'saltato' ? 'saltato' : `${kcalConsumate} kcal`}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         {ricetta && !registrato ? (
-          <Link href={`/cucina/${pasto.id}`} className="mt-2 block">
-            <h3 className="text-lg leading-snug font-bold text-inchiostro">{ricetta.titolo}</h3>
-            <p className="cifre mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-fumo">
+          <Link href={`/cucina/${pasto.id}`} className="block">
+            <h3 className="font-marchio text-xl leading-snug text-inchiostro">{ricetta.titolo}</h3>
+            <p className="cifre mt-1 flex flex-wrap items-center gap-x-2 text-xs text-fumo">
               <span className={`pillola ${stileLivello[ricetta.livello]}`}>
                 {NOME_LIVELLO[ricetta.livello]}
               </span>
               <span>{durata(ricetta.minuti)}</span>
+              {ricetta.fonte ? <span>{ricetta.fonte.nome}</span> : null}
             </p>
           </Link>
         ) : null}

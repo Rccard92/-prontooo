@@ -39,9 +39,21 @@ export type RicettaComponibile = {
   posti: Posto[]
   /** Quello che non si pesa: aglio, sale, erbe. Sta scritto, non conta. */
   liberi?: string[]
-  /** I passi, con `{chiave}` dove va nominato il componente assegnato. */
+  /**
+   * I passi.
+   *
+   * Nelle ricette scritte a mano portano `{chiave}` dove va nominato il
+   * componente assegnato. In quelle che arrivano dal catalogo no: li' il testo
+   * e' quello della fonte, parola per parola. "Cuocete la pasta" va bene per
+   * 80 g come per 120, e riscrivere il procedimento di qualcun altro per far
+   * tornare un numero vorrebbe dire rompere una ricetta che funziona.
+   */
   passi: string[]
   nota?: string
+  /** La foto, quando la ricetta arriva dal catalogo. */
+  immagineUrl?: string | null
+  /** Chi l'ha scritta, e dove sta. Una ricetta di altri si cita. */
+  fonte?: { nome: string; url: string } | null
 }
 
 /** Un componente del pasto, con quel tanto di alimento che serve per abbinarlo. */

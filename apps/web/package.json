@@ -10,6 +10,7 @@
     "test": "tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "@prontooo/db": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.10.2",

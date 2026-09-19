@@ -158,7 +158,7 @@ Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy aut
 
 Fatto: login multiutente, benvenuto a passi, scelta degli ingredienti per macro-categorie, volantini scaricati da soli, catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, volantini e offerte con soglia di confidenza, PWA installabile che regge senza rete, promemoria push, storico e peso, import manuale come attrezzo da officina.
 
-Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti delle **ricette**, e quindi allergeni sulle ricette, reparti e lista della spesa.
+Manca solo `ANTHROPIC_API_KEY` su Railway. La catena e' scritta e deployata: senza chiave il worker lo dice nei log a ogni giro e il catalogo resta sfogliabile com'era; il giorno che la chiave c'e', parte da sola.
 
 ## Come si compone un pasto
 
@@ -205,6 +205,22 @@ Quando una riga resta senza niente di stagione - hai spuntato solo frutta estiva
 
 Un test controlla che ogni mese dell'anno abbia almeno tre frutti e tre verdure disponibili: e' quello che impedisce di accendere le stagioni e scoprire che da ottobre a marzo non c'e' niente da proporre.
 
+### Dal catalogo al ricettario
+
+`apps/web/lib/ricette/normalizza.ts` e `posti.ts`, con `archivio.ts` che tiene il conto.
+
+Il catalogo raccolto dai siti aveva tutto quello che serve per una scheda - foto, ingredienti, procedimento - e non si poteva usare, per due motivi che sono lo stesso motivo: una ricetta del catalogo e' un **blocco chiuso**. Porta i suoi grammi, e infilarla nel piano vuol dire o ignorare i suoi - e allora la foto mente sulle porzioni - o ignorare i tuoi, e allora tutto il calcolo su peso, altezza e obiettivo diventa decorazione. E non sappiamo cosa contiene, quindi nessuna esclusione e' garantita.
+
+La normalizzazione scioglie tutti e due i nodi in un colpo. Ogni ricetta si legge **una volta sola** e il risultato si salva sulla riga: le righe diventano alimenti del vocabolario, le etichette si sommano dagli alimenti (mai dai tag della fonte), e i ruoli diventano i **posti**. A quel punto quella ricetta e' una ricetta del ricettario a tutti gli effetti - i tuoi grammi ci entrano dentro - e si porta dietro la foto e il procedimento veri.
+
+Tre scelte che tengono:
+
+- **Il modello sceglie per nome, non per id.** Un nome inventato non si risolve e la riga diventa `sconosciuto`, che e' quello che vogliamo; un id inventato punterebbe a un alimento vero e non se ne accorgerebbe nessuno
+- **Una riga non capita toglie la garanzia a tutta la ricetta.** Se non so cos'e' la terza riga non posso giurare che dentro non ci sia glutine, quindi `posti` resta vuoto e la ricetta non entra nel piano: resta sfogliabile. E' la differenza fra "questa ricetta non contiene pesce" e "nelle righe che ho capito non c'e' pesce"
+- **Il procedimento resta parola della fonte.** Non ci infiliamo segnaposto: "cuocete la pasta" va bene per 80 g come per 120, e riscrivere il testo di qualcun altro per far tornare un numero romperebbe una ricetta che funziona. La fonte si cita, col link
+
+Gira su Haiku perche' il lavoro e' estrazione, non giudizio - si cambia con `MODELLO_NORMALIZZA` - e con gli structured outputs, che garantiscono la forma invece di sperarci. Il worker bussa a `POST /api/interno/normalizza` un blocco alla volta (`RICETTE_PER_GIRO`, venti): il vocabolario resta nella cache del prompt fra una ricetta e l'altra, un errore costa un blocco e non un giro, e la spesa si spalma. Senza la chiave la rotta risponde 503 col motivo scritto, e nei log si legge - non e' un guasto.
+
 ### Il ricettario di casa
 
 Sta in `apps/web/lib/ricettario/`. Una ricetta del catalogo e' un blocco chiuso: porta i suoi ingredienti e i suoi grammi, e per usarla dovresti piegare la tua lista alla sua. Una ricetta del ricettario porta invece **posti** (`{pasta}`, `{verdura}`, `{grasso}`), e i posti li riempiono i componenti del pasto, coi grammi gia' calcolati. La stessa ricetta vale per chiunque e per ogni giorno, e non serve la chiave: e' un elenco scritto a mano in `libro.ts`.
@@ -215,7 +231,11 @@ La compatibilita' ha tre livelli e non e' si'/no, perche' il si'/no butterebbe v
 
 `giornata_pasti.ricetta_libro` tiene quale hai scelto, cosi' "altra ricetta" non ricompone il pasto: i grammi restano quelli, cambia solo come li cucini. Ricomporre il pasto azzera la scelta.
 
-Il catalogo raccolto dai siti **non** compare piu' nella scheda del giorno. Quelle ricette non sono normalizzate, quindi non si puo' garantire che non contengano quello che non ti piace - ed e' esattamente la garanzia che regge il ricettario. Restano sfogliabili su `/ricette`, come archivio.
+Il libro scritto a mano e il catalogo normalizzato finiscono nello stesso mucchio: `proposte()` li mette insieme, perche' una volta convertita una ricetta del catalogo parla la stessa lingua. Gli id del catalogo portano il prefisso `catalogo-`, altrimenti l'id 12 del libro e l'id 12 del catalogo sarebbero la stessa cosa dentro `giornata_pasti.ricetta_libro`.
+
+I passi delle ricette del catalogo si leggono **solo per quella scelta**: sono il campo piu' pesante della riga, e caricarli per duecento candidate a ogni apertura della pagina di oggi sarebbe mezzo mega per niente.
+
+Una ricetta del catalogo non ancora normalizzata, o normalizzata ma con una riga non capita, ha `posti` vuoto e non entra nel piano. Resta sfogliabile su `/ricette`, che e' quello per cui il catalogo e' nato.
 
 ### Il benvenuto a passi
 

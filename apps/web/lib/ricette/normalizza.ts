@@ -1,0 +1,201 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { jsonSchemaOutputFormat } from '@anthropic-ai/sdk/helpers/json-schema'
+
+import type { IngredienteRiconosciuto } from './posti'
+
+/**
+ * Leggere la lista ingredienti di una ricetta e capire cosa c'e' dentro.
+ *
+ * E' l'unico posto dell'app dove gira un modello, e gira **una volta per
+ * ricetta**: il risultato si salva sulla riga. Non si normalizza a runtime,
+ * perche' una pagina che apre e chiama un modello per mostrarti la cena e'
+ * una pagina lenta e una bolletta che cresce da sola.
+ *
+ * Il compito e' piccolo e meccanico: "320 g di pasta di semola" deve diventare
+ * l'alimento *Pasta di semola* con 320 grammi. Non serve un ragionamento, e
+ * per questo gira su Haiku - il modello piu' economico - e con gli structured
+ * outputs, che garantiscono la forma della risposta invece di sperarci.
+ *
+ * Il modello sceglie per **nome** dal vocabolario, non per id: un nome
+ * inventato non si risolve e la riga diventa `sconosciuto`, che e' esattamente
+ * quello che vogliamo. Un id inventato invece punterebbe a un alimento a caso
+ * e nessuno se ne accorgerebbe.
+ */
+
+/**
+ * Il modello che legge le liste ingredienti.
+ *
+ * Haiku perche' il lavoro e' estrazione, non giudizio, e perche' il conto lo
+ * paga una persona sola per un'app di casa: 419 ricette costano qualche
+ * centesimo invece di qualche euro. Si cambia con `MODELLO_NORMALIZZA` se un
+ * giorno le righe difficili diventano troppe.
+ */
+const MODELLO = process.env.MODELLO_NORMALIZZA?.trim() || 'claude-haiku-4-5'
+
+/** Senza chiave non si normalizza, e non e' un errore: si riprova domani. */
+export function chiaveConfigurata(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+}
+
+export type VoceVocabolario = {
+  id: number
+  nome: string
+  gruppo: string
+  ruoli: string[]
+  etichette: string[]
+}
+
+type RigaLetta = {
+  posizione: number
+  alimento: string | null
+  grammi: number | null
+  tipo: 'alimento' | 'libero' | 'sconosciuto'
+}
+
+const FORMATO = {
+  type: 'object',
+  properties: {
+    righe: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          posizione: { type: 'integer' },
+          alimento: {
+            type: ['string', 'null'],
+            description: "Il nome esatto dal vocabolario, o null se non c'e'.",
+          },
+          grammi: {
+            type: ['number', 'null'],
+            description: 'I grammi che ne vuole la ricetta, convertiti. null se non quantificabile.',
+          },
+          tipo: { type: 'string', enum: ['alimento', 'libero', 'sconosciuto'] },
+        },
+        required: ['posizione', 'alimento', 'grammi', 'tipo'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['righe'],
+  additionalProperties: false,
+} as const
+
+/**
+ * Le istruzioni, insieme al vocabolario.
+ *
+ * Stanno in `system` e portano `cache_control`: il vocabolario e' lungo, non
+ * cambia mai fra una ricetta e l'altra, e il worker ne normalizza un blocco
+ * alla volta. Pagarlo per intero a ogni ricetta sarebbe buttare via nove
+ * decimi del conto.
+ */
+function istruzioni(vocabolario: VoceVocabolario[]): string {
+  const elenco = vocabolario.map((v) => `${v.nome} (${v.gruppo})`).join('\n')
+
+  return `Traduci le righe della lista ingredienti di una ricetta italiana negli alimenti di questo vocabolario.
+
+VOCABOLARIO
+${elenco}
+
+REGOLE
+- "alimento": la riga e' uno di quelli del vocabolario. Scrivi il nome ESATTO come compare sopra, e i grammi convertiti (un cucchiaio d'olio = 10 g, uno spicchio d'aglio non si pesa, un uovo = 60 g, una scatola di pelati = 400 g).
+- "libero": la riga e' sale, pepe, aglio, erbe aromatiche, spezie, lievito, acqua. Si scrive e non si pesa: alimento null, grammi null.
+- "sconosciuto": la riga e' un alimento vero ma nel vocabolario non c'e' niente che gli somigli. Alimento null.
+
+Non forzare un abbinamento che non c'e': "sconosciuto" e' una risposta giusta, e una traduzione inventata e' peggio di un buco. Non scegliere un alimento che non sia scritto nel vocabolario qui sopra.
+Rispondi una riga per ogni riga ricevuta, nello stesso ordine.`
+}
+
+/**
+ * Legge le righe di una ricetta e le traduce in alimenti del vocabolario.
+ *
+ * Solleva se la chiave manca o se la chiamata fallisce: chi chiama decide se
+ * riprovare. Non inventa un risultato parziale, perche' una ricetta
+ * normalizzata a meta' sembrerebbe normalizzata.
+ */
+export async function leggiIngredienti(
+  righe: string[],
+  vocabolario: VoceVocabolario[],
+): Promise<IngredienteRiconosciuto[]> {
+  if (righe.length === 0) return []
+
+  const cliente = new Anthropic()
+
+  const risposta = await cliente.messages.parse({
+    model: MODELLO,
+    max_tokens: 4096,
+    system: [
+      {
+        type: 'text',
+        text: istruzioni(vocabolario),
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: righe.map((riga, i) => `${i}. ${riga}`).join('\n'),
+      },
+    ],
+    output_config: { format: jsonSchemaOutputFormat(FORMATO) },
+  })
+
+  const lette = risposta.parsed_output?.righe
+
+  if (!lette) throw new Error('la normalizzazione non ha restituito righe leggibili')
+
+  return abbinaAlVocabolario(righe, lette as RigaLetta[], vocabolario)
+}
+
+/**
+ * Dalle righe lette agli alimenti veri.
+ *
+ * Separata dalla chiamata apposta: e' la parte che puo' sbagliare in modo
+ * silenzioso - un nome che non esiste, una riga in meno, una posizione fuori
+ * ordine - e si prova senza spendere niente.
+ */
+export function abbinaAlVocabolario(
+  righe: string[],
+  lette: RigaLetta[],
+  vocabolario: VoceVocabolario[],
+): IngredienteRiconosciuto[] {
+  const perNome = new Map(vocabolario.map((v) => [v.nome.toLowerCase(), v]))
+  const perPosizione = new Map(lette.map((l) => [l.posizione, l]))
+
+  return righe.map((grezza, i) => {
+    const letta = perPosizione.get(i)
+    const trovato = letta?.alimento ? perNome.get(letta.alimento.toLowerCase()) : undefined
+
+    // Una riga saltata dal modello, o un nome che nel vocabolario non c'e':
+    // e' sconosciuta, non e' libera. La differenza conta - "libera" vuol dire
+    // "l'ho capita e non pesa", e da' per buone le etichette della ricetta.
+    if (!letta) return sconosciuto(grezza)
+    if (letta.tipo === 'libero') {
+      return { alimentoId: null, nome: grezza, gruppo: null, ruolo: null, grammi: null, etichette: [], tipo: 'libero' as const }
+    }
+    if (!trovato) return sconosciuto(grezza)
+
+    return {
+      alimentoId: trovato.id,
+      nome: trovato.nome,
+      gruppo: trovato.gruppo,
+      ruolo: trovato.ruoli[0] ?? null,
+      grammi: letta.grammi,
+      // Le etichette le porta l'alimento, non la ricetta: e' la regola che
+      // regge tutto - "un sito che dichiara senza glutine non e' attendibile".
+      etichette: trovato.etichette,
+      tipo: 'alimento' as const,
+    }
+  })
+}
+
+function sconosciuto(grezza: string): IngredienteRiconosciuto {
+  return {
+    alimentoId: null,
+    nome: grezza,
+    gruppo: null,
+    ruolo: null,
+    grammi: null,
+    etichette: [],
+    tipo: 'sconosciuto',
+  }
+}
