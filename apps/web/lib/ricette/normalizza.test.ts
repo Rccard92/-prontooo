@@ -5,7 +5,7 @@ import { VOCABOLARIO } from '@prontooo/db/alimenti'
 
 import { type VoceVocabolario, abbinaAlVocabolario, parole } from './normalizza'
 
-const VOCABOLARIO: VoceVocabolario[] = [
+const TRE_ALIMENTI: VoceVocabolario[] = [
   { id: 1, nome: 'Pasta di semola', gruppo: 'cereale', ruoli: ['base'], etichette: ['glutine'] },
   { id: 2, nome: 'Passata di pomodoro', gruppo: 'verdura', ruoli: ['verdura'], etichette: [] },
   {
@@ -22,7 +22,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       ['320 g di pasta di semola'],
       [{ posizione: 0, alimento: 'Pasta di semola', grammi: 320, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito[0]!.alimentoId, 1)
@@ -35,7 +35,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       ['olio'],
       [{ posizione: 0, alimento: 'olio extravergine di oliva', grammi: 10, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito[0]!.alimentoId, 3)
@@ -48,7 +48,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       ['120 gr di olio di oliva extravergine'],
       [{ posizione: 0, alimento: 'olio di oliva extravergine', grammi: 120, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito[0]!.alimentoId, 3)
@@ -59,7 +59,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       ['pasta'],
       [{ posizione: 0, alimento: 'Pasta, di semola', grammi: 80, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito[0]!.alimentoId, 1)
@@ -71,7 +71,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       ['200 g di seitan'],
       [{ posizione: 0, alimento: 'Seitan affumicato', grammi: 200, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito[0]!.tipo, 'sconosciuto')
@@ -85,7 +85,7 @@ describe('abbinare le righe lette al vocabolario', () => {
         { posizione: 0, alimento: null, grammi: null, tipo: 'libero' },
         { posizione: 1, alimento: null, grammi: null, tipo: 'sconosciuto' },
       ],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito[0]!.tipo, 'libero')
@@ -98,7 +98,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       ['320 g di pasta di semola', '200 g di qualcosa'],
       [{ posizione: 0, alimento: 'Pasta di semola', grammi: 320, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito.length, 2)
@@ -110,7 +110,7 @@ describe('abbinare le righe lette al vocabolario', () => {
     const esito = abbinaAlVocabolario(
       righe,
       [{ posizione: 2, alimento: 'Pasta di semola', grammi: 100, tipo: 'alimento' }],
-      VOCABOLARIO,
+      TRE_ALIMENTI,
     )
 
     assert.equal(esito.length, 3)
