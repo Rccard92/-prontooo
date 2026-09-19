@@ -31,6 +31,7 @@ import psycopg
 from normalizza import bussa as normalizza_un_blocco
 from promemoria import bussa
 from raccolta import raccogli
+from sonda import acceso as sonda_accesa, sonda
 from volantini import raccogli_volantini
 
 SERVIZIO = "worker"
@@ -70,6 +71,15 @@ def un_giro(url: str) -> None:
     except Exception as errore:  # la raccolta non deve impedire il battito
         print(f"raccolta fallita: {errore}", file=sys.stderr, flush=True)
         messaggio = f"raccolta fallita: {errore}"
+
+    # Il sondaggio delle fonti candidate e' un attrezzo da officina: si accende
+    # con SONDA_FONTI, si legge il verdetto nei log, si spegne.
+    if sonda_accesa():
+        try:
+            for riga in sonda():
+                print(f"sonda | {riga}", flush=True)
+        except Exception as errore:
+            print(f"sondaggio fallito: {errore}", file=sys.stderr, flush=True)
 
     # La normalizzazione non deve far cadere il giro: senza la chiave non
     # parte, e il catalogo resta sfogliabile com'era.

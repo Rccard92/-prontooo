@@ -63,3 +63,40 @@ FONTI: list[Fonte] = [
     # insistere vorrebbe dire fingersi un browser, e non e' il caso.
     # Fonte(nome="fattoincasadabenedetta.it", ...)
 ]
+
+
+# Le fonti che stiamo valutando, non ancora collegate.
+#
+# Non si aggiunge una fonte al catalogo per sentito dire: prima la si sonda -
+# il robots.txt dichiara le sitemap? le pagine hanno il JSON-LD che il parser
+# sa leggere? - e si collega solo quella che passa. Il sondaggio sta in
+# `sonda.py` e gira solo quando SONDA_FONTI e' acceso, cosi' non costa niente
+# nei giri normali.
+CANDIDATE: list[Fonte] = [
+    Fonte(
+        nome="cookaround.com",
+        radice="https://www.cookaround.com",
+        host=("www.cookaround.com", "cookaround.com"),
+        ripiego=("https://www.cookaround.com/sitemap.xml",),
+    ),
+    Fonte(
+        nome="cucchiaio.it",
+        radice="https://www.cucchiaio.it",
+        host=("www.cucchiaio.it", "cucchiaio.it"),
+        ripiego=("https://www.cucchiaio.it/sitemap.xml",),
+    ),
+    Fonte(
+        nome="melarossa.it",
+        radice="https://www.melarossa.it",
+        host=("www.melarossa.it", "melarossa.it"),
+        ripiego=("https://www.melarossa.it/sitemap_index.xml",),
+    ),
+    # Sulla carta ha tantissime ricette. L'ultima volta ha risposto 403 a
+    # tutto quello che non era un browser: il sondaggio dira' se vale ancora.
+    Fonte(
+        nome="fattoincasadabenedetta.it",
+        radice="https://www.fattoincasadabenedetta.it",
+        host=("www.fattoincasadabenedetta.it", "fattoincasadabenedetta.it"),
+        ripiego=("https://www.fattoincasadabenedetta.it/sitemap_index.xml",),
+    ),
+]
