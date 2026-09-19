@@ -8,6 +8,7 @@ import { alimenti, db, liste, listaVoci, profilo } from '@prontooo/db'
 
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { alimentiScelti, vociDaGusti } from '@/lib/lista/gusti'
+import { ammessi } from '@/lib/nutrizione/esclusioni'
 import { attiva, listaTua } from '@/lib/lista/archivio'
 import { anteprimaDaPdf, salvaLista } from '@/lib/lista/importa'
 
@@ -101,7 +102,20 @@ export async function salvaGusti(dati: FormData) {
     )
   }
 
-  const scelti = await alimentiScelti(ids)
+  // Il filtro c'e' anche nella schermata, ma un form si puo' rispedire a mano:
+  // l'esclusione la fa rispettare il server, non la casella nascosta.
+  const [impostazioni] = await db()
+    .select({ esclusioni: profilo.esclusioni })
+    .from(profilo)
+    .where(eq(profilo.utenteId, utenteId))
+    .limit(1)
+
+  const scelti = ammessi(
+    await alimentiScelti(ids),
+    impostazioni?.esclusioni ?? [],
+    (a) => a.etichette,
+  )
+
   const voci = vociDaGusti(scelti)
 
   if (voci.length === 0) {

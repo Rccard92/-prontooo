@@ -7,6 +7,7 @@ import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
 
 import { utenteConProfilo } from '@/lib/accesso/sessione'
 import { CATEGORIE } from '@/lib/lista/gusti'
+import { ammessi } from '@/lib/nutrizione/esclusioni'
 import { leggiProfilo } from '@/lib/profilo/leggi'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 
@@ -58,7 +59,7 @@ export default async function Gusti({
   const utenteId = await utenteConProfilo()
   const { errore } = await searchParams
 
-  const [vocabolario, profilo] = await Promise.all([
+  const [tuttiGliAlimenti, profilo] = await Promise.all([
     db()
       .select({
         id: tabellaAlimenti.id,
@@ -68,11 +69,18 @@ export default async function Gusti({
         quantita: tabellaAlimenti.quantita,
         unita: tabellaAlimenti.unita,
         mesiStagione: tabellaAlimenti.mesiStagione,
+        etichette: tabellaAlimenti.etichette,
       })
       .from(tabellaAlimenti)
       .orderBy(asc(tabellaAlimenti.nome)),
     leggiProfilo(utenteId),
   ])
+
+  // Chi ha tolto il pesce non deve vederselo fra le caselle da spuntare: la
+  // scelta fatta nel profilo si propaga qui, altrimenti che senso avrebbe.
+  const esclusioni = profilo?.esclusioni ?? []
+  const vocabolario = ammessi(tuttiGliAlimenti, esclusioni, (a) => a.etichette)
+  const nascosti = tuttiGliAlimenti.length - vocabolario.length
 
   const gia = new Set(profilo?.alimentiScelti ?? [])
   const mese = meseCorrente()
@@ -103,6 +111,16 @@ export default async function Gusti({
           {nomeMese} è fuori stagione è segnato qui sotto, e in questo periodo non finisce nei
           pasti.
         </p>
+
+        {nascosti > 0 ? (
+          <p className="rounded-controllo mt-4 bg-fondo px-4 py-3 text-sm text-fumo">
+            {nascosti} alimenti non compaiono perché li hai tolti nel profilo.{' '}
+            <Link href="/profilo" className="font-semibold text-basilico-scuro underline underline-offset-4">
+              Cambia cosa togliere
+            </Link>
+            .
+          </p>
+        ) : null}
 
         {errore ? (
           <p className="rounded-controllo mt-5 bg-pomodoro-tenue px-4 py-3 text-sm text-pomodoro">

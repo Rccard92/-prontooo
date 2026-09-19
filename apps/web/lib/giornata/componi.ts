@@ -12,6 +12,7 @@ import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
 
 import { type VoceConAlimento, vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
 import { leggiProfilo } from '../profilo/leggi'
+import { ammessi } from '../nutrizione/esclusioni'
 import { type DatiCorpo, datiCompleti, fabbisognoDi, kcalPerFascia } from '../nutrizione/fabbisogno'
 import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '../lista/modello'
@@ -79,11 +80,17 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
   const moltiplicatori = MOLTIPLICATORI[tipoGiorno]
   const mese = meseCorrente()
 
-  const scoperte = scoperteDelMese(voci, mese)
+  const esclusioni = impostazioni?.esclusioni ?? []
 
-  /** Le righe di una fascia, tolto quello che questo mese non si trova. */
+  // Le esclusioni si applicano **prima** di tutto il resto e su tutta la
+  // lista: sono rigide, e devono valere anche su una lista vecchia, importata
+  // da un PDF o spuntata prima di metterle. E' questa la rete di sicurezza.
+  const ammesse = ammessi(voci, esclusioni, (v) => v.alimento?.etichette)
+  const scoperte = scoperteDelMese(ammesse, mese)
+
+  /** Le righe di una fascia, tolto quello che non puoi o non si trova adesso. */
   const righeDiStagione = (fascia: string) =>
-    righePerFascia(voci, fascia)
+    righePerFascia(ammesse, fascia)
       .map((riga) => ({
         ...riga,
         voci: riga.voci.filter((v) => diStagione(v.alimento?.mesiStagione ?? [], mese)),

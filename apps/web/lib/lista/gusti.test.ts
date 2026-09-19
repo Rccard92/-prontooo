@@ -12,8 +12,9 @@ function cibo(
   ruoli: string[],
   fasce: string[],
   quantita = 100,
+  etichette: string[] = [],
 ): AlimentoScelto {
-  return { id, nome, gruppo, ruoli, fasce, quantita, unita: 'g' }
+  return { id, nome, gruppo, ruoli, fasce, quantita, unita: 'g', etichette }
 }
 
 const FETTINA = cibo(1, 'Fettina di vitello', 'carne', ['proteina'], ['pranzo', 'cena'], 150)

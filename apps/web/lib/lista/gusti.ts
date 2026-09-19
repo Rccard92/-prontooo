@@ -26,6 +26,7 @@ export type AlimentoScelto = {
   fasce: string[]
   quantita: number
   unita: string
+  etichette: string[]
 }
 
 /** L'ordine in cui i ruoli compaiono dentro un pasto. */
@@ -118,6 +119,7 @@ export async function alimentiScelti(ids: number[]): Promise<AlimentoScelto[]> {
       fasce: alimenti.fasce,
       quantita: alimenti.quantita,
       unita: alimenti.unita,
+      etichette: alimenti.etichette,
     })
     .from(alimenti)
     .where(inArray(alimenti.id, unici))
