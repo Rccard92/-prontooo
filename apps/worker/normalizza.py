@@ -119,6 +119,18 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
         elenco = ", ".join(f"{v.get('riga')} x{v.get('quante')}" for v in sconosciute)
         messaggio += f"\n  al vocabolario mancano: {elenco}"
 
+    # Le righe mancanti dicono cosa manca, queste dicono come e' distribuito, e
+    # sono due lavori diversi: una riga difficile su otto e' una ricetta da
+    # riscattare allargando il vocabolario, otto su otto e' una ricetta che in
+    # catalogo non doveva entrare.
+    bloccate = esito.get("bloccate") or []
+
+    if bloccate:
+        elenco = ", ".join(
+            f"{v.get('titolo')} ({v.get('nonCapite')}/{v.get('righe')})" for v in bloccate
+        )
+        messaggio += f"\n  restano fuori: {elenco}"
+
     return messaggio, restanti
 
 

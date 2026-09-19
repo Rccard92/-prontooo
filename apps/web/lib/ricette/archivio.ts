@@ -41,7 +41,25 @@ export type EsitoNormalizzazione = {
    * ricette non passate si rimandano in lettura.
    */
   sconosciute: { riga: string; quante: number }[]
+  /**
+   * Le ricette che non sono entrate nel piano, col conto delle righe non
+   * capite.
+   *
+   * L'elenco delle righe sconosciute dice **cosa** manca ma non **come** e'
+   * distribuito, e la differenza cambia il lavoro da fare. Venti ricette con
+   * una riga difficile ciascuna sono venti ricette da riscattare allargando il
+   * vocabolario; una ricetta con sei righe difficili su sei e' una ricetta che
+   * non doveva stare in catalogo - o un guasto nella lettura.
+   *
+   * Col titolo accanto si vede anche la terza cosa: se fra le bloccate
+   * compaiono dei dolci, allora il problema non e' il vocabolario ma la
+   * classificazione che li ha fatti passare per secondi.
+   */
+  bloccate: { titolo: string; nonCapite: number; righe: number }[]
 }
+
+/** Quante ricette bloccate riportare: serve il campione, non l'elenco. */
+const BLOCCATE_DA_RIPORTARE = 10
 
 /** Quante righe sconosciute riportare: le altre sono una coda lunghissima. */
 const SCONOSCIUTE_DA_RIPORTARE = 25
@@ -127,22 +145,6 @@ const DA_LEGGERE = and(
 )
 
 /**
- * Rimette in coda le ricette lette ma non convertite.
- *
- * Serve quando il vocabolario si allarga: una ricetta si era fermata su
- * "pangrattato", adesso il pangrattato c'e', e quella ricetta merita un
- * secondo tentativo. Rileggerla costa quanto la prima volta - due decimi di
- * centesimo - e vale molto di piu'.
- *
- * Tocca solo quelle senza posti: le convertite stanno bene come sono, e
- * rileggerle sarebbe pagare due volte per lo stesso risultato.
- *
- * **Si accende, si usa, si spegne.** Lasciato acceso e' una perdita: le
- * ricette che non passano non passeranno nemmeno al giro dopo - hanno dentro
- * il caviale o l'umeboshi - e rimetterle in coda ogni mezz'ora vuol dire
- * rileggerle ogni mezz'ora, pagando ogni volta lo stesso niente.
- */
-/**
  * Riclassifica quello che c'e' gia' in catalogo.
  *
  * Il ruolo si decide all'importazione e resta scritto sulla riga. Quando la
@@ -181,6 +183,22 @@ export async function riclassifica(): Promise<number> {
   return cambiate
 }
 
+/**
+ * Rimette in coda le ricette lette ma non convertite.
+ *
+ * Serve quando il vocabolario si allarga: una ricetta si era fermata su
+ * "pangrattato", adesso il pangrattato c'e', e quella ricetta merita un
+ * secondo tentativo. Rileggerla costa quanto la prima volta - due decimi di
+ * centesimo - e vale molto di piu'.
+ *
+ * Tocca solo quelle senza posti: le convertite stanno bene come sono, e
+ * rileggerle sarebbe pagare due volte per lo stesso risultato.
+ *
+ * **Si accende, si usa, si spegne.** Lasciato acceso e' una perdita: le
+ * ricette che non passano non passeranno nemmeno al giro dopo - hanno dentro
+ * il caviale o l'umeboshi - e rimetterle in coda ogni mezz'ora vuol dire
+ * rileggerle ogni mezz'ora, pagando ogni volta lo stesso niente.
+ */
 export async function rimettiInCoda(): Promise<number> {
   const rimesse = await db()
     .update(ricette)
@@ -244,11 +262,12 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
     .limit(Math.max(1, Math.min(quante, 50)))
 
   if (daFare.length === 0) {
-    return { normalizzate: 0, convertite: 0, fallite: 0, restanti: 0, sconosciute: [] }
+    return { normalizzate: 0, convertite: 0, fallite: 0, restanti: 0, sconosciute: [], bloccate: [] }
   }
 
   const vocaboli = await vocabolario()
   const sconosciute = new Map<string, { riga: string; quante: number }>()
+  const bloccate: { titolo: string; nonCapite: number; righe: number }[] = []
   let normalizzate = 0
   let convertite = 0
   let fallite = 0
@@ -330,7 +349,16 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
       .where(eq(ricette.id, ricetta.id))
 
     normalizzate += 1
-    if (esito.affidabile && esito.posti.length > 0) convertite += 1
+
+    if (esito.affidabile && esito.posti.length > 0) {
+      convertite += 1
+    } else {
+      bloccate.push({
+        titolo: ricetta.titolo,
+        nonCapite: letti.filter((l) => l.tipo === 'sconosciuto').length,
+        righe: letti.length,
+      })
+    }
   }
 
   return {
@@ -341,5 +369,10 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
     sconosciute: [...sconosciute.values()]
       .sort((a, b) => b.quante - a.quante)
       .slice(0, SCONOSCIUTE_DA_RIPORTARE),
+    // Le piu' compromesse per prime: e' li' che si vede se il guasto e' la
+    // lettura o se sono ricette che in catalogo non dovevano entrare.
+    bloccate: bloccate
+      .sort((a, b) => b.nonCapite - a.nonCapite)
+      .slice(0, BLOCCATE_DA_RIPORTARE),
   }
 }
