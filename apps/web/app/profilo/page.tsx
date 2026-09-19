@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { db, profilo as tabellaProfilo } from '@prontooo/db'
 
 import { FASCE, NOME_FASCIA } from '@/lib/ricette/fasce'
+import { CONDIZIONI, chiaveRegola } from '@/lib/nutrizione/condizioni'
 import { ESCLUSIONI, IMPOSTAZIONI } from '@/lib/nutrizione/impostazioni'
 import {
   ATTIVITA,
@@ -83,6 +84,18 @@ async function salva(dati: FormData) {
     (id) => dati.get(`esclusione-${id}`) === 'si',
   )
 
+  const condizioni = CONDIZIONI.map((c) => c.id).filter(
+    (id) => dati.get(`condizione-${id}`) === 'si',
+  )
+
+  // Si salvano solo le regole spente delle condizioni accese: cosi' spegnere
+  // una condizione e riaccenderla non si porta dietro scelte dimenticate.
+  const regoleSpente = CONDIZIONI.filter((c) => condizioni.includes(c.id)).flatMap((c) =>
+    c.regole
+      .filter((r) => dati.get(`regola-${chiaveRegola(c.id, r.id)}`) !== 'si')
+      .map((r) => chiaveRegola(c.id, r.id)),
+  )
+
   const scelti = dati.getAll('alimento').map((v) => Number(v)).filter(Number.isInteger)
 
   const impostazione = String(dati.get('impostazione') ?? 'equilibrata')
@@ -110,6 +123,8 @@ async function salva(dati: FormData) {
     pesoKg: corpo.pesoKg.toFixed(2),
     attivita: corpo.attivita,
     obiettivo: corpo.obiettivo,
+    condizioni,
+    regoleSpente,
     aggiornatoIl: new Date(),
   }
 
@@ -462,6 +477,74 @@ export default async function Profilo({
               Queste valgono sugli alimenti, quindi sono affidabili. Sulle <em>ricette</em> del
               catalogo no: lì gli ingredienti non sono ancora normalizzati. Se hai un&rsquo;allergia
               vera, non fidarti di un suggerimento di ricetta.
+            </p>
+          </Sezione>
+
+          <Sezione
+            titolo="Come stai di salute"
+            spiega="Se c'è qualcosa che già sai di te, scrivilo qui una volta sola e il piano ne tiene conto. Non è una diagnosi: è una preferenza scritta bene."
+          >
+            <div className="flex flex-col gap-3">
+              {CONDIZIONI.map((c) => {
+                const accesa = p.condizioni.includes(c.id)
+
+                return (
+                  <div key={c.id} className="rounded-controllo bg-fondo p-4">
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name={`condizione-${c.id}`}
+                        value="si"
+                        defaultChecked={accesa}
+                        className="mt-0.5 size-5 shrink-0 accent-basilico"
+                      />
+                      <span>
+                        <span className="block text-base font-semibold text-inchiostro">
+                          {c.nome}
+                        </span>
+                        <span className="block text-sm text-fumo">{c.spiega}</span>
+                      </span>
+                    </label>
+
+                    <div className="mt-3 flex flex-col gap-2 border-t border-bordo pt-3">
+                      {c.regole.map((r) => (
+                        <label
+                          key={r.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-controllo bg-bianco px-3 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            name={`regola-${chiaveRegola(c.id, r.id)}`}
+                            value="si"
+                            defaultChecked={!p.regoleSpente.includes(chiaveRegola(c.id, r.id))}
+                            className="mt-0.5 size-4 shrink-0 accent-basilico"
+                          />
+                          <span>
+                            <span className="block text-sm font-semibold text-inchiostro">
+                              {r.cosaFa}
+                            </span>
+                            <span className="block text-xs text-fumo">{r.quantoSiSa}</span>
+                          </span>
+                        </label>
+                      ))}
+
+                      {(c.esclusioniSuggerite ?? []).map((e) => (
+                        <p
+                          key={e.etichetta}
+                          className="rounded-controllo bg-limone-tenue px-3 py-2 text-xs text-inchiostro"
+                        >
+                          {e.perche}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="rounded-controllo mt-4 bg-fondo px-4 py-3 text-sm text-fumo">
+              Nessuna di queste toglie un alimento per sempre: spostano quanto spesso esce. Quello
+              che non deve comparire mai si mette in <strong>Cosa togliere</strong>, qui sopra.
             </p>
           </Sezione>
 

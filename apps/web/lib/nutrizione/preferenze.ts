@@ -1,8 +1,10 @@
 import { and, eq, gte, sql } from 'drizzle-orm'
 
-import { alimenti, db, giornataPasti, giornate, offerte, volantini } from '@prontooo/db'
+import { alimenti, db, giornataPasti, giornate, offerte, profilo, volantini } from '@prontooo/db'
 
 import { SOGLIA_CERTA } from '../offerte/aggancia'
+
+import { alimentiToccati } from './condizioni'
 
 /**
  * I pesi con cui si sceglie fra alternative equivalenti.
@@ -41,6 +43,16 @@ const PESO_MINIMO = 0.4
  * potresti nemmeno registrare quello che hai mangiato davvero.
  */
 const PESO_OCCASIONALE = 0.25
+
+/**
+ * Quanto pesano le condizioni di salute.
+ *
+ * Inclinano, non vietano: "di rado" resta piu' alto dell'occasionale, perche'
+ * una patologia non trasforma il tofu in una brioche. E "piu' spesso" e' una
+ * spinta gentile, non un obbligo a mangiare pesce tutti i giorni.
+ */
+const PESO_CONDIZIONE_DI_RADO = 0.35
+const PESO_CONDIZIONE_PIU_SPESSO = 1.6
 
 /** Quante volte ogni alimento e' finito in un pasto che hai spuntato. */
 async function abitudini(utenteId: number): Promise<{ conteggi: Map<number, number>; pasti: number }> {
@@ -117,10 +129,11 @@ export function pesoDaAbitudine(volte: number, media: number): number {
 export async function pesiDiScelta(utenteId: number): Promise<Pesi> {
   const pesi: Pesi = new Map()
 
-  const [{ conteggi, pasti }, offerti, diRado] = await Promise.all([
+  const [{ conteggi, pasti }, offerti, diRado, impostazioni] = await Promise.all([
     abitudini(utenteId),
     inOfferta(),
     occasionali(),
+    db().select().from(profilo).where(eq(profilo.utenteId, utenteId)).limit(1),
   ])
 
   if (pasti >= PASTI_MINIMI && conteggi.size > 0) {
@@ -135,6 +148,28 @@ export async function pesiDiScelta(utenteId: number): Promise<Pesi> {
   // L'occasionale schiaccia, e sta per ultimo apposta: nessuna abitudine e
   // nessuna offerta deve poter promuovere la mortadella a piatto fisso.
   for (const id of diRado) pesi.set(id, PESO_OCCASIONALE)
+
+  // Le condizioni di salute vengono dopo tutto il resto, perche' sono la cosa
+  // che sai di te e deve avere l'ultima parola sulle abitudini e sulle offerte.
+  const suo = impostazioni[0]
+
+  if (suo && suo.condizioni.length > 0) {
+    const toccati = alimentiToccati(suo.condizioni, suo.regoleSpente)
+
+    if (toccati.diRado.size > 0 || toccati.piuSpesso.size > 0) {
+      const righe = await db().select({ id: alimenti.id, nome: alimenti.nome }).from(alimenti)
+
+      for (const riga of righe) {
+        if (toccati.diRado.has(riga.nome)) {
+          // Non si scende sotto l'occasionale: una condizione inclina, e un
+          // alimento gia' raro non deve diventare irraggiungibile.
+          pesi.set(riga.id, Math.min(pesi.get(riga.id) ?? 1, PESO_CONDIZIONE_DI_RADO))
+        } else if (toccati.piuSpesso.has(riga.nome)) {
+          pesi.set(riga.id, (pesi.get(riga.id) ?? 1) * PESO_CONDIZIONE_PIU_SPESSO)
+        }
+      }
+    }
+  }
 
   return pesi
 }

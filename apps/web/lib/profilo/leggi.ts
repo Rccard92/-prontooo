@@ -36,6 +36,8 @@ export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl' | 'id' | 'utenteI
   pesoKg: null,
   attivita: null,
   obiettivo: null,
+  condizioni: [],
+  regoleSpente: [],
 }
 
 export async function leggiProfilo(utenteId: number): Promise<Profilo | null> {

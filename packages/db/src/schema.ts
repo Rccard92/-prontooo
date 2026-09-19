@@ -242,6 +242,13 @@ export const profilo = pgTable('profilo', {
   attivita: text('attivita'),
   // mantenere, dimagrire, massa
   obiettivo: text('obiettivo'),
+  // Le condizioni di salute accese: hashimoto, colesterolo, pressione...
+  // Non escludono niente in modo rigido, spostano i pesi. Vedi
+  // apps/web/lib/nutrizione/condizioni.ts.
+  condizioni: jsonb('condizioni').$type<string[]>().notNull().default([]),
+  // Le singole regole spente, come "hashimoto.soia": una condizione si accende
+  // tutta e poi si smonta pezzo per pezzo.
+  regoleSpente: jsonb('regole_spente').$type<string[]>().notNull().default([]),
   aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
 })
 
