@@ -238,6 +238,22 @@ def indizi(cliente: httpx.Client, pagina: str, quanti: int = 8) -> list[str]:
     return trovati
 
 
+def segna_tentativo(url_db: str, insegna: str) -> None:
+    """Scrive che ci abbiamo provato e non c'era niente da prendere.
+
+    Senza questa riga un'insegna che il PDF non ce l'ha verrebbe ribattuta a
+    ogni giro, per sempre: sette o otto pagine ogni mezz'ora a casa di
+    qualcuno che non ci ha fatto niente di male, e traffico pagato per nulla.
+    Il tentativo vale come un volantino vuoto, quindi si riprova domani.
+    """
+    with psycopg.connect(url_db, connect_timeout=15) as connessione:
+        with connessione.cursor() as cursore:
+            cursore.execute(
+                "insert into volantini (insegna, nome_file) values (%s, %s)",
+                (insegna, None),
+            )
+
+
 def gia_fresco(connessione: psycopg.Connection, insegna: str) -> bool:
     """Per quest'insegna c'e' gia' un volantino buono?
 
@@ -325,6 +341,7 @@ def raccogli_volantini(url_db: str) -> list[str]:
 
             if not indirizzi:
                 righe.append(f"{fonte.insegna}: nessun PDF, il volantino si sfoglia e basta.")
+                segna_tentativo(url_db, fonte.insegna)
 
                 # Se il PDF non c'e', il volantino sfogliabile i dati li prende
                 # da qualche parte. Qui si stampa da dove: e' l'unico modo che
@@ -367,5 +384,6 @@ def raccogli_volantini(url_db: str) -> list[str]:
 
             if not preso:
                 righe.append(f"{fonte.insegna}: nessuno dei PDF trovati era buono")
+                segna_tentativo(url_db, fonte.insegna)
 
     return righe
