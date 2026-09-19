@@ -365,4 +365,20 @@ export const VOCABOLARIO: VoceAlimento[] = [
   { nome: 'Pomodori secchi', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g' },
   { nome: 'Fagioli di Spagna', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
   { nome: 'Frutti di bosco', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 120, unita: 'g' },
+  // Secondo giro di log: queste tornavano di continuo dentro ricette salate.
+  // La farina non e' solo dei dolci - regge lasagne, besciamella e impanature.
+  { nome: 'Farina 00', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Semola', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Lasagne secche', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Pasta sfoglia', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Besciamella', gruppo: 'latticino', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['glutine', 'lattosio'] },
+  { nome: 'Fecola di patate', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 20, unita: 'g' },
+  { nome: 'Panna fresca', gruppo: 'latticino', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio'] },
+  { nome: 'Panna acida', gruppo: 'latticino', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 40, unita: 'g', etichette: ['lattosio'] },
+  { nome: 'Mascarpone', gruppo: 'latticino', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio'] },
+  { nome: 'Taleggio', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Quartirolo', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Caprino', gruppo: 'latticino', ruoli: ['proteina', 'spalmabile'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Nduja', gruppo: 'carne', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 25, unita: 'g', etichette: ['maiale'] },
+  { nome: 'Cavolo viola', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
 ]

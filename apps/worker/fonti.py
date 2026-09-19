@@ -91,12 +91,14 @@ CANDIDATE: list[Fonte] = [
         host=("www.melarossa.it", "melarossa.it"),
         ripiego=("https://www.melarossa.it/sitemap_index.xml",),
     ),
-    # Sulla carta ha tantissime ricette. L'ultima volta ha risposto 403 a
-    # tutto quello che non era un browser: il sondaggio dira' se vale ancora.
-    Fonte(
-        nome="fattoincasadabenedetta.it",
-        radice="https://www.fattoincasadabenedetta.it",
-        host=("www.fattoincasadabenedetta.it", "fattoincasadabenedetta.it"),
-        ripiego=("https://www.fattoincasadabenedetta.it/sitemap_index.xml",),
-    ),
 ]
+
+# Sondate e bocciate, con il motivo. Stanno scritte perche' il prossimo che
+# ci pensa non debba riprovarle da capo:
+#
+# - cucchiaio.it            403 su robots.txt e su sitemap.xml
+# - fattoincasadabenedetta  403 su robots.txt e su sitemap_index.xml
+#
+# Tutte e due rispondono 403 a chi non e' un browser. Per entrarci dovremmo
+# fingerci un browser, e un sito che risponde cosi' lo sta dicendo abbastanza
+# chiaramente. Ricette ce ne sono altrove.

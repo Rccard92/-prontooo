@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import random
+import re
 import time
 
 import httpx
@@ -27,9 +28,19 @@ import httpx
 from fonti import CANDIDATE, Fonte
 from raccolta import AGENTE, PAUSA, importa, raccogli_indirizzi
 
-# Quanti indirizzi provare per fonte. Bastano pochi: se tre pagine su tre
-# hanno il JSON-LD, le altre diecimila ce l'hanno.
-QUANTI = int(os.environ.get("SONDA_QUANTI", "3"))
+# Quanti indirizzi provare per fonte.
+#
+# Tre erano pochi, e il primo sondaggio l'ha dimostrato: Cookaround ha
+# ventiduemila indirizzi in sitemap, tre a caso sono finiti tutti su pagine
+# che ricette non erano, e la fonte e' risultata bocciata per sfortuna. Con
+# dieci, e pescando prima da quelli che sembrano ricette, il verdetto dice
+# qualcosa della fonte invece che del sorteggio.
+QUANTI = int(os.environ.get("SONDA_QUANTI", "10"))
+
+# Gli indirizzi che hanno "ricetta" o "ricette" nel percorso: quasi tutti i
+# siti italiani la mettono li'. Si provano prima, e se non ce ne sono si
+# ripiega sugli altri.
+SEMBRA_RICETTA = re.compile(r"/ricett", re.IGNORECASE)
 
 
 def acceso() -> bool:
@@ -46,17 +57,26 @@ def _sonda_una(cliente: httpx.Client, fonte: Fonte, base: str, segreto: str) -> 
         return f"{fonte.nome}: BOCCIATA - nessun indirizzo che somigli a una ricetta"
 
     random.shuffle(candidati)
-    prove = candidati[:QUANTI]
+
+    # Prima quelli che sembrano ricette dall'indirizzo, poi gli altri: cosi'
+    # il verdetto parla della fonte e non della fortuna del sorteggio.
+    promettenti = [u for u in candidati if SEMBRA_RICETTA.search(u)]
+    altri = [u for u in candidati if not SEMBRA_RICETTA.search(u)]
+    prove = (promettenti + altri)[:QUANTI]
     lette = 0
 
     for url in prove:
-        if importa(cliente, base, segreto, url):
-            lette += 1
+        esito = importa(cliente, base, segreto, url)
+        lette += 1 if esito else 0
+        # L'indirizzo provato si scrive: se una fonte viene bocciata, questo e'
+        # quello che serve per capire se era lei o se erano gli indirizzi.
+        print(f"  sonda {fonte.nome}: {'letta' if esito else 'niente'} <- {url}", flush=True)
         time.sleep(PAUSA)
 
     if lette == 0:
         return (
-            f"{fonte.nome}: BOCCIATA - {len(candidati)} indirizzi ma nessuna"
+            f"{fonte.nome}: BOCCIATA - {len(candidati)} indirizzi"
+            f" ({len(promettenti)} con 'ricetta' nel percorso) ma nessuna"
             f" delle {len(prove)} pagine provate ha una ricetta leggibile"
         )
 

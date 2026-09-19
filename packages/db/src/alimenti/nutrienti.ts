@@ -354,6 +354,21 @@ const RIGHE: Riga[] = [
   ['Pomodori secchi', 258, 14, 43, 3, 12, 'dispensa'],
   ['Fagioli di Spagna', 91, 6.4, 12, 0.5, 6.5, 'dispensa'],
   ['Frutti di bosco', 45, 1, 9, 0.4, 5, 'ortofrutta'],
+  // Secondo giro di log.
+  ['Farina 00', 343, 11, 77, 0.7, 2.2, 'dispensa'],
+  ['Semola', 339, 12, 70, 1, 3.6, 'dispensa'],
+  ['Lasagne secche', 360, 12, 72, 1.8, 3, 'dispensa'],
+  ['Pasta sfoglia', 380, 6, 35, 24, 1.5, 'frigo'],
+  ['Besciamella', 150, 4, 10, 10, 0.3, 'frigo'],
+  ['Fecola di patate', 343, 0.4, 83, 0.1, 0, 'dispensa'],
+  ['Panna fresca', 337, 2.3, 3.4, 35, 0, 'frigo'],
+  ['Panna acida', 198, 2.5, 4, 20, 0, 'frigo'],
+  ['Mascarpone', 450, 7, 4, 46, 0, 'frigo'],
+  ['Taleggio', 315, 19, 0.9, 26, 0, 'frigo'],
+  ['Quartirolo', 280, 20, 1, 22, 0, 'frigo'],
+  ['Caprino', 253, 15, 2, 20, 0, 'frigo'],
+  ['Nduja', 450, 14, 2, 43, 1, 'frigo'],
+  ['Cavolo viola', 31, 1.9, 4.4, 0.2, 2.5, 'ortofrutta'],
 ]
 
 export const NUTRIENTI = new Map<string, Nutrienti & { reparto: Reparto }>(
