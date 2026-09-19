@@ -266,7 +266,6 @@ const RIGHE: Riga[] = [
   ['Pistacchi', 560, 20, 8, 45, 10, 'dispensa'],
   ['Semi di zucca', 559, 25, 11, 49, 6, 'dispensa'],
   ['Semi di girasole', 584, 21, 20, 51, 9, 'dispensa'],
-  ['Pane di segale', 258, 8.5, 48, 3.3, 8, 'panetteria'],
   ['Grano saraceno', 343, 13, 72, 3.4, 10, 'dispensa'],
 ]
 

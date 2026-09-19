@@ -88,9 +88,23 @@ async function seedAlimenti() {
     }
   })
 
+  // Rete di sicurezza: un nome ripetuto farebbe fallire l'insert - Postgres
+  // rifiuta un ON CONFLICT che tocca la stessa riga due volte - e con esso il
+  // pre-deploy. C'e' un test che lo impedisce a monte; qui si tiene la prima
+  // e si urla, perche' un doppione non deve mai far cadere un rilascio.
+  const per = new Map(righe.map((r) => [r.nome, r]))
+  const ripetuti = righe.length - per.size
+
+  if (ripetuti > 0) {
+    console.warn(
+      `alimenti: ${ripetuti} nomi ripetuti nel vocabolario, tengo la prima occorrenza.` +
+        ' Vanno tolti: vedi vocabolario.test.ts',
+    )
+  }
+
   await db()
     .insert(alimenti)
-    .values(righe)
+    .values([...per.values()])
     .onConflictDoUpdate({
       target: alimenti.nome,
       set: {
@@ -112,8 +126,8 @@ async function seedAlimenti() {
 
   console.log(
     senzaNutrienti.length === 0
-      ? `alimenti: ${righe.length} voci allineate, tutte con i valori nutrizionali`
-      : `alimenti: ${righe.length} voci allineate, ${senzaNutrienti.length} SENZA valori nutrizionali: ${senzaNutrienti.join(', ')}`,
+      ? `alimenti: ${per.size} voci allineate, tutte con i valori nutrizionali`
+      : `alimenti: ${per.size} voci allineate, ${senzaNutrienti.length} SENZA valori nutrizionali: ${senzaNutrienti.join(', ')}`,
   )
 }
 

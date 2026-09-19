@@ -269,6 +269,5 @@ export const VOCABOLARIO: VoceAlimento[] = [
   { nome: 'Pistacchi', gruppo: 'frutta_secca', ruoli: ['semi', 'snack'], fasce: ['spuntino', 'merenda'], quantita: 25, unita: 'g', etichette: ['frutta_guscio'] },
   { nome: 'Semi di zucca', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 20, unita: 'g' },
   { nome: 'Semi di girasole', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 20, unita: 'g' },
-  { nome: 'Pane di segale', gruppo: 'pane', ruoli: ['base'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['glutine', 'pane'] },
   { nome: 'Grano saraceno', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
 ]
