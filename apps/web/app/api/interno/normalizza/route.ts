@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 
-import { daNormalizzare, normalizzaProssime, rimettiInCoda } from '@/lib/ricette/archivio'
+import {
+  daNormalizzare,
+  normalizzaProssime,
+  riclassifica,
+  rimettiInCoda,
+} from '@/lib/ricette/archivio'
 import { chiaveConfigurata } from '@/lib/ricette/normalizza'
 
 export const dynamic = 'force-dynamic'
@@ -55,9 +60,13 @@ export async function POST(richiesta: Request) {
   // Attrezzo da officina: dopo che il vocabolario si allarga, rimette in coda
   // le ricette che si erano fermate su una parola che adesso conosciamo.
   if (rileggi) {
+    // Prima si riclassifica, poi si rimette in coda: una ricetta che passa da
+    // "non classificabile" a "secondo" deve poter entrare nella coda dello
+    // stesso giro, altrimenti resta fuori fino al prossimo attrezzo.
+    const riclassificate = await riclassifica()
     const rimesse = await rimettiInCoda()
 
-    return NextResponse.json({ ok: true, rimesseInCoda: rimesse })
+    return NextResponse.json({ ok: true, riclassificate, rimesseInCoda: rimesse })
   }
 
   try {

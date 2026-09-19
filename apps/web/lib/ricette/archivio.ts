@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import { alimenti, db, ricettaIngredienti, ricette } from '@prontooo/db'
 
-import { RUOLI_IN_CATALOGO } from './fasce'
+import { RUOLI_IN_CATALOGO, classifica } from './fasce'
 import { chiaveConfigurata, leggiIngredienti } from './normalizza'
 import { converti } from './posti'
 
@@ -137,6 +137,45 @@ const DA_LEGGERE = and(
  * Tocca solo quelle senza posti: le convertite stanno bene come sono, e
  * rileggerle sarebbe pagare due volte per lo stesso risultato.
  */
+/**
+ * Riclassifica quello che c'e' gia' in catalogo.
+ *
+ * Il ruolo si decide all'importazione e resta scritto sulla riga. Quando la
+ * tabella delle parole migliora - come quando ha imparato a leggere il titolo
+ * - le ricette vecchie non se ne accorgono: restano col ruolo nullo che
+ * avevano, e col ruolo nullo non si leggono e non si propongono. Sono ricette
+ * gia' raccolte che resterebbero fuori per sempre.
+ *
+ * Non costa niente: nessun modello, solo la tabella di parole e un giro di
+ * UPDATE.
+ */
+export async function riclassifica(): Promise<number> {
+  const connessione = db()
+
+  const tutte = await connessione
+    .select({
+      id: ricette.id,
+      titolo: ricette.titolo,
+      categoriaFonte: ricette.categoriaFonte,
+      fonteUrl: ricette.fonteUrl,
+      ruolo: ricette.ruolo,
+    })
+    .from(ricette)
+
+  let cambiate = 0
+
+  for (const r of tutte) {
+    const { ruolo, fasce } = classifica(r.categoriaFonte, r.fonteUrl, r.titolo)
+
+    if (ruolo === r.ruolo) continue
+
+    await connessione.update(ricette).set({ ruolo, fasce }).where(eq(ricette.id, r.id))
+    cambiate += 1
+  }
+
+  return cambiate
+}
+
 export async function rimettiInCoda(): Promise<number> {
   const rimesse = await db()
     .update(ricette)

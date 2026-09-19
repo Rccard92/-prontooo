@@ -58,7 +58,12 @@ def _rimetti_in_coda(base: str, segreto: str) -> str:
     if risposta.status_code != 200:
         return f"rimessa in coda: il web ha risposto {risposta.status_code}"
 
-    return f"rimesse in coda {risposta.json().get('rimesseInCoda', 0)} ricette"
+    esito = risposta.json()
+
+    return (
+        f"riclassificate {esito.get('riclassificate', 0)} ricette,"
+        f" rimesse in coda {esito.get('rimesseInCoda', 0)}"
+    )
 
 
 def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
