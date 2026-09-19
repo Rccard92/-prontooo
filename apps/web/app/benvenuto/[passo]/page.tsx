@@ -22,8 +22,9 @@ export const dynamic = 'force-dynamic'
 const campo =
   'rounded-controllo w-full border border-bordo bg-fondo px-3 py-2.5 text-base text-inchiostro outline-none focus:border-basilico'
 
-const scelta =
-  'rounded-controllo flex cursor-pointer items-start gap-3 bg-fondo px-4 py-3 hover:bg-basilico-tenue'
+const scelta = 'rounded-controllo flex cursor-pointer items-start gap-3 px-4 py-3'
+const normale = `${scelta} bg-fondo hover:bg-basilico-tenue`
+const proposto = `${scelta} bg-limone-tenue`
 
 export default async function Benvenuto({
   params,
@@ -152,7 +153,7 @@ export default async function Benvenuto({
               <legend className="text-sm font-semibold text-inchiostro">In una settimana</legend>
               <div className="mt-2 flex flex-col gap-2">
                 {ATTIVITA.map((a) => (
-                  <label key={a} className={scelta}>
+                  <label key={a} className={normale}>
                     <input
                       type="radio"
                       name="attivita"
@@ -170,7 +171,7 @@ export default async function Benvenuto({
               <legend className="text-sm font-semibold text-inchiostro">Cosa vuoi ottenere</legend>
               <div className="mt-2 flex flex-col gap-2">
                 {OBIETTIVI.map((o) => (
-                  <label key={o} className={scelta}>
+                  <label key={o} className={normale}>
                     <input
                       type="radio"
                       name="obiettivo"
@@ -206,7 +207,7 @@ export default async function Benvenuto({
                 return (
                   <label
                     key={e.id}
-                    className={proposta ? `${scelta} bg-limone-tenue` : scelta}
+                    className={proposta ? proposto : normale}
                   >
                     <input
                       type="checkbox"
@@ -236,7 +237,7 @@ export default async function Benvenuto({
             </p>
 
             <button type="submit" className="bottone w-full hover:bg-basilico-scuro">
-              Avanti
+              Scegli cosa ti piace
             </button>
           </form>
         ) : null}
@@ -292,7 +293,7 @@ export default async function Benvenuto({
             </p>
 
             <button type="submit" className="bottone w-full hover:bg-basilico-scuro">
-              Scegli cosa ti piace
+              Avanti
             </button>
           </form>
         ) : null}
