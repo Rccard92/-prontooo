@@ -167,6 +167,15 @@ export function abbina(
   // spalmabile, col pane da comprare e la fettina lasciata sul tavolo.
   if (mancanti.length > 0 && avanzati.length > 0) return null
 
+  // Se la ricetta lascia fuori **piu'** di quello che usa, il titolo non e' di
+  // questo pasto: e' il nome di un'altra cosa messo sopra il tuo piatto. E'
+  // cosi' che "Ricotta e miele" si e' ritrovata a intitolare una colazione con
+  // dentro salmone affumicato e granita siciliana.
+  //
+  // Pari non basta per scartarla: pasta al pomodoro con la fettina e la frutta
+  // accanto usa due componenti e ne lascia due, ed e' un pranzo normale.
+  if (avanzati.length > assegnati.size) return null
+
   // Un solo avanzo non declassa la ricetta: la frutta o il pane stanno
   // accanto al piatto senza entrarci, ed e' normale. Due sono un pasto che
   // la ricetta copre solo a meta'.

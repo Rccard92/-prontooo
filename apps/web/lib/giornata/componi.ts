@@ -15,10 +15,11 @@ import { leggiProfilo } from '../profilo/leggi'
 import { ammessi } from '../nutrizione/esclusioni'
 import { type DatiCorpo, datiCompleti, fabbisognoDi, kcalPerFascia } from '../nutrizione/fabbisogno'
 import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
-import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '../lista/modello'
+import { arrotonda, nutrientiDi, sommaNutrienti } from '../lista/modello'
 import { FASCE } from '../ricette/fasce'
 
 import { MOLTIPLICATORI, type Componente, type TipoGiorno, nutrientiConsumati } from './modello'
+import { postiDi, riempiPosti } from './schema'
 import { ricalibra, scalaComponenti, type PastoDaRicalibrare } from './ricalibra'
 
 export function oggi(): string {
@@ -27,35 +28,52 @@ export function oggi(): string {
   return `${romana.getFullYear()}-${String(romana.getMonth() + 1).padStart(2, '0')}-${String(romana.getDate()).padStart(2, '0')}`
 }
 
-export type Scoperta = { fascia: string; ruolo: string }
+export type Scoperta = { fascia: string; posto: string }
+
+/** Il ruolo di un alimento dentro il pasto: il primo che copre. */
+function ruoloDi(alimento: Alimento | null): string {
+  return alimento?.ruoli[0] ?? 'base'
+}
+
+/** Le righe di una fascia con il loro ruolo, prima e dopo il filtro stagione. */
+function righeConRuolo(voci: VoceConAlimento[], fascia: string, mese: number) {
+  return righePerFascia(voci, fascia).map((riga) => ({
+    ruolo: ruoloDi(riga.voci[0]?.alimento ?? null),
+    voci: riga.voci.filter((v) => diStagione(v.alimento?.mesiStagione ?? [], mese)),
+    quante: riga.voci.length,
+  }))
+}
 
 /**
- * Le righe che questo mese restano senza niente da mettere dentro.
+ * I posti che questo mese restano vuoti pur avendo qualcosa di spuntato.
  *
- * Succede quando in una riga hai spuntato solo roba fuori stagione: a gennaio
- * una riga di sola frutta estiva resta vuota. Non e' un errore, e'
- * un'informazione da darti - cosi' vai a spuntare due cose d'inverno invece
- * di trovarti la colazione senza frutta e non capire perche'.
+ * Succede quando per un posto hai spuntato solo roba fuori stagione: a gennaio
+ * una colazione di sola frutta estiva resta senza frutta. Non e' un errore,
+ * e' un'informazione da darti - cosi' vai a spuntare due cose d'inverno
+ * invece di trovarti il piatto corto e non capire perche'.
+ *
+ * Un posto che non hai proprio riempito - niente verdura spuntata, mai - non
+ * e' una scoperta del mese: quello e' un buco della lista, e lo dice la
+ * schermata degli ingredienti, non il calendario.
  */
 export function scoperteDelMese(voci: VoceConAlimento[], mese: number): Scoperta[] {
   const scoperte: Scoperta[] = []
 
   for (const fascia of FASCE) {
-    for (const riga of righePerFascia(voci, fascia)) {
-      const restano = riga.voci.some((v) => diStagione(v.alimento?.mesiStagione ?? [], mese))
+    const righe = righeConRuolo(voci, fascia, mese)
 
-      if (!restano && riga.voci[0]) {
-        scoperte.push({ fascia, ruolo: ruoloDi(riga.voci[0].alimento) })
-      }
+    for (const posto of postiDi(fascia)) {
+      if (!posto.obbligatorio) continue
+
+      const sue = righe.filter((r) => posto.ruoli.includes(r.ruolo))
+      const spuntate = sue.reduce((t, r) => t + r.quante, 0)
+      const restano = sue.reduce((t, r) => t + r.voci.length, 0)
+
+      if (spuntate > 0 && restano === 0) scoperte.push({ fascia, posto: posto.nome })
     }
   }
 
   return scoperte
-}
-
-/** Il ruolo di un alimento dentro il pasto: il primo che copre. */
-function ruoloDi(alimento: Alimento | null): string {
-  return alimento?.ruoli[0] ?? 'base'
 }
 
 /**
@@ -88,21 +106,16 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
   const ammesse = ammessi(voci, esclusioni, (v) => v.alimento?.etichette)
   const scoperte = scoperteDelMese(ammesse, mese)
 
-  /** Le righe di una fascia, tolto quello che non puoi o non si trova adesso. */
-  const righeDiStagione = (fascia: string) =>
-    righePerFascia(ammesse, fascia)
-      .map((riga) => ({
-        ...riga,
-        voci: riga.voci.filter((v) => diStagione(v.alimento?.mesiStagione ?? [], mese)),
-      }))
-
   const pasti = FASCE.map((fascia) => {
-    const righe = righeDiStagione(fascia)
+    const righe = righeConRuolo(ammesse, fascia, mese)
 
-    const componenti: Componente[] = righe
-      .map((riga) => {
-        const scelta = scegliPesato(riga.voci, pesi)
-
+    // Lo schema decide **quanti** posti ha il piatto; la lista decide chi puo'
+    // starci; i pesi decidono chi ci sta oggi. Prima erano tre cose sole - una
+    // per riga spuntata - e veniva fuori un inventario invece di un pasto.
+    const componenti: Componente[] = riempiPosti(postiDi(fascia), righe, (voci) =>
+      scegliPesato(voci, pesi),
+    )
+      .map(({ scelta }) => {
         if (!scelta) return null
 
         const ruolo = ruoloDi(scelta.alimento)
@@ -163,20 +176,21 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
         grassi: fabbisogno.grassi,
       }
     : arrotonda(
+        // Senza i dati del corpo l'obiettivo e' quello che il piano ti mette
+        // davvero nel piatto. Sommare tutte le righe spuntate - com'era prima
+        // - darebbe un bersaglio che nessuna giornata puo' raggiungere: nel
+        // pasto ne entrano quattro, non quaranta.
         sommaNutrienti(
-          FASCE.map((fascia) => {
-            const base = obiettivoDa(righeDiStagione(fascia))
-
-            // Senza i dati del corpo l'obiettivo e' la somma delle porzioni di
-            // riferimento, col solo aggiustamento del tipo di giorno.
-            return {
-              kcal: base.kcal * fattoreGiorno,
-              proteine: base.proteine,
-              carboidrati: base.carboidrati * fattoreGiorno,
-              grassi: base.grassi * (tipoGiorno === 'on' ? 0.85 : 1),
-              fibre: base.fibre,
-            }
-          }),
+          pasti.flatMap((pasto) =>
+            pasto.componenti.map((c) =>
+              nutrientiDi(
+                c.alimentoId === null
+                  ? null
+                  : (voci.find((v) => v.alimentoId === c.alimentoId)?.alimento ?? null),
+                c.quantita,
+              ),
+            ),
+          ),
         ),
       )
 

@@ -383,7 +383,10 @@ export default async function Oggi() {
                 <p className="font-semibold text-inchiostro">Questo mese ti manca qualcosa</p>
                 <p className="mt-1 text-sm text-inchiostro">
                   {scoperte
-                    .map((s) => `${eFascia(s.fascia) ? NOME_FASCIA[s.fascia] : s.fascia}`)
+                    .map(
+                      (s) =>
+                        `${eFascia(s.fascia) ? NOME_FASCIA[s.fascia] : s.fascia} senza ${s.posto}`,
+                    )
                     .filter((nome, i, tutti) => tutti.indexOf(nome) === i)
                     .join(', ')}
                   : quello che avevi spuntato lì adesso è fuori stagione, quindi l&rsquo;ho

@@ -289,3 +289,30 @@ describe('proposte', () => {
     }
   })
 })
+
+describe('quando la ricetta non e’ di questo pasto', () => {
+  it('scarta chi lascia fuori piu’ di quello che usa', () => {
+    // Un pasto di quattro componenti di cui la ricetta ne prende uno: e' il
+    // caso che ha dato "Ricotta e miele" sopra una colazione col salmone
+    // affumicato dentro. Il titolo non e' di questo piatto.
+    const esito = abbina(PER_ID.get('ricotta-miele')!, [
+      comp('Ricotta vaccina', 'latticino', 'latticino', 150),
+      comp('Petto di pollo', 'proteina', 'carne', 150),
+      comp('Broccoli', 'verdura', 'verdura', 200),
+      comp('Olio extravergine', 'grasso', 'grasso', 10),
+    ])
+
+    assert.equal(esito, null)
+  })
+
+  it('tiene il primo con il secondo accanto, che e’ un pranzo normale', () => {
+    const esito = abbina(PER_ID.get('pasta-pomodoro')!, [
+      comp('Pasta', 'base', 'cereale', 80),
+      comp('Pomodori', 'verdura', 'verdura', 200),
+      comp('Petto di pollo', 'proteina', 'carne', 150),
+      comp('Mela', 'frutta', 'frutta', 150),
+    ])
+
+    assert.notEqual(esito, null)
+  })
+})
