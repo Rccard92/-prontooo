@@ -71,6 +71,13 @@ export type VoceAlimento = {
   quantita: number
   unita: 'g' | 'ml'
   etichette?: Etichetta[]
+  /**
+   * I mesi in cui ha senso comprarlo, 1-12. Vuoto vuol dire sempre.
+   *
+   * Non si scrive qui voce per voce: sta in `stagioni.ts`, dove si legge
+   * tutta insieme e si corregge guardando l'anno intero.
+   */
+  mesi?: number[]
 }
 
 /** Il reparto del supermercato: ordina la lista della spesa sul percorso fisico. */

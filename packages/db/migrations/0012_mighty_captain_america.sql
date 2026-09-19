@@ -1,0 +1,1 @@
+ALTER TABLE "alimenti" ADD COLUMN "mesi_stagione" jsonb DEFAULT '[]'::jsonb NOT NULL;

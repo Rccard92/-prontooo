@@ -166,13 +166,23 @@ Questa e' la parte che regge l'app, ed e' stata rifatta dopo che il primo piano 
 
 Adesso il piano si costruisce dagli alimenti, in tre strati:
 
-1. **`alimenti`** — il vocabolario, in `packages/db/src/alimenti/vocabolario.ts` e seminato a ogni deploy. Ogni voce ha gruppo, ruoli che puo' coprire, fasce, porzione tipica ed **etichette** (lattosio, glutine, pane, maiale, carne rossa, pesce, uova, frutta a guscio, fritto, proteico, zuccheri)
+1. **`alimenti`** — il vocabolario, in `packages/db/src/alimenti/vocabolario.ts` e seminato a ogni deploy. Non e' un database nutrizionale completo: e' un elenco scritto a mano, nato in buona parte dalle diete su cui e' stato tarato il lettore PDF - che erano estive - e poi allargato. Quando manca qualcosa si aggiunge li', con i valori CREA in `nutrienti.ts` e i mesi in `stagioni.ts`. Ogni voce ha gruppo, ruoli che puo' coprire, fasce, porzione tipica ed **etichette** (lattosio, glutine, pane, maiale, carne rossa, pesce, uova, frutta a guscio, fritto, proteico, zuccheri)
 2. **La tua lista** — `liste` e `lista_voci`, riempite dal PDF del nutrizionista oppure dalla spunta per categorie su `/ingredienti/gusti`. Ogni riga e' un posto in una fascia, con dentro le alternative equivalenti e i grammi. Dalla spunta la lista si costruisce da sola (`lib/lista/gusti.ts`), e ogni alimento finisce **solo nelle fasce che il vocabolario gli concede**: non e' un filtro messo dopo, la fettina non entra proprio nella colazione
 3. **Il compositore** — `apps/web/lib/giornata/componi.ts`. Per ogni riga della fascia pesca **una** alternativa e le applica il moltiplicatore del tipo di giorno
 
 La scelta fra alternative non e' un caso cieco: `lib/nutrizione/preferenze.ts` la inclina verso quello che mangi davvero (solo sopra `PASTI_MINIMI` pasti registrati - sotto, "mangi sempre il pollo" vuol dire che e' uscito due volte) e verso quello che e' in offerta questa settimana. I pesi cambiano **la frequenza, mai l'insieme**: le alternative restano quelle della tua lista, e un alimento con peso basso esce lo stesso ogni tanto, altrimenti dopo un mese mangeresti sempre le stesse quattro cose.
 
 Le **sostituzioni equivalenti** (`lib/nutrizione/sostituzioni.ts`) rispondono a "non ho il pollo, ho il merluzzo". Non si cambia a peso - il merluzzo ha meno proteine, e 150 g di merluzzo al posto di 150 g di pollo perdono mezza porzione - si cambia a nutriente, e quale nutriente comanda dipende dal ruolo: proteina a proteine, base a carboidrati, grasso a grassi, verdura a peso perche' li' conta il volume.
+
+### Le stagioni
+
+`packages/db/src/alimenti/stagioni.ts`, e vale per frutta e verdura e per nient'altro: la pasta non ha stagione, e mettere dodici mesi accanto a ogni scatoletta sarebbe rumore. Chi non compare nella tabella e' disponibile sempre - quello che arriva da lontano tutto l'anno (banane, ananas, limoni) non ha stagione **qui**, e quello che si conserva per mesi (mele, patate, cipolle) al banco c'e' davvero sempre.
+
+Il filtro sta nel **compositore**, non nella lista. La lista e' quello che ti piace, la giornata e' quello che si mangia oggi: cosi' le pesche restano spuntate tutto l'anno e a giugno tornano da sole. Fuori stagione non entra nel pasto e non entra nemmeno nell'obiettivo, altrimenti risulteresti sempre sotto.
+
+Quando una riga resta senza niente di stagione - hai spuntato solo frutta estiva e siamo a gennaio - il componente salta e la schermata di oggi **lo dice**, invece di lasciare un buco muto.
+
+Un test controlla che ogni mese dell'anno abbia almeno tre frutti e tre verdure disponibili: e' quello che impedisce di accendere le stagioni e scoprire che da ottobre a marzo non c'e' niente da proporre.
 
 ### Il ricettario di casa
 

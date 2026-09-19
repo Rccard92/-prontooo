@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { utenteCorrente } from '@/lib/accesso/sessione'
 import { GRUPPI_FUORI, PIATTI_FUORI } from '@/lib/giornata/piatti'
-import { leggiGiornata, oggi } from '@/lib/giornata/componi'
+import { type Scoperta, leggiGiornata, oggi, scopertePerUtente } from '@/lib/giornata/componi'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
@@ -286,6 +286,7 @@ export default async function Oggi() {
   let ricette = new Map<number, RicettaDelPasto>()
   let alternative: AlternativeDiPasto = new Map()
   let inOfferta = new Set<number>()
+  let scoperte: Scoperta[] = []
 
   const utente = await utenteCorrente()
 
@@ -300,6 +301,7 @@ export default async function Oggi() {
     if (giorno) {
       const previsti = giorno.pasti.filter((p) => p.stato === 'previsto')
 
+      scoperte = await scopertePerUtente(utenteId)
       ricette = await ricetteDeiPasti(previsti)
       alternative = await alternativeDei(utenteId, previsti)
 
@@ -375,6 +377,27 @@ export default async function Oggi() {
                 )
               })}
             </form>
+
+            {scoperte.length > 0 ? (
+              <div className="rounded-scheda mt-5 bg-limone-tenue px-5 py-4">
+                <p className="font-semibold text-inchiostro">Questo mese ti manca qualcosa</p>
+                <p className="mt-1 text-sm text-inchiostro">
+                  {scoperte
+                    .map((s) => `${eFascia(s.fascia) ? NOME_FASCIA[s.fascia] : s.fascia}`)
+                    .filter((nome, i, tutti) => tutti.indexOf(nome) === i)
+                    .join(', ')}
+                  : quello che avevi spuntato lì adesso è fuori stagione, quindi l&rsquo;ho
+                  lasciato fuori invece di proportelo a dispetto del calendario.{' '}
+                  <Link
+                    href="/ingredienti/gusti"
+                    className="font-semibold underline underline-offset-4"
+                  >
+                    Spunta qualcosa di questo periodo
+                  </Link>
+                  .
+                </p>
+              </div>
+            ) : null}
 
             {giorno && obiettivo && consumato ? (
               <div className="scheda mt-5 p-5">

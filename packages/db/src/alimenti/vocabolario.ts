@@ -230,4 +230,45 @@ export const VOCABOLARIO: VoceAlimento[] = [
   { nome: 'Torta fatta in casa', gruppo: 'dolce', ruoli: ['cereale_colazione', 'snack'], fasce: ['colazione', 'merenda'], quantita: 80, unita: 'g', etichette: ['glutine', 'zuccheri', 'uova'] },
   { nome: 'Chips proteici', gruppo: 'dolce', ruoli: ['snack'], fasce: ['spuntino', 'merenda'], quantita: 30, unita: 'g', etichette: ['proteico'] },
   { nome: 'More', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 125, unita: 'g' },
+
+  // ---------- I buchi colmati dopo ----------
+  // Il vocabolario di partenza veniva in buona parte dalle diete su cui ho
+  // tarato il lettore, e quelle diete erano estive: mancavano i fichi, i
+  // cachi, i mandarini, le castagne, i funghi, il radicchio, i porri. Cioe'
+  // proprio quello che si mangia da ottobre a marzo, che con le stagioni
+  // accese vorrebbe dire mezzo anno senza frutta e verdura da proporre.
+  { nome: 'Cachi', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Castagne', gruppo: 'frutta', ruoli: ['frutta', 'snack'], fasce: ['spuntino', 'merenda'], quantita: 100, unita: 'g' },
+  { nome: 'Ciliegie', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Clementine', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Fichi', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Lamponi', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 125, unita: 'g' },
+  { nome: 'Mandarini', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Nespole', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Prugne', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 150, unita: 'g' },
+  { nome: 'Agretti', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Barbabietola', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Cavolo cappuccio', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Cavolo nero', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Funghi', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Porri', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Puntarelle', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Radicchio', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Rape', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Sedano', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Taccole', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Coniglio', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Agnello', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+  { nome: 'Cozze', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Vongole', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Alici', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Trota', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Pecorino', gruppo: 'latticino', ruoli: ['proteina', 'latticino'], fasce: ['pranzo', 'cena'], quantita: 40, unita: 'g', etichette: ['lattosio'] },
+  { nome: 'Fagioli borlotti', gruppo: 'legume', ruoli: ['proteina', 'base'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Nocciole', gruppo: 'frutta_secca', ruoli: ['semi', 'snack'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 25, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Pistacchi', gruppo: 'frutta_secca', ruoli: ['semi', 'snack'], fasce: ['spuntino', 'merenda'], quantita: 25, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Semi di zucca', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 20, unita: 'g' },
+  { nome: 'Semi di girasole', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 20, unita: 'g' },
+  { nome: 'Pane di segale', gruppo: 'pane', ruoli: ['base'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Grano saraceno', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
 ]

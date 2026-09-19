@@ -8,7 +8,9 @@ import {
   giornate,
 } from '@prontooo/db'
 
-import { vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
+import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
+
+import { type VoceConAlimento, vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
 import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '../lista/modello'
 import { FASCE } from '../ricette/fasce'
@@ -20,6 +22,32 @@ export function oggi(): string {
   const romana = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }))
 
   return `${romana.getFullYear()}-${String(romana.getMonth() + 1).padStart(2, '0')}-${String(romana.getDate()).padStart(2, '0')}`
+}
+
+export type Scoperta = { fascia: string; ruolo: string }
+
+/**
+ * Le righe che questo mese restano senza niente da mettere dentro.
+ *
+ * Succede quando in una riga hai spuntato solo roba fuori stagione: a gennaio
+ * una riga di sola frutta estiva resta vuota. Non e' un errore, e'
+ * un'informazione da darti - cosi' vai a spuntare due cose d'inverno invece
+ * di trovarti la colazione senza frutta e non capire perche'.
+ */
+export function scoperteDelMese(voci: VoceConAlimento[], mese: number): Scoperta[] {
+  const scoperte: Scoperta[] = []
+
+  for (const fascia of FASCE) {
+    for (const riga of righePerFascia(voci, fascia)) {
+      const restano = riga.voci.some((v) => diStagione(v.alimento?.mesiStagione ?? [], mese))
+
+      if (!restano && riga.voci[0]) {
+        scoperte.push({ fascia, ruolo: ruoloDi(riga.voci[0].alimento) })
+      }
+    }
+  }
+
+  return scoperte
 }
 
 /** Il ruolo di un alimento dentro il pasto: il primo che copre. */
@@ -43,9 +71,20 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
 
   const [voci, pesi] = await Promise.all([vociDi(utenteId, lista.id), pesiDiScelta(utenteId)])
   const moltiplicatori = MOLTIPLICATORI[tipoGiorno]
+  const mese = meseCorrente()
+
+  const scoperte = scoperteDelMese(voci, mese)
+
+  /** Le righe di una fascia, tolto quello che questo mese non si trova. */
+  const righeDiStagione = (fascia: string) =>
+    righePerFascia(voci, fascia)
+      .map((riga) => ({
+        ...riga,
+        voci: riga.voci.filter((v) => diStagione(v.alimento?.mesiStagione ?? [], mese)),
+      }))
 
   const pasti = FASCE.map((fascia) => {
-    const righe = righePerFascia(voci, fascia)
+    const righe = righeDiStagione(fascia)
 
     const componenti: Componente[] = righe
       .map((riga) => {
@@ -74,8 +113,7 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
   const obiettivo = arrotonda(
     sommaNutrienti(
       FASCE.map((fascia) => {
-        const righe = righePerFascia(voci, fascia)
-        const base = obiettivoDa(righe)
+        const base = obiettivoDa(righeDiStagione(fascia))
         // L'obiettivo del giorno tiene conto del tipo di giorno, altrimenti un
         // giorno ON risulterebbe sempre sopra soglia.
         const fattoreMedio = tipoGiorno === 'on' ? 1.12 : tipoGiorno === 'off' ? 0.92 : 1
@@ -91,7 +129,21 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
     ),
   )
 
-  return { listaId: lista.id, pasti, obiettivo }
+  return { listaId: lista.id, pasti, obiettivo, scoperte }
+}
+
+/**
+ * Cosa resta scoperto questo mese, per la lista attiva di un utente.
+ *
+ * La pagina di oggi la chiama per dirtelo: non ricompone la giornata, legge
+ * la lista e guarda il calendario.
+ */
+export async function scopertePerUtente(utenteId: number): Promise<Scoperta[]> {
+  const lista = await listaAttiva(utenteId)
+
+  if (!lista) return []
+
+  return scoperteDelMese(await vociDi(utenteId, lista.id), meseCorrente())
 }
 
 /** Le kcal di un elenco di componenti, leggendo gli alimenti dal database. */

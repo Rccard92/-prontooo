@@ -259,6 +259,9 @@ export const alimenti = pgTable(
     fibre: numeric('fibre', { precision: 7, scale: 2 }),
     // Il reparto ordina la lista della spesa sul percorso fisico nel negozio.
     reparto: text('reparto'),
+    // I mesi in cui ha senso comprarlo, 1-12. Vuoto = tutto l'anno. Vale per
+    // frutta e verdura: la pasta non ha stagione.
+    mesiStagione: jsonb('mesi_stagione').$type<number[]>().notNull().default([]),
   },
   (t) => [uniqueIndex('alimenti_nome_idx').on(t.nome)],
 )

@@ -3,6 +3,8 @@ import { asc } from 'drizzle-orm'
 
 import { alimenti as tabellaAlimenti, db } from '@prontooo/db'
 
+import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
+
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { CATEGORIE } from '@/lib/lista/gusti'
 import { leggiProfilo } from '@/lib/profilo/leggi'
@@ -12,6 +14,34 @@ import { Testata } from '../../componenti/testata'
 import { salvaGusti } from '../azioni'
 
 export const dynamic = 'force-dynamic'
+
+const NOMI_MESI = [
+  'gennaio',
+  'febbraio',
+  'marzo',
+  'aprile',
+  'maggio',
+  'giugno',
+  'luglio',
+  'agosto',
+  'settembre',
+  'ottobre',
+  'novembre',
+  'dicembre',
+]
+
+/** Il primo mese buono a partire da adesso: "torna a ottobre". */
+function primoMese(mesi: number[]): string {
+  const oggi = meseCorrente()
+
+  for (let avanti = 1; avanti <= 12; avanti += 1) {
+    const mese = ((oggi - 1 + avanti) % 12) + 1
+
+    if (mesi.includes(mese)) return NOMI_MESI[mese - 1]!
+  }
+
+  return 'mai'
+}
 
 /** "pranzo, cena" scritto come lo leggi, non come sta nel database. */
 function doveFinisce(fasce: string[]): string {
@@ -37,6 +67,7 @@ export default async function Gusti({
         fasce: tabellaAlimenti.fasce,
         quantita: tabellaAlimenti.quantita,
         unita: tabellaAlimenti.unita,
+        mesiStagione: tabellaAlimenti.mesiStagione,
       })
       .from(tabellaAlimenti)
       .orderBy(asc(tabellaAlimenti.nome)),
@@ -44,6 +75,10 @@ export default async function Gusti({
   ])
 
   const gia = new Set(profilo?.alimentiScelti ?? [])
+  const mese = meseCorrente()
+  const nomeMese = new Intl.DateTimeFormat('it-IT', { month: 'long' }).format(
+    new Date(2026, mese - 1, 1),
+  )
 
   return (
     <div className="min-h-dvh bg-fondo">
@@ -61,6 +96,12 @@ export default async function Gusti({
           Spunta quello che mangi volentieri, categoria per categoria. Da qui costruisco i pasti e
           cerco le ricette: quello che non spunti non compare, mai. Sotto ogni alimento c&rsquo;è
           scritto in quali pasti può finire — la fettina non arriverà a colazione.
+        </p>
+        <p className="mt-2 max-w-2xl text-sm text-fumo">
+          Spunta pure tutto quello che ti piace, anche quello che adesso non si trova: la frutta e
+          la verdura seguono l&rsquo;anno, e ognuna torna nel suo mese. Quello che a{' '}
+          {nomeMese} è fuori stagione è segnato qui sotto, e in questo periodo non finisce nei
+          pasti.
         </p>
 
         {errore ? (
@@ -106,6 +147,11 @@ export default async function Gusti({
                           <span className="cifre block text-xs text-fumo">
                             {a.quantita} {a.unita} · {doveFinisce(a.fasce)}
                           </span>
+                          {a.mesiStagione.length > 0 && !diStagione(a.mesiStagione, mese) ? (
+                            <span className="mt-1 block text-xs font-semibold text-pomodoro">
+                              fuori stagione a {nomeMese} · torna a {primoMese(a.mesiStagione)}
+                            </span>
+                          ) : null}
                         </span>
                       </label>
                     ))}

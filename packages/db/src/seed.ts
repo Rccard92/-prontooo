@@ -2,6 +2,7 @@ import { config } from 'dotenv'
 import { asc, isNull, sql } from 'drizzle-orm'
 
 import { NUTRIENTI } from './alimenti/nutrienti'
+import { mesiDi } from './alimenti/stagioni'
 import { VOCABOLARIO } from './alimenti/vocabolario'
 import { db } from './client'
 import {
@@ -83,6 +84,7 @@ async function seedAlimenti() {
       grassi: n ? String(n.grassi) : null,
       fibre: n ? String(n.fibre) : null,
       reparto: n?.reparto ?? null,
+      mesiStagione: mesiDi(v.nome),
     }
   })
 
@@ -104,6 +106,7 @@ async function seedAlimenti() {
         grassi: sql`excluded.grassi`,
         fibre: sql`excluded.fibre`,
         reparto: sql`excluded.reparto`,
+        mesiStagione: sql`excluded.mesi_stagione`,
       },
     })
 
