@@ -26,7 +26,7 @@ import time
 import httpx
 
 from fonti import CANDIDATE, Fonte
-from raccolta import AGENTE, PAUSA, importa, raccogli_indirizzi
+from raccolta import AGENTE, PAUSA, raccogli_indirizzi
 
 # Quanti indirizzi provare per fonte.
 #
@@ -45,6 +45,35 @@ SEMBRA_RICETTA = re.compile(r"/ricett", re.IGNORECASE)
 
 def acceso() -> bool:
     return os.environ.get("SONDA_FONTI", "").strip().lower() in ("1", "si", "true", "on")
+
+
+def _prova(cliente: httpx.Client, base: str, segreto: str, url: str) -> tuple[bool, str]:
+    """Prova a importare un indirizzo e riporta il motivo, non solo l'esito.
+
+    Non riusa `importa` della raccolta apposta: quella torna un booleano,
+    e per giudicare una fonte il booleano non basta. "Non ha il JSON-LD" e
+    "e' un dolce e il catalogo non lo vuole" sono due cose diversissime, e
+    dal di fuori si vedono uguali.
+    """
+    try:
+        risposta = cliente.post(
+            f"{base.rstrip('/')}/api/interno/importa",
+            json={"url": url},
+            headers={"x-segreto-interno": segreto},
+            timeout=45,
+        )
+    except Exception as errore:
+        return False, f"non raggiunta ({errore})"
+
+    if risposta.status_code == 200:
+        return True, "letta"
+
+    try:
+        motivo = risposta.json().get("motivo") or f"risposta {risposta.status_code}"
+    except ValueError:
+        motivo = f"risposta {risposta.status_code}"
+
+    return False, motivo
 
 
 def _sonda_una(cliente: httpx.Client, fonte: Fonte, base: str, segreto: str) -> str:
@@ -66,11 +95,13 @@ def _sonda_una(cliente: httpx.Client, fonte: Fonte, base: str, segreto: str) -> 
     lette = 0
 
     for url in prove:
-        esito = importa(cliente, base, segreto, url)
+        esito, motivo = _prova(cliente, base, segreto, url)
         lette += 1 if esito else 0
-        # L'indirizzo provato si scrive: se una fonte viene bocciata, questo e'
-        # quello che serve per capire se era lei o se erano gli indirizzi.
-        print(f"  sonda {fonte.nome}: {'letta' if esito else 'niente'} <- {url}", flush=True)
+        # Il motivo, non solo il si'/no. Al primo sondaggio Cookaround e'
+        # risultata bocciata su dieci ricette vere, e senza il motivo non si
+        # capiva se il sito non avesse il JSON-LD o se fosse il nostro filtro
+        # a scartarle perche' non sapevamo classificarle.
+        print(f"  sonda {fonte.nome}: {'letta' if esito else motivo} <- {url}", flush=True)
         time.sleep(PAUSA)
 
     if lette == 0:
