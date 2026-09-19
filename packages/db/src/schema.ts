@@ -242,6 +242,11 @@ export const profilo = pgTable('profilo', {
   attivita: text('attivita'),
   // mantenere, dimagrire, massa
   obiettivo: text('obiettivo'),
+  // Le etichette attenuate invece che escluse: non tolgono l'alimento, lo
+  // spostano. Il glutine si riduce - una fonte per pasto - e il lattosio si
+  // sostituisce col gemello delattosato. Il modo sta in
+  // apps/web/lib/nutrizione/attenuazioni.ts.
+  attenuazioni: jsonb('attenuazioni').$type<string[]>().notNull().default([]),
   // Le condizioni di salute accese: hashimoto, colesterolo, pressione...
   // Non escludono niente in modo rigido, spostano i pesi. Vedi
   // apps/web/lib/nutrizione/condizioni.ts.

@@ -8,11 +8,17 @@ import {
   giornate,
 } from '@prontooo/db'
 
-import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
+import { SENZA_LATTOSIO, cheFarneCol, diStagione, meseCorrente } from '@prontooo/db/alimenti'
 
 import { type VoceConAlimento, vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
 import { leggiProfilo } from '../profilo/leggi'
 import { ammessi } from '../nutrizione/esclusioni'
+import {
+  PASTI_CON_GLUTINE,
+  attive,
+  preferiSenza,
+  senzaLeEscluse,
+} from '../nutrizione/attenuazioni'
 import { type DatiCorpo, datiCompleti, fabbisognoDi, kcalPerFascia } from '../nutrizione/fabbisogno'
 import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
 import { arrotonda, nutrientiDi, sommaNutrienti } from '../lista/modello'
@@ -76,6 +82,40 @@ export function scoperteDelMese(voci: VoceConAlimento[], mese: number): Scoperta
   return scoperte
 }
 
+/** I nomi della lista che al banco hanno un gemello senza lattosio. */
+function componibili(voci: VoceConAlimento[]): string[] {
+  return [
+    ...new Set(
+      voci
+        .map((v) => v.alimento?.nome)
+        .filter((n): n is string => n !== undefined && SENZA_LATTOSIO[n] !== undefined)
+        .map((n) => SENZA_LATTOSIO[n]!),
+    ),
+  ]
+}
+
+/**
+ * I gemelli delattosati, letti dal vocabolario in una query sola.
+ *
+ * Dal vocabolario e non dalla lista: la mozzarella senza lattosio puo' non
+ * essere fra le cose che hai spuntato - anzi, di solito non lo e', perche'
+ * hai spuntato la mozzarella e basta.
+ */
+async function leggiGemelli(nomi: string[]): Promise<Map<string, Alimento>> {
+  if (nomi.length === 0) return new Map()
+
+  const righe = await db().select().from(alimenti).where(inArray(alimenti.nome, nomi))
+  const per = new Map<string, Alimento>()
+
+  for (const [normale, gemello] of Object.entries(SENZA_LATTOSIO)) {
+    const trovato = righe.find((r) => r.nome === gemello)
+
+    if (trovato) per.set(normale, trovato)
+  }
+
+  return per
+}
+
 /**
  * Compone i pasti di un giorno dalla lista di ingredienti.
  *
@@ -106,32 +146,78 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
   const ammesse = ammessi(voci, esclusioni, (v) => v.alimento?.etichette)
   const scoperte = scoperteDelMese(ammesse, mese)
 
+  // Le attenuazioni sono la via di mezzo, e stanno **dopo** le esclusioni:
+  // su un'etichetta che hai gia' escluso non c'e' piu' niente da attenuare.
+  const attenuazioni = senzaLeEscluse(impostazioni?.attenuazioni ?? [], esclusioni)
+  const riduceGlutine = attive(attenuazioni, 'riduci').includes('glutine')
+  const sostituisceLattosio = attive(attenuazioni, 'sostituisci').includes('lattosio')
+
+  /** Il gemello delattosato, quando serve e quando esiste. */
+  const gemelli = sostituisceLattosio ? await leggiGemelli(componibili(ammesse)) : new Map()
+
+  // Chi attenua il lattosio non perde il latticino: perde solo quelli per cui
+  // al banco non c'e' alternativa. Gli stagionati restano dove sono.
+  const conLattosioARegola = sostituisceLattosio
+    ? ammesse.filter(
+        (v) =>
+          v.alimento === null ||
+          cheFarneCol(v.alimento.nome, v.alimento.etichette) !== 'togli',
+      )
+    : ammesse
+
+  let pastiColGlutine = 0
+
   const pasti = FASCE.map((fascia) => {
-    const righe = righeConRuolo(ammesse, fascia, mese)
+    const righe = righeConRuolo(conLattosioARegola, fascia, mese)
+
+    // Una sola fonte di glutine per pasto, e non a tutti i pasti: e' questo
+    // che vuol dire ridurre. Se pero' togliendola la riga resta vuota, il
+    // glutine passa lo stesso - meglio il pane per la terza volta che un
+    // pranzo senza base. Lo zero assoluto si chiede con l'esclusione.
+    let glutineQui = false
+
+    const pesca = (voci: VoceConAlimento[]) => {
+      const quota = glutineQui || pastiColGlutine >= PASTI_CON_GLUTINE
+      const mucchio =
+        riduceGlutine && quota
+          ? preferiSenza(voci, (v) => v.alimento?.etichette.includes('glutine') ?? false)
+          : voci
+
+      const scelta = scegliPesato(mucchio, pesi)
+
+      if (scelta?.alimento?.etichette.includes('glutine')) glutineQui = true
+
+      return scelta
+    }
 
     // Lo schema decide **quanti** posti ha il piatto; la lista decide chi puo'
     // starci; i pesi decidono chi ci sta oggi. Prima erano tre cose sole - una
     // per riga spuntata - e veniva fuori un inventario invece di un pasto.
-    const componenti: Componente[] = riempiPosti(postiDi(fascia), righe, (voci) =>
-      scegliPesato(voci, pesi),
-    )
+    const componenti: Componente[] = riempiPosti(postiDi(fascia), righe, pesca)
       .map(({ scelta }) => {
         if (!scelta) return null
 
         const ruolo = ruoloDi(scelta.alimento)
         const base = Number(scelta.quantita)
         const fattore = moltiplicatori[ruolo] ?? 1
+        const nome = scelta.alimento?.nome ?? scelta.testoGrezzo ?? 'Da collegare'
+
+        // Qui la mozzarella diventa mozzarella senza lattosio: stesso posto,
+        // stessi grammi, il nome che devi cercare al banco.
+        const gemello = gemelli.get(nome) ?? null
 
         return {
           ruolo,
-          alimentoId: scelta.alimentoId,
-          nome: scelta.alimento?.nome ?? scelta.testoGrezzo ?? 'Da collegare',
+          alimentoId: gemello?.id ?? scelta.alimentoId,
+          nome: gemello?.nome ?? nome,
           // Le voci "a piacere" hanno quantita' zero e restano tali.
           quantita: base === 0 ? 0 : Math.max(5, Math.round((base * fattore) / 5) * 5),
           unita: scelta.unita,
         }
       })
       .filter((c): c is Componente => c !== null)
+
+    if (glutineQui) pastiColGlutine += 1
 
     return { fascia, componenti }
   }).filter((p) => p.componenti.length > 0)

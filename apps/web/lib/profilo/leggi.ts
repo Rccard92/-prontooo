@@ -25,6 +25,7 @@ export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl' | 'id' | 'utenteI
   minutiMassimi: { colazione: 15, spuntino: 10, pranzo: 40, merenda: 15, cena: 45 },
   daEvitare: [],
   esclusioni: [],
+  attenuazioni: [],
   impostazione: 'equilibrata',
   alimentiScelti: [],
   settimaneAntiRipetizione: 3,

@@ -7,9 +7,9 @@ import { db, profilo } from '@prontooo/db'
 
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { type Passo, prossimo } from '@/lib/benvenuto/passi'
+import { leggiCosaTogliere } from '@/lib/nutrizione/attenuazioni'
 import { CONDIZIONI, chiaveRegola } from '@/lib/nutrizione/condizioni'
 import { ATTIVITA, OBIETTIVI, SESSI } from '@/lib/nutrizione/fabbisogno'
-import { ESCLUSIONI } from '@/lib/nutrizione/impostazioni'
 
 function decimale(dati: FormData, campo: string): number | null {
   const grezzo = String(dati.get(campo) ?? '').replace(',', '.').trim()
@@ -81,9 +81,15 @@ export async function salvaMovimento(dati: FormData) {
 }
 
 export async function salvaEsclusioni(dati: FormData) {
-  const esclusioni = ESCLUSIONI.map((e) => e.id).filter((id) => dati.get(`esclusione-${id}`) === 'si')
+  // Due forme nello stesso passo: una casella per quasi tutte le etichette,
+  // tre risposte per glutine e lattosio, che una via di mezzo ce l'hanno.
+  const scelte = leggiCosaTogliere((campo) => {
+    const valore = dati.get(campo)
 
-  await scrivi({ esclusioni }, 'togliere')
+    return typeof valore === 'string' ? valore : null
+  })
+
+  await scrivi(scelte, 'togliere')
 }
 
 export async function salvaCondizioni(dati: FormData) {

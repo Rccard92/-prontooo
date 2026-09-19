@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { PASSI_TOTALI, SOTTOTITOLO, TITOLO, ePasso, numeroDi } from '@/lib/benvenuto/passi'
-import { CONDIZIONI, chiaveRegola, esclusioniSuggeriteDa } from '@/lib/nutrizione/condizioni'
+import { esclusioniSuggeriteDa } from '@/lib/nutrizione/condizioni'
 import {
   ATTIVITA,
   type DatiCorpo,
@@ -12,9 +12,9 @@ import {
   datiCompleti,
   fabbisognoDi,
 } from '@/lib/nutrizione/fabbisogno'
-import { ESCLUSIONI } from '@/lib/nutrizione/impostazioni'
 import { leggiProfilo } from '@/lib/profilo/leggi'
 
+import { Condizioni, CosaTogliere } from '../../componenti/salute'
 import { salvaCondizioni, salvaCorpo, salvaEsclusioni, salvaMovimento } from '../azioni'
 
 export const dynamic = 'force-dynamic'
@@ -200,35 +200,11 @@ export default async function Benvenuto({
               </p>
             ) : null}
 
-            <div className="flex flex-col gap-2">
-              {ESCLUSIONI.map((e) => {
-                const proposta = suggerite.find((s) => s.etichetta === e.id)
-
-                return (
-                  <label
-                    key={e.id}
-                    className={proposta ? proposto : normale}
-                  >
-                    <input
-                      type="checkbox"
-                      name={`esclusione-${e.id}`}
-                      value="si"
-                      defaultChecked={p?.esclusioni.includes(e.id)}
-                      className="mt-0.5 size-5 shrink-0 accent-basilico"
-                    />
-                    <span>
-                      <span className="block text-base font-semibold text-inchiostro">{e.nome}</span>
-                      <span className="block text-sm text-fumo">{e.spiega}</span>
-                      {proposta ? (
-                        <span className="mt-1 block text-sm text-inchiostro">
-                          <strong>{proposta.condizione}:</strong> {proposta.perche}
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
+            <CosaTogliere
+              esclusioni={p?.esclusioni ?? []}
+              attenuazioni={p?.attenuazioni ?? []}
+              suggerite={suggerite}
+            />
 
             <p className="text-sm text-fumo">
               {suggerite.length > 0
@@ -244,48 +220,7 @@ export default async function Benvenuto({
 
         {passo === 'salute' ? (
           <form action={salvaCondizioni} className="mt-6 flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-              {CONDIZIONI.map((c) => (
-                <div key={c.id} className="rounded-controllo bg-fondo p-4">
-                  <label className="flex cursor-pointer items-start gap-3">
-                    <input
-                      type="checkbox"
-                      name={`condizione-${c.id}`}
-                      value="si"
-                      defaultChecked={p?.condizioni.includes(c.id)}
-                      className="mt-0.5 size-5 shrink-0 accent-basilico"
-                    />
-                    <span>
-                      <span className="block text-base font-semibold text-inchiostro">{c.nome}</span>
-                      <span className="block text-sm text-fumo">{c.spiega}</span>
-                    </span>
-                  </label>
-
-                  <div className="mt-3 flex flex-col gap-2 border-t border-bordo pt-3">
-                    {c.regole.map((r) => (
-                      <label
-                        key={r.id}
-                        className="rounded-controllo flex cursor-pointer items-start gap-3 bg-bianco px-3 py-2"
-                      >
-                        <input
-                          type="checkbox"
-                          name={`regola-${chiaveRegola(c.id, r.id)}`}
-                          value="si"
-                          defaultChecked={!p?.regoleSpente.includes(chiaveRegola(c.id, r.id))}
-                          className="mt-0.5 size-4 shrink-0 accent-basilico"
-                        />
-                        <span>
-                          <span className="block text-sm font-semibold text-inchiostro">
-                            {r.cosaFa}
-                          </span>
-                          <span className="block text-xs text-fumo">{r.quantoSiSa}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Condizioni accese={p?.condizioni ?? []} regoleSpente={p?.regoleSpente ?? []} />
 
             <p className="rounded-controllo bg-limone-tenue px-4 py-3 text-sm text-inchiostro">
               Nessuna di queste toglie un alimento per sempre: spostano quanto spesso esce. E si

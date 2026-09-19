@@ -1,0 +1,1 @@
+ALTER TABLE "profilo" ADD COLUMN "attenuazioni" jsonb DEFAULT '[]'::jsonb NOT NULL;

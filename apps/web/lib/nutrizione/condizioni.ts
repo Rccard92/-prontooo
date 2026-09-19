@@ -151,6 +151,160 @@ export const CONDIZIONI: Condizione[] = [
       },
     ],
   },
+  {
+    id: 'colon_irritabile',
+    nome: 'Colon irritabile',
+    spiega: 'Fa uscire di rado i fermentabili che piu\u2019 spesso danno gonfiore.',
+    regole: [
+      {
+        id: 'fodmap_verdure',
+        verso: 'di_rado',
+        alimenti: ['Cipolla', 'Carciofi', 'Cavolfiore', 'Broccoli'],
+        cosaFa: 'Cipolla, carciofi e crucifere escono di rado.',
+        quantoSiSa:
+          'Sono fra i FODMAP piu\u2019 fermentabili, e la dieta a basso contenuto di FODMAP e\u2019 oggi l\u2019intervento alimentare con piu\u2019 prove nel colon irritabile.',
+      },
+      {
+        id: 'fodmap_legumi',
+        verso: 'di_rado',
+        alimenti: ['Ceci lessati', 'Fagioli borlotti', 'Fagioli cannellini', 'Lenticchie lessate'],
+        cosaFa: 'I legumi interi escono di rado.',
+        quantoSiSa:
+          'Sono galatto-oligosaccaridi, e sono una delle cause piu\u2019 comuni di gonfiore. Attenzione pero\u2019: i legumi portano fibra e ferro, e toglierli a lungo lascia buchi veri. Se li digerisci, spegni questa regola.',
+      },
+      {
+        id: 'fodmap_frutta',
+        verso: 'di_rado',
+        alimenti: ['Mela', 'Pera', 'Anguria'],
+        cosaFa: 'Mela, pera e anguria escono di rado.',
+        quantoSiSa:
+          'Sono le tre piu\u2019 ricche di fruttosio e polioli. Le altre frutte restano dove sono: qui non si toglie la frutta, si cambia quale.',
+      },
+    ],
+    esclusioniSuggerite: [
+      {
+        etichetta: 'lattosio',
+        perche:
+          'Il lattosio e\u2019 un FODMAP, e in chi ha il colon irritabile da\u2019 fastidio spesso. Prima di toglierlo del tutto guarda la via di mezzo qui sopra: la versione senza lattosio esiste per quasi tutto.',
+      },
+    ],
+  },
+  {
+    id: 'gotta',
+    nome: 'Gotta o acido urico alto',
+    spiega: 'Abbassa la frequenza di quello che fa salire l\u2019uricemia.',
+    regole: [
+      {
+        id: 'purine_pesce',
+        verso: 'di_rado',
+        alimenti: ['Alici', 'Sardine', 'Cozze', 'Gamberi', 'Sgombro al naturale'],
+        cosaFa: 'Pesce azzurro piccolo, molluschi e crostacei escono di rado.',
+        quantoSiSa:
+          'Sono i piu\u2019 concentrati in purine, e negli studi il pesce alza il rischio di attacco di circa la meta\u2019. Il pesce non sparisce: restano merluzzo, tonno e salmone.',
+      },
+      {
+        id: 'purine_carne',
+        verso: 'di_rado',
+        alimenti: ['Fettina di manzo', 'Macinato di manzo', 'Spezzatino di manzo', 'Hamburger di manzo'],
+        cosaFa: 'La carne rossa esce di rado.',
+        quantoSiSa:
+          'E\u2019 la raccomandazione piu\u2019 costante di tutte le linee guida sulla gotta, insieme alle frattaglie - che qui dentro non ci sono.',
+      },
+      {
+        id: 'fruttosio',
+        verso: 'di_rado',
+        alimenti: ['Gelato', 'Granita siciliana', 'Muffin', 'Biscotti secchi'],
+        cosaFa: 'I dolci industriali e le bibite escono di rado.',
+        quantoSiSa:
+          'Il fruttosio e\u2019 l\u2019unico zucchero che alza direttamente l\u2019acido urico, e nelle meta-analisi le bevande zuccherate aumentano il rischio di gotta di circa un quinto. La frutta intera non c\u2019entra: li\u2019 il fruttosio arriva con fibra e acqua.',
+      },
+      {
+        id: 'latticini_magri',
+        verso: 'piu_spesso',
+        alimenti: ['Yogurt greco 0%', 'Ciliegie', 'Orzo perlato'],
+        cosaFa: 'Latticini magri, ciliegie e cereali integrali escono piu\u2019 spesso.',
+        quantoSiSa:
+          'I latticini magri sono associati a meno gotta. Sulle ciliegie qualche studio c\u2019e\u2019 ma la certezza e\u2019 bassa: le metto perche\u2019 non costano niente, non perche\u2019 siano una cura.',
+      },
+    ],
+  },
+  {
+    id: 'ferro_basso',
+    nome: 'Ferro basso o anemia',
+    spiega: 'Mette insieme il ferro e quello che lo fa assorbire.',
+    regole: [
+      {
+        id: 'ferro',
+        verso: 'piu_spesso',
+        alimenti: ['Fettina di manzo', 'Lenticchie lessate', 'Spinaci', 'Sgombro al naturale', 'Uova'],
+        cosaFa: 'Carne rossa, legumi, spinaci e uova escono piu\u2019 spesso.',
+        quantoSiSa:
+          'Il ferro della carne si assorbe molto meglio di quello dei vegetali, e questo e\u2019 assodato. Un piano non cura un\u2019anemia: se l\u2019emoglobina e\u2019 bassa davvero serve il medico, non la spesa.',
+      },
+      {
+        id: 'vitamina_c',
+        verso: 'piu_spesso',
+        alimenti: ['Arance', 'Limone', 'Kiwi', 'Peperoni', 'Pomodori'],
+        cosaFa: 'Agrumi, kiwi e peperoni escono piu\u2019 spesso.',
+        quantoSiSa:
+          'Questa e\u2019 la regola con la resa piu\u2019 alta di tutte: 100 mg di vitamina C nello stesso pasto moltiplicano per quattro il ferro assorbito dai vegetali. Il limone sui legumi non e\u2019 folklore.',
+      },
+      {
+        id: 'tannini',
+        verso: 'di_rado',
+        alimenti: ['T\u00e8 verde'],
+        cosaFa: 'Il t\u00e8 esce di rado.',
+        quantoSiSa:
+          'I tannini del t\u00e8 possono tagliare l\u2019assorbimento del ferro fino al 90%, il caff\u00e8 fino al 60%. Conta pero\u2019 **quando**: lontano dai pasti il problema non si pone, e l\u2019app la distanza dalla tazzina non la sa. Qui puo\u2019 solo diradare.',
+      },
+    ],
+  },
+  {
+    id: 'fegato_grasso',
+    nome: 'Fegato grasso',
+    spiega: 'Sposta il piano verso il mediterraneo e taglia gli zuccheri aggiunti.',
+    regole: [
+      {
+        id: 'zuccheri_aggiunti',
+        verso: 'di_rado',
+        alimenti: ['Gelato', 'Granita siciliana', 'Cornetto', 'Brioche col tuppo', 'Muffin', 'Biscotti secchi'],
+        cosaFa: 'Dolci da bar e industriali escono di rado.',
+        quantoSiSa:
+          'Sugli zuccheri aggiunti e sul fruttosio raffinato le prove sono buone: aggiungere calorie da bevande zuccherate aumenta il grasso nel fegato in modo misurabile. La frutta intera no, anzi: li\u2019 fibra e polifenoli sembrano proteggere.',
+      },
+      {
+        id: 'mediterraneo',
+        verso: 'piu_spesso',
+        alimenti: ['Olio extravergine di oliva', 'Merluzzo', 'Salmone fresco', 'Lenticchie lessate', 'Broccoli', 'Noci'],
+        cosaFa: 'Olio d\u2019oliva, pesce, legumi, verdura e frutta secca escono piu\u2019 spesso.',
+        quantoSiSa:
+          'La dieta mediterranea e\u2019 quella consigliata per la steatosi, ed e\u2019 stata provata su due anni con miglioramenti veri. Va detto pero\u2019 che la leva piu\u2019 forte resta il peso: perdere il 5-10% fa piu\u2019 di qualsiasi singolo alimento.',
+      },
+    ],
+  },
+  {
+    id: 'stitichezza',
+    nome: 'Stitichezza',
+    spiega: 'Fa uscire piu\u2019 spesso quello che nelle prove funziona davvero.',
+    regole: [
+      {
+        id: 'kiwi',
+        verso: 'piu_spesso',
+        alimenti: ['Kiwi', 'Prugne'],
+        cosaFa: 'Kiwi e prugne escono piu\u2019 spesso.',
+        quantoSiSa:
+          'Il kiwi e\u2019 la cosa meglio dimostrata che si possa fare a tavola: nelle linee guida dietetiche britanniche del 2025 regge il confronto con lo psillio sulla consistenza, ed e\u2019 quello che la gente smette di prendere meno spesso - il 7% contro il 38% dello psillio.',
+      },
+      {
+        id: 'fibra',
+        verso: 'piu_spesso',
+        alimenti: ['Pane di segale', 'Orzo perlato', 'Ceci lessati', 'Fagioli borlotti', 'Carciofi'],
+        cosaFa: 'Segale, cereali integrali e legumi escono piu\u2019 spesso.',
+        quantoSiSa:
+          'Il pane di segale e\u2019 fra i pochi alimenti singoli che le linee guida nominano per nome. Resta vero che senza bere di piu\u2019 la fibra da sola puo\u2019 peggiorare le cose, e l\u2019acqua l\u2019app non te la puo\u2019 versare.',
+      },
+    ],
+  },
 ]
 
 export function condizione(id: string): Condizione | null {
