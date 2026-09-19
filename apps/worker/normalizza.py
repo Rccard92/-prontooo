@@ -37,6 +37,30 @@ PER_BLOCCO = int(os.environ.get("RICETTE_PER_BLOCCO", "20"))
 BLOCCHI_PER_GIRO = int(os.environ.get("BLOCCHI_PER_GIRO", "5"))
 
 
+def _rimetti_in_coda(base: str, segreto: str) -> str:
+    """Chiede al web di rimettere in coda le ricette lette ma non convertite.
+
+    Attrezzo da officina, come il sondaggio delle fonti: si accende con
+    RIMETTI_IN_CODA, si legge quante ne sono tornate in coda, si spegne. Serve
+    quando il vocabolario si allarga - una ricetta ferma su "pangrattato"
+    merita un secondo tentativo adesso che il pangrattato lo conosciamo.
+    """
+    try:
+        risposta = httpx.post(
+            f"{base.rstrip('/')}/api/interno/normalizza",
+            headers={"x-segreto-interno": segreto},
+            json={"rileggi": True},
+            timeout=120,
+        )
+    except httpx.HTTPError as errore:
+        return f"rimessa in coda non chiesta: {errore}"
+
+    if risposta.status_code != 200:
+        return f"rimessa in coda: il web ha risposto {risposta.status_code}"
+
+    return f"rimesse in coda {risposta.json().get('rimesseInCoda', 0)} ricette"
+
+
 def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     """Un blocco solo. Torna il messaggio e quante ne restano, se si sa."""
     try:
@@ -100,6 +124,11 @@ def bussa() -> str:
 
     righe: list[str] = []
     prima = None
+
+    # Prima di leggere, non dopo: cosi' quelle rimesse in coda le prende
+    # questo stesso giro invece del prossimo.
+    if os.environ.get("RIMETTI_IN_CODA", "").strip().lower() in ("1", "si", "true", "on"):
+        righe.append(_rimetti_in_coda(base, segreto))
 
     for _ in range(BLOCCHI_PER_GIRO):
         messaggio, restanti = _un_blocco(base, segreto)
