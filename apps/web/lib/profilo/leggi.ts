@@ -28,6 +28,14 @@ export const PROFILO_PREDEFINITO: Omit<Profilo, 'aggiornatoIl' | 'id' | 'utenteI
   impostazione: 'equilibrata',
   alimentiScelti: [],
   settimaneAntiRipetizione: 3,
+  // I dati del corpo restano vuoti finche' non li dai tu: senza, le porzioni
+  // sono quelle di riferimento del vocabolario.
+  sesso: null,
+  eta: null,
+  altezza: null,
+  pesoKg: null,
+  attivita: null,
+  obiettivo: null,
 }
 
 export async function leggiProfilo(utenteId: number): Promise<Profilo | null> {

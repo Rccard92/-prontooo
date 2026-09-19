@@ -1,0 +1,1918 @@
+{
+  "id": "fbdd60e2-9ea3-4735-8e48-b9d592aaf3ee",
+  "prevId": "797a1f29-4c96-424e-aa85-e390bef6f944",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.alimenti": {
+      "name": "alimenti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gruppo": {
+          "name": "gruppo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ruoli": {
+          "name": "ruoli",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "fasce": {
+          "name": "fasce",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "quantita": {
+          "name": "quantita",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unita": {
+          "name": "unita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etichette": {
+          "name": "etichette",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "kcal": {
+          "name": "kcal",
+          "type": "numeric(7, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proteine": {
+          "name": "proteine",
+          "type": "numeric(7, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "carboidrati": {
+          "name": "carboidrati",
+          "type": "numeric(7, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "grassi": {
+          "name": "grassi",
+          "type": "numeric(7, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fibre": {
+          "name": "fibre",
+          "type": "numeric(7, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reparto": {
+          "name": "reparto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mesi_stagione": {
+          "name": "mesi_stagione",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        }
+      },
+      "indexes": {
+        "alimenti_nome_idx": {
+          "name": "alimenti_nome_idx",
+          "columns": [
+            {
+              "expression": "nome",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.allergeni": {
+      "name": "allergeni",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "codice": {
+          "name": "codice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "allergeni_codice_idx": {
+          "name": "allergeni_codice_idx",
+          "columns": [
+            {
+              "expression": "codice",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.battiti": {
+      "name": "battiti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "servizio": {
+          "name": "servizio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messaggio": {
+          "name": "messaggio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registrato_il": {
+          "name": "registrato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.dispensa": {
+      "name": "dispensa",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alimento_id": {
+          "name": "alimento_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantita": {
+          "name": "quantita",
+          "type": "numeric(8, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unita": {
+          "name": "unita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'g'"
+        },
+        "aggiornato_il": {
+          "name": "aggiornato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "dispensa_alimento_idx": {
+          "name": "dispensa_alimento_idx",
+          "columns": [
+            {
+              "expression": "utente_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "alimento_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "dispensa_utente_id_utenti_id_fk": {
+          "name": "dispensa_utente_id_utenti_id_fk",
+          "tableFrom": "dispensa",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "dispensa_alimento_id_alimenti_id_fk": {
+          "name": "dispensa_alimento_id_alimenti_id_fk",
+          "tableFrom": "dispensa",
+          "tableTo": "alimenti",
+          "columnsFrom": [
+            "alimento_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.giornata_pasti": {
+      "name": "giornata_pasti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "giornata_id": {
+          "name": "giornata_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fascia": {
+          "name": "fascia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stato": {
+          "name": "stato",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'previsto'"
+        },
+        "bloccato": {
+          "name": "bloccato",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "previsti": {
+          "name": "previsti",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "consumati": {
+          "name": "consumati",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "ricetta_libro": {
+          "name": "ricetta_libro",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registrato_il": {
+          "name": "registrato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "giornata_pasti_posto_idx": {
+          "name": "giornata_pasti_posto_idx",
+          "columns": [
+            {
+              "expression": "giornata_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fascia",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "giornata_pasti_giornata_id_giornate_id_fk": {
+          "name": "giornata_pasti_giornata_id_giornate_id_fk",
+          "tableFrom": "giornata_pasti",
+          "tableTo": "giornate",
+          "columnsFrom": [
+            "giornata_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.giornate": {
+      "name": "giornate",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo_giorno": {
+          "name": "tipo_giorno",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'standard'"
+        },
+        "lista_id": {
+          "name": "lista_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "obiettivo": {
+          "name": "obiettivo",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"kcal\":0,\"proteine\":0,\"carboidrati\":0,\"grassi\":0}'::jsonb"
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "giornate_data_idx": {
+          "name": "giornate_data_idx",
+          "columns": [
+            {
+              "expression": "utente_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "data",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "giornate_utente_id_utenti_id_fk": {
+          "name": "giornate_utente_id_utenti_id_fk",
+          "tableFrom": "giornate",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "giornate_lista_id_liste_id_fk": {
+          "name": "giornate_lista_id_liste_id_fk",
+          "tableFrom": "giornate",
+          "tableTo": "liste",
+          "columnsFrom": [
+            "lista_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ingrediente_allergene": {
+      "name": "ingrediente_allergene",
+      "schema": "",
+      "columns": {
+        "ingrediente_id": {
+          "name": "ingrediente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "allergene_id": {
+          "name": "allergene_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "certezza": {
+          "name": "certezza",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'certo'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ingrediente_allergene_ingrediente_id_ingredienti_canonici_id_fk": {
+          "name": "ingrediente_allergene_ingrediente_id_ingredienti_canonici_id_fk",
+          "tableFrom": "ingrediente_allergene",
+          "tableTo": "ingredienti_canonici",
+          "columnsFrom": [
+            "ingrediente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ingrediente_allergene_allergene_id_allergeni_id_fk": {
+          "name": "ingrediente_allergene_allergene_id_allergeni_id_fk",
+          "tableFrom": "ingrediente_allergene",
+          "tableTo": "allergeni",
+          "columnsFrom": [
+            "allergene_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "ingrediente_allergene_ingrediente_id_allergene_id_pk": {
+          "name": "ingrediente_allergene_ingrediente_id_allergene_id_pk",
+          "columns": [
+            "ingrediente_id",
+            "allergene_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ingredienti_canonici": {
+      "name": "ingredienti_canonici",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reparto": {
+          "name": "reparto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mesi_stagione": {
+          "name": "mesi_stagione",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ingredienti_canonici_nome_idx": {
+          "name": "ingredienti_canonici_nome_idx",
+          "columns": [
+            {
+              "expression": "nome",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.iscrizioni_push": {
+      "name": "iscrizioni_push",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "p256dh": {
+          "name": "p256dh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth": {
+          "name": "auth",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "creata_il": {
+          "name": "creata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "iscrizioni_push_endpoint_idx": {
+          "name": "iscrizioni_push_endpoint_idx",
+          "columns": [
+            {
+              "expression": "endpoint",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "iscrizioni_push_utente_id_utenti_id_fk": {
+          "name": "iscrizioni_push_utente_id_utenti_id_fk",
+          "tableFrom": "iscrizioni_push",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lista_voci": {
+      "name": "lista_voci",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "lista_id": {
+          "name": "lista_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "giorno": {
+          "name": "giorno",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'standard'"
+        },
+        "fascia": {
+          "name": "fascia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "riga": {
+          "name": "riga",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordine": {
+          "name": "ordine",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "alimento_id": {
+          "name": "alimento_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "testo_grezzo": {
+          "name": "testo_grezzo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantita": {
+          "name": "quantita",
+          "type": "numeric(8, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unita": {
+          "name": "unita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'g'"
+        }
+      },
+      "indexes": {
+        "lista_voci_lista_idx": {
+          "name": "lista_voci_lista_idx",
+          "columns": [
+            {
+              "expression": "lista_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "giorno",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fascia",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "lista_voci_lista_id_liste_id_fk": {
+          "name": "lista_voci_lista_id_liste_id_fk",
+          "tableFrom": "lista_voci",
+          "tableTo": "liste",
+          "columnsFrom": [
+            "lista_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "lista_voci_alimento_id_alimenti_id_fk": {
+          "name": "lista_voci_alimento_id_alimenti_id_fk",
+          "tableFrom": "lista_voci",
+          "tableTo": "alimenti",
+          "columnsFrom": [
+            "alimento_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.liste": {
+      "name": "liste",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origine": {
+          "name": "origine",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manuale'"
+        },
+        "data_visita": {
+          "name": "data_visita",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attiva": {
+          "name": "attiva",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "liste_utente_id_utenti_id_fk": {
+          "name": "liste_utente_id_utenti_id_fk",
+          "tableFrom": "liste",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.offerte": {
+      "name": "offerte",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "volantino_id": {
+          "name": "volantino_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "riga_grezza": {
+          "name": "riga_grezza",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome_grezzo": {
+          "name": "nome_grezzo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "marca": {
+          "name": "marca",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "formato": {
+          "name": "formato",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prezzo": {
+          "name": "prezzo",
+          "type": "numeric(8, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prezzo_unitario": {
+          "name": "prezzo_unitario",
+          "type": "numeric(8, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unita_prezzo": {
+          "name": "unita_prezzo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alimento_id": {
+          "name": "alimento_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidenza": {
+          "name": "confidenza",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "confermato": {
+          "name": "confermato",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "offerte_volantino_idx": {
+          "name": "offerte_volantino_idx",
+          "columns": [
+            {
+              "expression": "volantino_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "offerte_alimento_idx": {
+          "name": "offerte_alimento_idx",
+          "columns": [
+            {
+              "expression": "alimento_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "offerte_volantino_id_volantini_id_fk": {
+          "name": "offerte_volantino_id_volantini_id_fk",
+          "tableFrom": "offerte",
+          "tableTo": "volantini",
+          "columnsFrom": [
+            "volantino_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "offerte_alimento_id_alimenti_id_fk": {
+          "name": "offerte_alimento_id_alimenti_id_fk",
+          "tableFrom": "offerte",
+          "tableTo": "alimenti",
+          "columnsFrom": [
+            "alimento_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pesi": {
+      "name": "pesi",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kg": {
+          "name": "kg",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "pesi_data_idx": {
+          "name": "pesi_data_idx",
+          "columns": [
+            {
+              "expression": "utente_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "data",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pesi_utente_id_utenti_id_fk": {
+          "name": "pesi_utente_id_utenti_id_fk",
+          "tableFrom": "pesi",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.profilo": {
+      "name": "profilo",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adulti": {
+          "name": "adulti",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "bambini": {
+          "name": "bambini",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "porzioni_default": {
+          "name": "porzioni_default",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "fasce_attive": {
+          "name": "fasce_attive",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "giorni_fuori_pranzo": {
+          "name": "giorni_fuori_pranzo",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "minuti_massimi": {
+          "name": "minuti_massimi",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "da_evitare": {
+          "name": "da_evitare",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "esclusioni": {
+          "name": "esclusioni",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "impostazione": {
+          "name": "impostazione",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'equilibrata'"
+        },
+        "alimenti_scelti": {
+          "name": "alimenti_scelti",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "settimane_anti_ripetizione": {
+          "name": "settimane_anti_ripetizione",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "sesso": {
+          "name": "sesso",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eta": {
+          "name": "eta",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "altezza": {
+          "name": "altezza",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peso_kg": {
+          "name": "peso_kg",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attivita": {
+          "name": "attivita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "obiettivo": {
+          "name": "obiettivo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aggiornato_il": {
+          "name": "aggiornato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "profilo_utente_id_utenti_id_fk": {
+          "name": "profilo_utente_id_utenti_id_fk",
+          "tableFrom": "profilo",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.promemoria_mandati": {
+      "name": "promemoria_mandati",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "genere": {
+          "name": "genere",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mandato_il": {
+          "name": "mandato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "promemoria_genere_data_idx": {
+          "name": "promemoria_genere_data_idx",
+          "columns": [
+            {
+              "expression": "utente_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "genere",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "data",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "promemoria_mandati_utente_id_utenti_id_fk": {
+          "name": "promemoria_mandati_utente_id_utenti_id_fk",
+          "tableFrom": "promemoria_mandati",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ricetta_ingredienti": {
+      "name": "ricetta_ingredienti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ricetta_id": {
+          "name": "ricetta_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posizione": {
+          "name": "posizione",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "riga_grezza": {
+          "name": "riga_grezza",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantita": {
+          "name": "quantita",
+          "type": "numeric(10, 3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unita": {
+          "name": "unita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ingrediente_canonico_id": {
+          "name": "ingrediente_canonico_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ricetta_ingredienti_ricetta_idx": {
+          "name": "ricetta_ingredienti_ricetta_idx",
+          "columns": [
+            {
+              "expression": "ricetta_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ricetta_ingredienti_ricetta_id_ricette_id_fk": {
+          "name": "ricetta_ingredienti_ricetta_id_ricette_id_fk",
+          "tableFrom": "ricetta_ingredienti",
+          "tableTo": "ricette",
+          "columnsFrom": [
+            "ricetta_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ricetta_ingredienti_ingrediente_canonico_id_ingredienti_canonici_id_fk": {
+          "name": "ricetta_ingredienti_ingrediente_canonico_id_ingredienti_canonici_id_fk",
+          "tableFrom": "ricetta_ingredienti",
+          "tableTo": "ingredienti_canonici",
+          "columnsFrom": [
+            "ingrediente_canonico_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ricette": {
+      "name": "ricette",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "titolo": {
+          "name": "titolo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fonte_url": {
+          "name": "fonte_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fonte_nome": {
+          "name": "fonte_nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "immagine_url": {
+          "name": "immagine_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descrizione": {
+          "name": "descrizione",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minuti_preparazione": {
+          "name": "minuti_preparazione",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minuti_cottura": {
+          "name": "minuti_cottura",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minuti_totali": {
+          "name": "minuti_totali",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "porzioni": {
+          "name": "porzioni",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "difficolta": {
+          "name": "difficolta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria_fonte": {
+          "name": "categoria_fonte",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ruolo": {
+          "name": "ruolo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fasce": {
+          "name": "fasce",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "passaggi": {
+          "name": "passaggi",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "normalizzata_il": {
+          "name": "normalizzata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "importata_il": {
+          "name": "importata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ricette_fonte_url_idx": {
+          "name": "ricette_fonte_url_idx",
+          "columns": [
+            {
+              "expression": "fonte_url",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ricette_titolo_idx": {
+          "name": "ricette_titolo_idx",
+          "columns": [
+            {
+              "expression": "titolo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.spesa_spuntati": {
+      "name": "spesa_spuntati",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "utente_id": {
+          "name": "utente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "settimana": {
+          "name": "settimana",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alimento_id": {
+          "name": "alimento_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "voce_libera": {
+          "name": "voce_libera",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spuntato": {
+          "name": "spuntato",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {
+        "spesa_spuntati_settimana_idx": {
+          "name": "spesa_spuntati_settimana_idx",
+          "columns": [
+            {
+              "expression": "utente_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "settimana",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "spesa_spuntati_utente_id_utenti_id_fk": {
+          "name": "spesa_spuntati_utente_id_utenti_id_fk",
+          "tableFrom": "spesa_spuntati",
+          "tableTo": "utenti",
+          "columnsFrom": [
+            "utente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "spesa_spuntati_alimento_id_alimenti_id_fk": {
+          "name": "spesa_spuntati_alimento_id_alimenti_id_fk",
+          "tableFrom": "spesa_spuntati",
+          "tableTo": "alimenti",
+          "columnsFrom": [
+            "alimento_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.utenti": {
+      "name": "utenti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ultimo_accesso": {
+          "name": "ultimo_accesso",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "utenti_email_idx": {
+          "name": "utenti_email_idx",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.volantini": {
+      "name": "volantini",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "insegna": {
+          "name": "insegna",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "punto_vendita": {
+          "name": "punto_vendita",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valido_dal": {
+          "name": "valido_dal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valido_al": {
+          "name": "valido_al",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nome_file": {
+          "name": "nome_file",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caricato_il": {
+          "name": "caricato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "volantini_validita_idx": {
+          "name": "volantini_validita_idx",
+          "columns": [
+            {
+              "expression": "valido_al",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -231,6 +231,17 @@ export const profilo = pgTable('profilo', {
   // Gli alimenti che vuoi usare questa settimana: il piano pesca prima da qui.
   alimentiScelti: jsonb('alimenti_scelti').$type<number[]>().notNull().default([]),
   settimaneAntiRipetizione: integer('settimane_anti_ripetizione').notNull().default(3),
+  // I dati del corpo servono a calcolare le porzioni invece di indovinarle.
+  // Sono facoltativi: senza, restano le porzioni di riferimento del
+  // vocabolario, e l'app funziona lo stesso.
+  sesso: text('sesso'),
+  eta: integer('eta'),
+  altezza: integer('altezza'),
+  pesoKg: numeric('peso_kg', { precision: 5, scale: 2 }),
+  // sedentario, leggero, moderato, attivo, molto_attivo
+  attivita: text('attivita'),
+  // mantenere, dimagrire, massa
+  obiettivo: text('obiettivo'),
   aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
 })
 

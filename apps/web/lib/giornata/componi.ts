@@ -11,12 +11,14 @@ import {
 import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
 
 import { type VoceConAlimento, vociDi, listaAttiva, righePerFascia } from '../lista/archivio'
+import { leggiProfilo } from '../profilo/leggi'
+import { type DatiCorpo, datiCompleti, fabbisognoDi, kcalPerFascia } from '../nutrizione/fabbisogno'
 import { pesiDiScelta, scegliPesato } from '../nutrizione/preferenze'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '../lista/modello'
 import { FASCE } from '../ricette/fasce'
 
 import { MOLTIPLICATORI, type Componente, type TipoGiorno, nutrientiConsumati } from './modello'
-import { ricalibra, type PastoDaRicalibrare } from './ricalibra'
+import { ricalibra, scalaComponenti, type PastoDaRicalibrare } from './ricalibra'
 
 export function oggi(): string {
   const romana = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }))
@@ -69,7 +71,11 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
 
   if (!lista) return null
 
-  const [voci, pesi] = await Promise.all([vociDi(utenteId, lista.id), pesiDiScelta(utenteId)])
+  const [voci, pesi, impostazioni] = await Promise.all([
+    vociDi(utenteId, lista.id),
+    pesiDiScelta(utenteId),
+    leggiProfilo(utenteId),
+  ])
   const moltiplicatori = MOLTIPLICATORI[tipoGiorno]
   const mese = meseCorrente()
 
@@ -110,24 +116,62 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
     return { fascia, componenti }
   }).filter((p) => p.componenti.length > 0)
 
-  const obiettivo = arrotonda(
-    sommaNutrienti(
-      FASCE.map((fascia) => {
-        const base = obiettivoDa(righeDiStagione(fascia))
-        // L'obiettivo del giorno tiene conto del tipo di giorno, altrimenti un
-        // giorno ON risulterebbe sempre sopra soglia.
-        const fattoreMedio = tipoGiorno === 'on' ? 1.12 : tipoGiorno === 'off' ? 0.92 : 1
+  const corpo: Partial<DatiCorpo> = {
+    sesso: (impostazioni?.sesso ?? undefined) as DatiCorpo['sesso'] | undefined,
+    eta: impostazioni?.eta ?? undefined,
+    altezza: impostazioni?.altezza ?? undefined,
+    pesoKg: impostazioni?.pesoKg === null ? undefined : Number(impostazioni?.pesoKg),
+    attivita: (impostazioni?.attivita ?? undefined) as DatiCorpo['attivita'] | undefined,
+    obiettivo: (impostazioni?.obiettivo ?? undefined) as DatiCorpo['obiettivo'] | undefined,
+  }
 
-        return {
-          kcal: base.kcal * fattoreMedio,
-          proteine: base.proteine,
-          carboidrati: base.carboidrati * fattoreMedio,
-          grassi: base.grassi * (tipoGiorno === 'on' ? 0.85 : 1),
-          fibre: base.fibre,
-        }
-      }),
-    ),
-  )
+  const fattoreGiorno = tipoGiorno === 'on' ? 1.12 : tipoGiorno === 'off' ? 0.92 : 1
+
+  // Se sappiamo com'e' fatto il tuo corpo, le porzioni smettono di essere
+  // quelle generiche del vocabolario e diventano le tue: si compone col
+  // riferimento e poi si scala ogni pasto sulle kcal che gli spettano.
+  const fabbisogno = datiCompleti(corpo) ? fabbisognoDi(corpo, fattoreGiorno) : null
+
+  if (fabbisogno) {
+    const bersagli = kcalPerFascia(
+      fabbisogno.giornaliero,
+      pasti.map((p) => p.fascia),
+    )
+
+    for (const pasto of pasti) {
+      const bersaglio = bersagli.get(pasto.fascia)
+      const adesso = kcalDiComponenti(pasto.componenti, voci)
+
+      if (!bersaglio || adesso <= 0) continue
+
+      pasto.componenti = scalaComponenti(pasto.componenti, bersaglio / adesso)
+    }
+  }
+
+  const obiettivo = fabbisogno
+    ? {
+        kcal: fabbisogno.giornaliero,
+        proteine: fabbisogno.proteine,
+        carboidrati: fabbisogno.carboidrati,
+        grassi: fabbisogno.grassi,
+      }
+    : arrotonda(
+        sommaNutrienti(
+          FASCE.map((fascia) => {
+            const base = obiettivoDa(righeDiStagione(fascia))
+
+            // Senza i dati del corpo l'obiettivo e' la somma delle porzioni di
+            // riferimento, col solo aggiustamento del tipo di giorno.
+            return {
+              kcal: base.kcal * fattoreGiorno,
+              proteine: base.proteine,
+              carboidrati: base.carboidrati * fattoreGiorno,
+              grassi: base.grassi * (tipoGiorno === 'on' ? 0.85 : 1),
+              fibre: base.fibre,
+            }
+          }),
+        ),
+      )
 
   return { listaId: lista.id, pasti, obiettivo, scoperte }
 }
@@ -144,6 +188,24 @@ export async function scopertePerUtente(utenteId: number): Promise<Scoperta[]> {
   if (!lista) return []
 
   return scoperteDelMese(await vociDi(utenteId, lista.id), meseCorrente())
+}
+
+/**
+ * Le kcal di un pasto appena composto, senza tornare sul database.
+ *
+ * Gli alimenti stanno gia' dentro le voci della lista: rileggerli sarebbe una
+ * query per pasto per ogni generazione.
+ */
+function kcalDiComponenti(componenti: Componente[], voci: VoceConAlimento[]): number {
+  const per = new Map(
+    voci.filter((v) => v.alimento !== null).map((v) => [v.alimentoId, v.alimento]),
+  )
+
+  return componenti.reduce((totale, c) => {
+    const alimento = c.alimentoId === null ? null : (per.get(c.alimentoId) ?? null)
+
+    return totale + nutrientiDi(alimento, c.quantita).kcal
+  }, 0)
 }
 
 /** Le kcal di un elenco di componenti, leggendo gli alimenti dal database. */

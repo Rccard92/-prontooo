@@ -174,6 +174,20 @@ La scelta fra alternative non e' un caso cieco: `lib/nutrizione/preferenze.ts` l
 
 Le **sostituzioni equivalenti** (`lib/nutrizione/sostituzioni.ts`) rispondono a "non ho il pollo, ho il merluzzo". Non si cambia a peso - il merluzzo ha meno proteine, e 150 g di merluzzo al posto di 150 g di pollo perdono mezza porzione - si cambia a nutriente, e quale nutriente comanda dipende dal ruolo: proteina a proteine, base a carboidrati, grasso a grassi, verdura a peso perche' li' conta il volume.
 
+### Da quanto pesi a quanti grammi di pasta
+
+`apps/web/lib/nutrizione/fabbisogno.ts`. Le porzioni del vocabolario sono numeri di riferimento scritti a mano - 80 g di pasta, 150 g di pollo - ragionevoli per un adulto medio e **non** tarati su nessuno. Se il profilo ha i dati del corpo diventano le tue:
+
+1. **Mifflin-St Jeor** da' il metabolismo basale
+2. il **fattore di attivita'** porta al fabbisogno giornaliero
+3. l'**obiettivo** lo sposta (mantenere, dimagrire −15%, massa +10%), e il tipo di giorno pure
+4. il totale si divide fra i pasti con le quote classiche, **normalizzate sulle fasce che hai davvero**: chi non fa merenda non perde quel 10%, se lo vede ridistribuito
+5. ogni pasto si compone con le porzioni di riferimento e poi si scala col fattore che serve, riusando `scalaComponenti` della ricalibrazione - lo stesso pezzo che sa tagliare dai grassi prima che dalla proteina
+
+Due vincoli che non si toccano: **mai sotto il metabolismo basale**, e chi dimagrisce prende **piu'** proteine (1,8 g/kg contro 1,4), perche' in deficit la proteina e' quello che tiene il muscolo mentre il resto cala. I macro si fissano su due vincoli - proteine dal peso, grassi al 27% delle calorie - e i carboidrati prendono quello che resta: fissarne tre da' percentuali che poi non tornano.
+
+I dati del corpo sono **facoltativi** e si cancellano da `/corpo`. Senza, tutto funziona come prima. E l'app dice che e' una stima: una formula non vede gli esami.
+
 ### Le stagioni
 
 `packages/db/src/alimenti/stagioni.ts`, e vale per frutta e verdura e per nient'altro: la pasta non ha stagione, e mettere dodici mesi accanto a ogni scatoletta sarebbe rumore. Chi non compare nella tabella e' disponibile sempre - quello che arriva da lontano tutto l'anno (banane, ananas, limoni) non ha stagione **qui**, e quello che si conserva per mesi (mele, patate, cipolle) al banco c'e' davvero sempre.
