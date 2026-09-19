@@ -1,6 +1,6 @@
 # èProntooo
 
-Webapp personale di pianificazione pasti, lista della spesa e confronto offerte dei supermercati. Utente singolo, uso privato, non commerciale.
+Webapp di pianificazione pasti, lista della spesa e confronto offerte dei supermercati. Uso privato, non commerciale: poche persone che si conoscono, ognuna col suo pannello.
 
 La roadmap completa è in `ROADMAP.md`. Leggila prima di iniziare una fase nuova.
 
@@ -95,7 +95,9 @@ Il consiglio delle tappe e' prudente per scelta: due tappe si consigliano solo s
 
 I volantini li scarica il worker (`apps/worker/volantini.py`), dentro il ciclo che gia' gira: nessun servizio in piu' e nessun cron. Un volantino dura una settimana, quindi prima di muoversi si guarda in database se per quell'insegna ce n'e' gia' uno fresco - nel caso normale il giro costa una query. Il PDF non si legge nel worker: si passa a `POST /api/interno/volantino`, perche' il lettore deve restare uno solo, come per le ricette.
 
-Le pagine dei volantini cambiano spesso e il PDF non sta sempre nello stesso posto, quindi non si cerca un indirizzo preciso: si prende la pagina e si cercano **tutti** i link a un PDF, anche dentro i blob JSON, scartando informative e regolamenti. Quando una fonte smette di funzionare i log lo dicono con chiarezza invece di tacere, ed e' li' che si va a guardare.
+Le pagine dei volantini cambiano spesso e il PDF non sta sempre nello stesso posto, quindi non si cerca un indirizzo preciso: si prende la pagina e si cercano **tutti** i link a un PDF, anche dentro i blob JSON, scartando informative e regolamenti. Quando una fonte smette di funzionare i log lo dicono con chiarezza invece di tacere, ed e' li' che si va a guardare - il primo giro vero ha risposto 404 su tutte e tre le insegne, ed e' cosi' che l'ho saputo.
+
+**Quello che si e' visto provando davvero**: MD pubblica un PDF e si legge. Lidl ed Eurospin il volantino lo fanno solo sfogliare - nessun PDF in nessuna delle pagine, Lidl passa per `esi.leaflets.schwarz` - e per leggere i loro prezzi servirebbe guardare le immagini, cioe' la chiave. Per quelle insegne resta il caricamento a mano, e non e' pigrizia: non c'e' un file da scaricare.
 
 Conad non sta nel codice ma in `VOLANTINO_CONAD_URL`, e non e' pigrizia: e' una cooperativa, il volantino cambia per cooperativa regionale e per negozio, e scriverne uno fisso qui dentro vorrebbe dire mostrare prezzi che non sono quelli che paghi.
 
@@ -165,7 +167,7 @@ Questa e' la parte che regge l'app, ed e' stata rifatta dopo che il primo piano 
 Adesso il piano si costruisce dagli alimenti, in tre strati:
 
 1. **`alimenti`** — il vocabolario, in `packages/db/src/alimenti/vocabolario.ts` e seminato a ogni deploy. Ogni voce ha gruppo, ruoli che puo' coprire, fasce, porzione tipica ed **etichette** (lattosio, glutine, pane, maiale, carne rossa, pesce, uova, frutta a guscio, fritto, proteico, zuccheri)
-2. **La tua lista** — `liste` e `lista_voci`, riempite dal PDF del nutrizionista o a mano da `/ingredienti`. Ogni riga e' un posto in una fascia, con dentro le alternative equivalenti e i grammi
+2. **La tua lista** — `liste` e `lista_voci`, riempite dal PDF del nutrizionista oppure dalla spunta per categorie su `/ingredienti/gusti`. Ogni riga e' un posto in una fascia, con dentro le alternative equivalenti e i grammi. Dalla spunta la lista si costruisce da sola (`lib/lista/gusti.ts`), e ogni alimento finisce **solo nelle fasce che il vocabolario gli concede**: non e' un filtro messo dopo, la fettina non entra proprio nella colazione
 3. **Il compositore** — `apps/web/lib/giornata/componi.ts`. Per ogni riga della fascia pesca **una** alternativa e le applica il moltiplicatore del tipo di giorno
 
 La scelta fra alternative non e' un caso cieco: `lib/nutrizione/preferenze.ts` la inclina verso quello che mangi davvero (solo sopra `PASTI_MINIMI` pasti registrati - sotto, "mangi sempre il pollo" vuol dire che e' uscito due volte) e verso quello che e' in offerta questa settimana. I pesi cambiano **la frequenza, mai l'insieme**: le alternative restano quelle della tua lista, e un alimento con peso basso esce lo stesso ogni tanto, altrimenti dopo un mese mangeresti sempre le stesse quattro cose.
@@ -182,7 +184,7 @@ La compatibilita' ha tre livelli e non e' si'/no, perche' il si'/no butterebbe v
 
 `giornata_pasti.ricetta_libro` tiene quale hai scelto, cosi' "altra ricetta" non ricompone il pasto: i grammi restano quelli, cambia solo come li cucini. Ricomporre il pasto azzera la scelta.
 
-La ricetta del catalogo resta, sotto, come **spunto**: `ideaRicetta` cerca qualcosa che usi il componente principale, la corrispondenza e' sul testo grezzo, e si mostra come "spunto dal catalogo" e mai come prescrizione.
+Il catalogo raccolto dai siti **non** compare piu' nella scheda del giorno. Quelle ricette non sono normalizzate, quindi non si puo' garantire che non contengano quello che non ti piace - ed e' esattamente la garanzia che regge il ricettario. Restano sfogliabili su `/ricette`, come archivio.
 
 ### Esclusioni e impostazione sono due cose diverse
 
@@ -191,7 +193,7 @@ Non vanno mai mischiate nella stessa lista, ed e' questo che rendeva inutile la 
 - **Esclusioni** (`profilo.esclusioni`): etichette. Rigide. Un alimento che ne porta una non entra mai, in nessuno schema. Sono affidabili perche' l'etichetta sta sull'alimento
 - **Impostazione** (`profilo.impostazione`): una sola alla volta. Non toglie niente, sposta i moltiplicatori di porzione per ruolo. La proteica alza la proteina e abbassa la base, quella per dimagrire taglia i grassi ed esclude i fritti
 
-`profilo.alimentiScelti` sono gli ingredienti spuntati nel wizard: il compositore pesca prima da li'. Vuoto vuol dire "pesca da tutto", non "non pescare niente".
+`profilo.alimentiScelti` sono gli ingredienti spuntati su `/ingredienti/gusti`: la stessa spunta che costruisce la lista, e che serve poi a pesare le alternative e a proporre le sostituzioni.
 
 Due regole che restano finche' manca la chiave:
 
