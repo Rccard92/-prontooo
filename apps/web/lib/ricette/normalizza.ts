@@ -159,11 +159,19 @@ export function abbinaAlVocabolario(
   vocabolario: VoceVocabolario[],
 ): IngredienteRiconosciuto[] {
   const perNome = new Map(vocabolario.map((v) => [v.nome.toLowerCase(), v]))
+
+  // Le stesse parole in un altro ordine sono lo stesso alimento. Il modello
+  // a volte scrive "olio di oliva extravergine" perche' cosi' era scritto
+  // nella ricetta, e il vocabolario dice "Olio extravergine di oliva": prima
+  // quella riga finiva fra le sconosciute, e con lei cadeva tutta la ricetta.
+  const perParole = new Map(vocabolario.map((v) => [parole(v.nome), v]))
   const perPosizione = new Map(lette.map((l) => [l.posizione, l]))
 
   return righe.map((grezza, i) => {
     const letta = perPosizione.get(i)
-    const trovato = letta?.alimento ? perNome.get(letta.alimento.toLowerCase()) : undefined
+    const trovato = letta?.alimento
+      ? (perNome.get(letta.alimento.toLowerCase()) ?? perParole.get(parole(letta.alimento)))
+      : undefined
 
     // Una riga saltata dal modello, o un nome che nel vocabolario non c'e':
     // e' sconosciuta, non e' libera. La differenza conta - "libera" vuol dire
@@ -186,6 +194,24 @@ export function abbinaAlVocabolario(
       tipo: 'alimento' as const,
     }
   })
+}
+
+/**
+ * Le parole di un nome, in ordine alfabetico.
+ *
+ * Serve a far cadere "Olio extravergine di oliva" e "olio di oliva
+ * extravergine" sulla stessa chiave. Due voci del vocabolario con le stesse
+ * parole sarebbero un doppione, e un test gia' vieta i doppioni: quindi qui
+ * non si rischia di scambiare un alimento per un altro.
+ */
+export function parole(nome: string): string {
+  return nome
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .sort()
+    .join(' ')
 }
 
 function sconosciuto(grezza: string): IngredienteRiconosciuto {

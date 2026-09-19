@@ -1,4 +1,4 @@
-import { asc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 
 import { alimenti, db, ricettaIngredienti, ricette } from '@prontooo/db'
 
@@ -107,12 +107,29 @@ export function nocciolo(riga: string): string {
   )
 }
 
+/**
+ * Le ricette che vale la pena leggere.
+ *
+ * Non tutte: una ricetta con `fasce` vuota - un antipasto, un contorno, una
+ * bevanda, o una che non siamo riusciti a classificare - il piano non la
+ * propone **mai**, per costruzione. Leggerla vuol dire pagare un modello per
+ * un risultato che nessuno guardera'.
+ *
+ * Non si segnano nemmeno come lette: restano fuori portata e basta. Se un
+ * giorno la classificazione migliora e quella ricetta prende una fascia,
+ * rientra da sola nella coda senza che nessuno debba ricordarsene.
+ */
+const DA_LEGGERE = and(
+  isNull(ricette.normalizzataIl),
+  sql`jsonb_array_length(${ricette.fasce}) > 0`,
+)
+
 /** Quante ne restano da leggere: serve al worker per sapere quando smettere. */
 export async function daNormalizzare(): Promise<number> {
   const [riga] = await db()
     .select({ quante: sql<number>`count(*)::int` })
     .from(ricette)
-    .where(isNull(ricette.normalizzataIl))
+    .where(DA_LEGGERE)
 
   return riga?.quante ?? 0
 }
@@ -149,7 +166,7 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
   const daFare = await connessione
     .select({ id: ricette.id, titolo: ricette.titolo })
     .from(ricette)
-    .where(isNull(ricette.normalizzataIl))
+    .where(DA_LEGGERE)
     .orderBy(asc(ricette.id))
     .limit(Math.max(1, Math.min(quante, 50)))
 

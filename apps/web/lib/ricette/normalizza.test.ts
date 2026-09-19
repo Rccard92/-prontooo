@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { type VoceVocabolario, abbinaAlVocabolario } from './normalizza'
+import { VOCABOLARIO } from '@prontooo/db/alimenti'
+
+import { type VoceVocabolario, abbinaAlVocabolario, parole } from './normalizza'
 
 const VOCABOLARIO: VoceVocabolario[] = [
   { id: 1, nome: 'Pasta di semola', gruppo: 'cereale', ruoli: ['base'], etichette: ['glutine'] },
@@ -37,6 +39,30 @@ describe('abbinare le righe lette al vocabolario', () => {
     )
 
     assert.equal(esito[0]!.alimentoId, 3)
+  })
+
+  it('riconosce le stesse parole in un altro ordine', () => {
+    // Caso vero, preso dai log: la ricetta diceva "olio di oliva
+    // extravergine", il vocabolario dice "Olio extravergine di oliva", e
+    // quella riga faceva cadere tutta la ricetta.
+    const esito = abbinaAlVocabolario(
+      ['120 gr di olio di oliva extravergine'],
+      [{ posizione: 0, alimento: 'olio di oliva extravergine', grammi: 120, tipo: 'alimento' }],
+      VOCABOLARIO,
+    )
+
+    assert.equal(esito[0]!.alimentoId, 3)
+    assert.equal(esito[0]!.tipo, 'alimento')
+  })
+
+  it('non si fa ingannare dalla punteggiatura', () => {
+    const esito = abbinaAlVocabolario(
+      ['pasta'],
+      [{ posizione: 0, alimento: 'Pasta, di semola', grammi: 80, tipo: 'alimento' }],
+      VOCABOLARIO,
+    )
+
+    assert.equal(esito[0]!.alimentoId, 1)
   })
 
   it('un nome inventato diventa sconosciuto, non un alimento a caso', () => {
@@ -90,5 +116,26 @@ describe('abbinare le righe lette al vocabolario', () => {
     assert.equal(esito.length, 3)
     assert.equal(esito[2]!.alimentoId, 1)
     assert.equal(esito[0]!.tipo, 'sconosciuto')
+  })
+})
+
+describe('le parole di un nome', () => {
+  it('cadono sulla stessa chiave in qualunque ordine', () => {
+    assert.equal(parole('Olio extravergine di oliva'), parole('olio di oliva extravergine'))
+  })
+
+  it('nel vocabolario vero non fanno collidere due alimenti diversi', () => {
+    // E' la condizione che rende sicuro il confronto morbido: se due voci
+    // avessero le stesse parole, una riga finirebbe sull'alimento sbagliato
+    // e nessuno se ne accorgerebbe.
+    const viste = new Map<string, string>()
+
+    for (const alimento of VOCABOLARIO) {
+      const chiave = parole(alimento.nome)
+      const gia = viste.get(chiave)
+
+      assert.equal(gia, undefined, `"${alimento.nome}" e "${gia}" hanno le stesse parole`)
+      viste.set(chiave, alimento.nome)
+    }
   })
 })
