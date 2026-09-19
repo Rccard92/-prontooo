@@ -62,6 +62,20 @@ FONTI: list[Fonte] = [
     # browser, robots.txt compreso. Resta qui documentata ma disattivata:
     # insistere vorrebbe dire fingersi un browser, e non e' il caso.
     # Fonte(nome="fattoincasadabenedetta.it", ...)
+    #
+    # Sondate e promosse, adesso in catalogo a tutti gli effetti.
+    Fonte(
+        nome="cookaround.com",
+        radice="https://www.cookaround.com",
+        host=("www.cookaround.com", "cookaround.com"),
+        ripiego=("https://www.cookaround.com/sitemap.xml",),
+    ),
+    Fonte(
+        nome="melarossa.it",
+        radice="https://www.melarossa.it",
+        host=("www.melarossa.it", "melarossa.it"),
+        ripiego=("https://www.melarossa.it/sitemap_index.xml",),
+    ),
 ]
 
 
@@ -72,26 +86,7 @@ FONTI: list[Fonte] = [
 # sa leggere? - e si collega solo quella che passa. Il sondaggio sta in
 # `sonda.py` e gira solo quando SONDA_FONTI e' acceso, cosi' non costa niente
 # nei giri normali.
-CANDIDATE: list[Fonte] = [
-    Fonte(
-        nome="cookaround.com",
-        radice="https://www.cookaround.com",
-        host=("www.cookaround.com", "cookaround.com"),
-        ripiego=("https://www.cookaround.com/sitemap.xml",),
-    ),
-    Fonte(
-        nome="cucchiaio.it",
-        radice="https://www.cucchiaio.it",
-        host=("www.cucchiaio.it", "cucchiaio.it"),
-        ripiego=("https://www.cucchiaio.it/sitemap.xml",),
-    ),
-    Fonte(
-        nome="melarossa.it",
-        radice="https://www.melarossa.it",
-        host=("www.melarossa.it", "melarossa.it"),
-        ripiego=("https://www.melarossa.it/sitemap_index.xml",),
-    ),
-]
+CANDIDATE: list[Fonte] = []
 
 # Sondate e bocciate, con il motivo. Stanno scritte perche' il prossimo che
 # ci pensa non debba riprovarle da capo:

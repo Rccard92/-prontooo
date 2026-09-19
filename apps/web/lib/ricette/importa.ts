@@ -92,7 +92,7 @@ export async function importaDaUrl(indirizzo: string): Promise<EsitoImport> {
     }
   }
 
-  const { ruolo, fasce } = classifica(estratta.categoriaFonte, estratta.fonteUrl)
+  const { ruolo, fasce } = classifica(estratta.categoriaFonte, estratta.fonteUrl, estratta.titolo)
 
   // Il catalogo tiene solo quello che puo' reggere un pranzo o una cena. Il
   // filtro sta **qui**, dove la ricetta e' gia' classificata, e non nel

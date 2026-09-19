@@ -42,14 +42,23 @@ const FASCE_PER_RUOLO: Record<Ruolo, Fascia[]> = {
  * stanno prima. "torte salate" deve battere "torte".
  */
 const INDIZI: [RegExp, Ruolo][] = [
-  [/torte salate|rustici|quiche/, 'secondo'],
+  [/torte salate|torta salata|rustici|quiche|sformat/, 'secondo'],
   [/piatti unici|piatto unico|one pot/, 'piatto_unico'],
-  [/primi piatti|\bprimi\b|paste|\bpasta\b|risotti|risotto|zuppe|minestre|gnocchi|lasagne/, 'primo'],
-  [/secondi piatti|\bsecondi\b|carne|pesce|uova e frittate|frittate|spezzatin/, 'secondo'],
-  [/antipasti|antipasto|finger food|stuzzichini|aperitivo/, 'antipasto'],
-  [/contorni|contorno|insalate|verdure/, 'contorno'],
-  [/lievitati|pane|pizze|\bpizza\b|focacce|brioche|croissant|cornetti/, 'lievitato'],
-  [/dolci|dolce|dessert|torte|crostate|biscotti|budini|gelati|creme|marmellate/, 'dolce'],
+  [
+    /primi piatti|\bprimi\b|paste|\bpasta\b|risott|zupp|minestr|gnocchi|lasagne|vellutat|spaghett|penne|rigatoni|paccheri|tagliatelle|fusilli|orecchiette|ravioli|tortell|cannelloni|couscous|farro|orzott/,
+    'primo',
+  ],
+  [
+    /secondi piatti|\bsecondi\b|carne|pesce|uova e frittate|frittat|spezzatin|polpett|cotolett|scaloppin|arrost|brasat|straccett|hamburger|pollo|tacchino|manzo|vitello|maiale|agnello|coniglio|cinghiale|salmone|merluzzo|tonno|orata|branzino|gamber|calamar|cozze|vongole|seppie|polpo|baccal|stracotto|coda alla|spiedini/,
+    'secondo',
+  ],
+  [/antipasti|antipasto|finger food|stuzzichini|aperitivo|crostin|bruschett/, 'antipasto'],
+  [/contorni|contorno|insalat|verdure|patate al forno|puree/, 'contorno'],
+  [/lievitati|\bpane\b|pizze|\bpizza\b|focacc|brioche|croissant|cornetti|panini/, 'lievitato'],
+  [
+    /dolci|dolce|dessert|tort|crostat|biscott|budin|gelat|creme|marmellate|muffin|cheesecake|tiramis|panna cotta|frittelle dolci|ciambell|plumcake|pastiera|aspic/,
+    'dolce',
+  ],
   [/bevande|cocktail|drink|smoothie|centrifugat/, 'bevanda'],
   [/colazione|merenda/, 'lievitato'],
 ]
@@ -88,8 +97,18 @@ export type Classificazione = {
  * ma il piano non la usa, perche' proporre un contorno come cena e' peggio che
  * non proporre niente.
  */
-export function classifica(categoria: string | null, url: string): Classificazione {
-  const testo = [categoria ?? '', percorso(url)].join(' ').toLowerCase()
+export function classifica(
+  categoria: string | null,
+  url: string,
+  titolo: string | null = null,
+): Classificazione {
+  // Anche il **titolo**, e non e' un dettaglio. Il sondaggio di Cookaround
+  // l'ha reso evidente: i loro indirizzi sono `/ricetta/nome.html`, senza la
+  // sezione nel percorso, e se la fonte non dichiara la categoria restava
+  // solo il nulla. Cosi' "Cotolette di cinghiale" e "Zuppa rustica" - un
+  // secondo e un primo - finivano fra le non classificabili e venivano
+  // scartate dal catalogo. Il titolo invece c'e' sempre.
+  const testo = [categoria ?? '', percorso(url), titolo ?? ''].join(' ').toLowerCase()
 
   for (const [indizio, ruolo] of INDIZI) {
     if (indizio.test(testo)) {

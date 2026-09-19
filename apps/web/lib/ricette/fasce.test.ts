@@ -80,3 +80,60 @@ describe('cosa tiene il catalogo', () => {
     assert.equal(daTenereInCatalogo(classifica('Torte salate', '').ruolo), true)
   })
 })
+
+describe('quando la fonte non dichiara la categoria', () => {
+  // I casi veri presi dal sondaggio di Cookaround: indirizzi tipo
+  // /ricetta/nome.html, nessuna sezione nel percorso, nessuna categoria.
+  // Prima finivano tutti fra le non classificabili e venivano scartati.
+  const daTitolo = (titolo: string, url: string) => classifica(null, url, titolo)
+
+  it('riconosce un secondo dal titolo', () => {
+    assert.equal(
+      daTitolo('Cotolette di cinghiale', 'https://www.cookaround.com/ricetta/cotolette-di-cinghiale.html')
+        .ruolo,
+      'secondo',
+    )
+    assert.equal(
+      daTitolo('Coda alla vaccinara', 'https://www.cookaround.com/ricetta/coda-alla-vaccinara.html')
+        .ruolo,
+      'secondo',
+    )
+    assert.equal(
+      daTitolo(
+        'Cosce di tacchino al forno con cipolle',
+        'https://www.cookaround.com/ricetta/cosce-di-tacchino-al-forno-con-cipolle.html',
+      ).ruolo,
+      'secondo',
+    )
+  })
+
+  it('riconosce un primo dal titolo', () => {
+    assert.equal(
+      daTitolo(
+        'Zuppa rustica con misticanza',
+        'https://www.cookaround.com/ricetta/Zuppa-rustica-con-misticanza.html',
+      ).ruolo,
+      'primo',
+    )
+    assert.equal(
+      daTitolo(
+        'Pasta risottata asparagi e zafferano',
+        'https://www.cookaround.com/ricetta/pasta-risottata-asparagi-zafferano-cremosa.html',
+      ).ruolo,
+      'primo',
+    )
+  })
+
+  it('tiene i dolci fuori anche quando arrivano dal titolo', () => {
+    assert.equal(daTitolo('Torta di rose', 'https://x.it/ricetta/Torta-di-rose.html').ruolo, 'dolce')
+    assert.equal(daTenereInCatalogo(daTitolo('Aspic di frutta', 'https://x.it/r.html').ruolo), false)
+  })
+
+  it('prende i singolari, non solo i plurali', () => {
+    // "zuppe" c'era, "zuppa" no. "focacce" c'era, "focaccia" no. Erano le
+    // parole che i titoli usano davvero.
+    assert.equal(classifica(null, '', 'Zuppa di ceci').ruolo, 'primo')
+    assert.equal(classifica(null, '', 'Focaccia con formaggio').ruolo, 'lievitato')
+    assert.equal(classifica(null, '', 'Frittata di zucchine').ruolo, 'secondo')
+  })
+})
