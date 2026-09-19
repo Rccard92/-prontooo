@@ -37,6 +37,11 @@ AGENTE = "Mozilla/5.0 (compatible; eProntoooBot/0.1; progetto personale)"
 # settimana; si riprova prima per non perdere il cambio.
 GIORNI_FRESCHEZZA = int(os.environ.get("VOLANTINI_GIORNI", "5"))
 
+# Dopo quante ore riprovare un volantino da cui non e' uscita nessuna offerta.
+# Sta in una variabile perche' quando aggiusto il lettore voglio poter dire
+# "riprova adesso" senza cancellare righe dal database a mano.
+ORE_RIPROVA_VUOTO = int(os.environ.get("VOLANTINI_RIPROVA_ORE", "24"))
+
 # Quanto puo' pesare un volantino. Sopra questa soglia non lo scarichiamo
 # nemmeno: e' un catalogo stagionale, non il volantino della settimana.
 MASSIMO_BYTE = 40 * 1024 * 1024
@@ -250,9 +255,11 @@ def gia_fresco(connessione: psycopg.Connection, insegna: str) -> bool:
             " where v.insegna = %s"
             "   and v.caricato_il > now() - make_interval("
             "         days => case when exists (select 1 from offerte o where o.volantino_id = v.id)"
-            "                      then %s else 1 end)"
+            "                      then %s else 0 end,"
+            "         hours => case when exists (select 1 from offerte o where o.volantino_id = v.id)"
+            "                      then 0 else %s end)"
             " limit 1",
-            (insegna, GIORNI_FRESCHEZZA),
+            (insegna, GIORNI_FRESCHEZZA, ORE_RIPROVA_VUOTO),
         )
         return cursore.fetchone() is not None
 
