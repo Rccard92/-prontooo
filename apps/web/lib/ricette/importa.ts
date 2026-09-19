@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { db, ricettaIngredienti, ricette } from '@prontooo/db'
 
-import { classifica } from './fasce'
+import { classifica, daTenereInCatalogo } from './fasce'
 import { estraiRicetta } from './jsonld'
 
 const AGENTE = 'Mozilla/5.0 (compatible; eProntoooBot/0.1; progetto personale)'
@@ -93,6 +93,19 @@ export async function importaDaUrl(indirizzo: string): Promise<EsitoImport> {
   }
 
   const { ruolo, fasce } = classifica(estratta.categoriaFonte, estratta.fonteUrl)
+
+  // Il catalogo tiene solo quello che puo' reggere un pranzo o una cena. Il
+  // filtro sta **qui**, dove la ricetta e' gia' classificata, e non nel
+  // worker: la tabella delle parole vive in `fasce.ts` e deve restare una
+  // sola, altrimenti fra un po' il worker e il web non sono piu' d'accordo su
+  // cos'e' un dolce.
+  if (!daTenereInCatalogo(ruolo)) {
+    return {
+      ok: false,
+      motivo: `Questa e' ${ruolo ?? 'una ricetta non classificabile'}: il catalogo tiene primi, secondi e piatti unici.`,
+    }
+  }
+
   const connessione = db()
 
   const [salvata] = await connessione

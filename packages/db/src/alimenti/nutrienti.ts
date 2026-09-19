@@ -334,6 +334,26 @@ const RIGHE: Riga[] = [
   ['Bevanda di riso', 47, 0.3, 9.5, 1, 0.2, 'dispensa'],
   ['Bevanda di cocco', 20, 0.1, 2.7, 0.9, 0, 'dispensa'],
   ['Patate novelle', 70, 1.9, 15.7, 0.1, 1.4, 'ortofrutta'],
+  // Aggiunti dopo i log della normalizzazione.
+  ['Pangrattato', 356, 12, 72, 2, 3, 'dispensa'],
+  ['Pane raffermo', 290, 9, 58, 1.5, 3.5, 'dispensa'],
+  ['Salsa di soia', 60, 6, 6, 0.1, 0, 'dispensa'],
+  ['Tuorlo', 325, 16, 0.6, 29, 0, 'frigo'],
+  ['Pancetta affumicata', 337, 15, 0.5, 31, 0, 'frigo'],
+  ['Guanciale', 655, 8, 0, 69, 0, 'frigo'],
+  ['Lardo', 891, 0, 0, 99, 0, 'frigo'],
+  ['Stracchino', 300, 18, 1.5, 25, 0, 'frigo'],
+  ['Crescenza', 281, 15, 2, 24, 0, 'frigo'],
+  ['Brie', 319, 19, 0.5, 27, 0, 'frigo'],
+  ['Asiago', 361, 25, 1, 29, 0, 'frigo'],
+  ['Formaggio spalmabile', 253, 6.5, 4, 23, 0, 'frigo'],
+  ['Funghi porcini', 26, 3.9, 1, 0.7, 2.5, 'ortofrutta'],
+  ['Friarielli', 32, 3.1, 2, 0.6, 3, 'ortofrutta'],
+  ['Cipolline borettane', 26, 1, 5.7, 0.1, 1, 'ortofrutta'],
+  ['Scalogno', 72, 2.5, 16.8, 0.1, 3.2, 'ortofrutta'],
+  ['Pomodori secchi', 258, 14, 43, 3, 12, 'dispensa'],
+  ['Fagioli di Spagna', 91, 6.4, 12, 0.5, 6.5, 'dispensa'],
+  ['Frutti di bosco', 45, 1, 9, 0.4, 5, 'ortofrutta'],
 ]
 
 export const NUTRIENTI = new Map<string, Nutrienti & { reparto: Reparto }>(

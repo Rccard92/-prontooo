@@ -341,4 +341,28 @@ export const VOCABOLARIO: VoceAlimento[] = [
   { nome: 'Bevanda di riso', gruppo: 'bevanda', ruoli: ['latticino'], fasce: ['colazione', 'merenda'], quantita: 200, unita: 'ml' },
   { nome: 'Bevanda di cocco', gruppo: 'bevanda', ruoli: ['latticino'], fasce: ['colazione', 'merenda'], quantita: 200, unita: 'ml' },
   { nome: 'Patate novelle', gruppo: 'tubero', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  // Arrivati dai log della normalizzazione: sono le righe che le ricette vere
+  // chiedevano e che qui dentro non c'erano. Ci stanno perche' portano
+  // un'etichetta - glutine, lattosio, maiale, uova - o perche' reggono un
+  // posto del piatto. Quello che insaporisce e basta - vino, aceto, capperi,
+  // brodo, concentrato - non sta qui: si scrive e non si pesa.
+  { nome: 'Pangrattato', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Pane raffermo', gruppo: 'pane', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['glutine', 'pane'] },
+  { nome: 'Salsa di soia', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 15, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Tuorlo', gruppo: 'uova', ruoli: ['proteina'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 35, unita: 'g', etichette: ['uova', 'proteico'] },
+  { nome: 'Pancetta affumicata', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['maiale', 'proteico'] },
+  { nome: 'Guanciale', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 40, unita: 'g', etichette: ['maiale', 'proteico'] },
+  { nome: 'Lardo', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 15, unita: 'g', etichette: ['maiale'] },
+  { nome: 'Stracchino', gruppo: 'latticino', ruoli: ['proteina', 'spalmabile'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Crescenza', gruppo: 'latticino', ruoli: ['proteina', 'spalmabile'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Brie', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Asiago', gruppo: 'latticino', ruoli: ['proteina', 'latticino'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Formaggio spalmabile', gruppo: 'latticino', ruoli: ['spalmabile'], fasce: ['colazione', 'merenda'], quantita: 40, unita: 'g', etichette: ['lattosio'] },
+  { nome: 'Funghi porcini', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Friarielli', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+  { nome: 'Cipolline borettane', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
+  { nome: 'Scalogno', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 40, unita: 'g' },
+  { nome: 'Pomodori secchi', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g' },
+  { nome: 'Fagioli di Spagna', gruppo: 'legume', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Frutti di bosco', gruppo: 'frutta', ruoli: ['frutta'], fasce: ['colazione', 'spuntino', 'merenda'], quantita: 120, unita: 'g' },
 ]

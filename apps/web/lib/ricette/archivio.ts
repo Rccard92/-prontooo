@@ -1,7 +1,8 @@
-import { and, asc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import { alimenti, db, ricettaIngredienti, ricette } from '@prontooo/db'
 
+import { RUOLI_IN_CATALOGO } from './fasce'
 import { chiaveConfigurata, leggiIngredienti } from './normalizza'
 import { converti } from './posti'
 
@@ -108,21 +109,49 @@ export function nocciolo(riga: string): string {
 }
 
 /**
- * Le ricette che vale la pena leggere.
+ * Le ricette che vale la pena leggere: primi, secondi e piatti unici.
  *
- * Non tutte: una ricetta con `fasce` vuota - un antipasto, un contorno, una
- * bevanda, o una che non siamo riusciti a classificare - il piano non la
- * propone **mai**, per costruzione. Leggerla vuol dire pagare un modello per
- * un risultato che nessuno guardera'.
+ * La stessa regola che tiene il catalogo pulito all'ingresso, applicata anche
+ * a quello che c'e' gia' dentro. Serve perche' le due cose non succedono
+ * insieme: il filtro all'ingresso vale da adesso, ma in catalogo restano le
+ * crostate raccolte prima, e leggerle sarebbe pagare per ricette che il piano
+ * non proporra' mai.
  *
  * Non si segnano nemmeno come lette: restano fuori portata e basta. Se un
- * giorno la classificazione migliora e quella ricetta prende una fascia,
- * rientra da sola nella coda senza che nessuno debba ricordarsene.
+ * giorno la classificazione migliora e una ricetta cambia ruolo, rientra da
+ * sola nella coda senza che nessuno debba ricordarsene.
  */
 const DA_LEGGERE = and(
   isNull(ricette.normalizzataIl),
-  sql`jsonb_array_length(${ricette.fasce}) > 0`,
+  inArray(ricette.ruolo, RUOLI_IN_CATALOGO),
 )
+
+/**
+ * Rimette in coda le ricette lette ma non convertite.
+ *
+ * Serve quando il vocabolario si allarga: una ricetta si era fermata su
+ * "pangrattato", adesso il pangrattato c'e', e quella ricetta merita un
+ * secondo tentativo. Rileggerla costa quanto la prima volta - due decimi di
+ * centesimo - e vale molto di piu'.
+ *
+ * Tocca solo quelle senza posti: le convertite stanno bene come sono, e
+ * rileggerle sarebbe pagare due volte per lo stesso risultato.
+ */
+export async function rimettiInCoda(): Promise<number> {
+  const rimesse = await db()
+    .update(ricette)
+    .set({ normalizzataIl: null })
+    .where(
+      and(
+        isNotNull(ricette.normalizzataIl),
+        inArray(ricette.ruolo, RUOLI_IN_CATALOGO),
+        sql`jsonb_array_length(${ricette.posti}) = 0`,
+      ),
+    )
+    .returning({ id: ricette.id })
+
+  return rimesse.length
+}
 
 /** Quante ne restano da leggere: serve al worker per sapere quando smettere. */
 export async function daNormalizzare(): Promise<number> {

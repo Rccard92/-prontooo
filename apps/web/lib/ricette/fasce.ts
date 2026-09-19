@@ -54,6 +54,26 @@ const INDIZI: [RegExp, Ruolo][] = [
   [/colazione|merenda/, 'lievitato'],
 ]
 
+/**
+ * I ruoli che il catalogo raccoglie.
+ *
+ * Solo quelli che possono reggere un pranzo o una cena. Fuori restano i dolci
+ * - scelta esplicita: la colazione l'app la compone dai tuoi alimenti, e un
+ * catalogo di crostate costava soldi da leggere per ricette che il piano non
+ * avrebbe proposto mai - e con loro i lievitati, gli antipasti, i contorni e
+ * le bevande, che un pasto da soli non lo fanno.
+ *
+ * Il primo giro vero l'ha reso evidente: su cento ricette lette, tredici
+ * entravano nel piano, e quasi tutte le altre erano torte. Il difetto non era
+ * nel leggerle, era nel raccoglierle.
+ */
+export const RUOLI_IN_CATALOGO: Ruolo[] = ['primo', 'secondo', 'piatto_unico']
+
+/** Questa ricetta puo' finire in catalogo, o e' roba che il piano non usa? */
+export function daTenereInCatalogo(ruolo: Ruolo | null): boolean {
+  return ruolo !== null && RUOLI_IN_CATALOGO.includes(ruolo)
+}
+
 export type Classificazione = {
   ruolo: Ruolo | null
   fasce: Fascia[]

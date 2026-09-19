@@ -98,7 +98,8 @@ ${elenco}
 
 REGOLE
 - "alimento": la riga e' uno di quelli del vocabolario. Scrivi il nome ESATTO come compare sopra, e i grammi convertiti (un cucchiaio d'olio = 10 g, uno spicchio d'aglio non si pesa, un uovo = 60 g, una scatola di pelati = 400 g).
-- "libero": la riga e' sale, pepe, aglio, erbe aromatiche, spezie, lievito, acqua. Si scrive e non si pesa: alimento null, grammi null.
+- "libero": la riga insaporisce e non fa il piatto. Sale, pepe, aglio, cipolla per il soffritto, erbe aromatiche, spezie, lievito, acqua, brodo, vino, aceto, limone spremuto, senape, capperi, olive per condire, concentrato di pomodoro, scorze, coloranti, estratti. Si scrive e non si pesa: alimento null, grammi null.
+  ATTENZIONE: non e' libero niente che porti glutine o lattosio - pangrattato, farina, pane, salsa di soia, panna, burro, formaggi. Quelli o stanno nel vocabolario o sono "sconosciuto".
 - "sconosciuto": la riga e' un alimento vero ma nel vocabolario non c'e' niente che gli somigli. Alimento null.
 
 Non forzare un abbinamento che non c'e': "sconosciuto" e' una risposta giusta, e una traduzione inventata e' peggio di un buco. Non scegliere un alimento che non sia scritto nel vocabolario qui sopra.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { classifica } from './fasce'
+import { RUOLI_IN_CATALOGO, classifica, daTenereInCatalogo } from './fasce'
 
 describe('classifica', () => {
   it('riconosce i primi e li mette a pranzo e a cena', () => {
@@ -39,5 +39,44 @@ describe('classifica', () => {
     const esito = classifica('Ricette della nonna', 'https://x.it/r/4231')
     assert.equal(esito.ruolo, null)
     assert.deepEqual(esito.fasce, [])
+  })
+})
+
+describe('cosa tiene il catalogo', () => {
+  it('tiene solo quello che puo’ reggere un pranzo o una cena', () => {
+    // La regola che deve valere sempre: se una ricetta entra in catalogo deve
+    // poter finire in un pasto vero. Altrimenti e' peso morto che occupa il
+    // budget del catalogo e che poi si paga per leggerlo.
+    for (const categoria of ['Primi piatti', 'Secondi piatti', 'Piatti unici', 'Torte salate']) {
+      const esito = classifica(categoria, '')
+
+      assert.ok(RUOLI_IN_CATALOGO.includes(esito.ruolo!), `${categoria} resta fuori dal catalogo`)
+      assert.ok(
+        esito.fasce.includes('pranzo') || esito.fasce.includes('cena'),
+        `${categoria} e' in catalogo ma non va ne' a pranzo ne' a cena`,
+      )
+    }
+  })
+
+  it('lascia fuori i dolci', () => {
+    // Scelta esplicita: la colazione l'app la compone dai tuoi alimenti, e un
+    // catalogo di crostate erano soldi da leggere per ricette mai proposte.
+    assert.equal(daTenereInCatalogo(classifica('Dolci', '').ruolo), false)
+    assert.equal(daTenereInCatalogo(classifica('Torte', '').ruolo), false)
+    assert.equal(daTenereInCatalogo(classifica('Biscotti', '').ruolo), false)
+  })
+
+  it('lascia fuori anche quello che un pasto non lo fa da solo', () => {
+    assert.equal(daTenereInCatalogo(classifica('Antipasti', '').ruolo), false)
+    assert.equal(daTenereInCatalogo(classifica('Contorni', '').ruolo), false)
+    assert.equal(daTenereInCatalogo(classifica('Bevande', '').ruolo), false)
+    assert.equal(daTenereInCatalogo(null), false)
+  })
+
+  it('tiene primi, secondi e piatti unici', () => {
+    assert.equal(daTenereInCatalogo(classifica('Primi piatti', '').ruolo), true)
+    assert.equal(daTenereInCatalogo(classifica('Secondi piatti', '').ruolo), true)
+    assert.equal(daTenereInCatalogo(classifica('Piatti unici', '').ruolo), true)
+    assert.equal(daTenereInCatalogo(classifica('Torte salate', '').ruolo), true)
   })
 })

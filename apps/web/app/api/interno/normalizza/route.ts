@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { daNormalizzare, normalizzaProssime } from '@/lib/ricette/archivio'
+import { daNormalizzare, normalizzaProssime, rimettiInCoda } from '@/lib/ricette/archivio'
 import { chiaveConfigurata } from '@/lib/ricette/normalizza'
 
 export const dynamic = 'force-dynamic'
@@ -38,15 +38,26 @@ export async function POST(richiesta: Request) {
   }
 
   let quante = PREDEFINITE
+  let rileggi = false
 
   try {
-    const corpo = (await richiesta.json()) as { quante?: unknown }
+    const corpo = (await richiesta.json()) as { quante?: unknown; rileggi?: unknown }
 
     if (typeof corpo.quante === 'number' && Number.isFinite(corpo.quante)) {
       quante = corpo.quante
     }
+
+    rileggi = corpo.rileggi === true
   } catch {
     // Corpo vuoto o illeggibile: va bene lo stesso, si usa il predefinito.
+  }
+
+  // Attrezzo da officina: dopo che il vocabolario si allarga, rimette in coda
+  // le ricette che si erano fermate su una parola che adesso conosciamo.
+  if (rileggi) {
+    const rimesse = await rimettiInCoda()
+
+    return NextResponse.json({ ok: true, rimesseInCoda: rimesse })
   }
 
   try {
