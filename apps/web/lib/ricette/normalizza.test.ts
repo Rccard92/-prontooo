@@ -139,3 +139,15 @@ describe('le parole di un nome', () => {
     }
   })
 })
+
+describe('le paroline e i numeri', () => {
+  it('ignora articoli e preposizioni, che cambiano da sito a sito', () => {
+    assert.equal(parole("Olio extravergine d'oliva"), parole('Olio extravergine di oliva'))
+  })
+
+  it('tiene i numeri, che invece distinguono', () => {
+    // Senza questa riga "Yogurt greco 5%" e "Yogurt greco 0%" cadono sulla
+    // stessa chiave e il piano ti da' l'uno per l'altro.
+    assert.notEqual(parole('Yogurt greco 5%'), parole('Yogurt greco 0%'))
+  })
+})

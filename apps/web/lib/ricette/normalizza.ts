@@ -210,7 +210,15 @@ export function parole(nome: string): string {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .split(/\s+/)
-    .filter(Boolean)
+    // Via le paroline: articoli e preposizioni non distinguono un alimento da
+    // un altro, e sono quelle che cambiano fra un sito e l'altro. "Olio
+    // extravergine d'oliva" e "Olio extravergine di oliva" differivano solo
+    // per "d" contro "di", e tanto bastava a perdere la ricetta.
+    //
+    // I numeri corti restano: li' la differenza e' tutta. Buttandoli, "Yogurt
+    // greco 5%" e "Yogurt greco 0%" cadevano sulla stessa chiave, e il piano
+    // ti avrebbe dato l'uno per l'altro. L'ha preso il test dei doppioni.
+    .filter((p) => p.length > 2 || /\d/.test(p))
     .sort()
     .join(' ')
 }
