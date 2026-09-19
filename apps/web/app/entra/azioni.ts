@@ -21,7 +21,7 @@ export async function iscriviti(dati: FormData) {
     String(dati.get('invito') ?? ''),
   )
 
-  redirect(esito.ok ? '/ingredienti' : `/registrati?errore=${encodeURIComponent(esito.motivo)}`)
+  redirect(esito.ok ? '/profilo?benvenuto=1' : `/registrati?errore=${encodeURIComponent(esito.motivo)}`)
 }
 
 export async function esciDallApp() {

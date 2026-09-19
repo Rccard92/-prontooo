@@ -5,6 +5,16 @@ import { db, profilo as tabellaProfilo } from '@prontooo/db'
 
 import { FASCE, NOME_FASCIA } from '@/lib/ricette/fasce'
 import { ESCLUSIONI, IMPOSTAZIONI } from '@/lib/nutrizione/impostazioni'
+import {
+  ATTIVITA,
+  type DatiCorpo,
+  NOME_ATTIVITA,
+  NOME_OBIETTIVO,
+  OBIETTIVI,
+  SESSI,
+  datiCompleti,
+  fabbisognoDi,
+} from '@/lib/nutrizione/fabbisogno'
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { GIORNI, PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/profilo/leggi'
 
@@ -18,8 +28,40 @@ function numero(dati: FormData, campo: string, predefinito: number): number {
   return Number.isFinite(valore) && valore >= 0 ? Math.round(valore) : predefinito
 }
 
+function decimale(dati: FormData, campo: string): number | null {
+  const grezzo = String(dati.get(campo) ?? '').replace(',', '.').trim()
+
+  if (grezzo.length === 0) return null
+
+  const n = Number(grezzo)
+
+  return Number.isFinite(n) ? n : null
+}
+
+function fraQuelli<T extends string>(valore: string, ammessi: readonly T[]): T | undefined {
+  return (ammessi as readonly string[]).includes(valore) ? (valore as T) : undefined
+}
+
 async function salva(dati: FormData) {
   'use server'
+
+  const corpo: Partial<DatiCorpo> = {
+    sesso: fraQuelli(String(dati.get('sesso') ?? ''), SESSI),
+    eta: decimale(dati, 'eta') ?? undefined,
+    altezza: decimale(dati, 'altezza') ?? undefined,
+    pesoKg: decimale(dati, 'peso') ?? undefined,
+    attivita: fraQuelli(String(dati.get('attivita') ?? ''), ATTIVITA),
+    obiettivo: fraQuelli(String(dati.get('obiettivo') ?? ''), OBIETTIVI),
+  }
+
+  // Senza questi non si calcola niente, e le porzioni tornerebbero a essere
+  // numeri generici: si ferma qui invece di salvare un profilo a meta'.
+  if (!datiCompleti(corpo)) {
+    redirect(
+      '/profilo?errore=' +
+        encodeURIComponent('Servono età, altezza e peso: da lì nascono le tue porzioni.'),
+    )
+  }
 
   const fasceAttive = FASCE.filter((f) => dati.get(`fascia-${f}`) === 'si')
 
@@ -62,6 +104,12 @@ async function salva(dati: FormData) {
     impostazione: IMPOSTAZIONI.some((i) => i.id === impostazione) ? impostazione : 'equilibrata',
     alimentiScelti: scelti,
     settimaneAntiRipetizione: numero(dati, 'antiRipetizione', 3),
+    sesso: corpo.sesso,
+    eta: corpo.eta,
+    altezza: corpo.altezza,
+    pesoKg: corpo.pesoKg.toFixed(2),
+    attivita: corpo.attivita,
+    obiettivo: corpo.obiettivo,
     aggiornatoIl: new Date(),
   }
 
@@ -70,7 +118,7 @@ async function salva(dati: FormData) {
     .values(valori)
     .onConflictDoUpdate({ target: tabellaProfilo.id, set: valori })
 
-  redirect('/?generato=1')
+  redirect(String(dati.get('poi') ?? '') === 'ingredienti' ? '/ingredienti/gusti' : '/profilo?salvato=1')
 }
 
 function Sezione({
@@ -138,7 +186,12 @@ const NOME_GRUPPO: Record<string, string> = {
   bevanda: 'Bevande',
 }
 
-export default async function Wizard() {
+export default async function Profilo({
+  searchParams,
+}: {
+  searchParams: Promise<{ errore?: string; salvato?: string; benvenuto?: string }>
+}) {
+  const { errore, salvato: appenaSalvato, benvenuto } = await searchParams
   const utenteId = await utenteObbligatorio()
   const salvato = await leggiProfilo(utenteId)
   const p = salvato ?? {
@@ -150,6 +203,18 @@ export default async function Wizard() {
   const alimenti = await leggiAlimenti()
   const scelti = new Set(p.alimentiScelti)
 
+  const corpo: Partial<DatiCorpo> = {
+    sesso: (p.sesso ?? undefined) as DatiCorpo['sesso'] | undefined,
+    eta: p.eta ?? undefined,
+    altezza: p.altezza ?? undefined,
+    pesoKg: p.pesoKg === null || p.pesoKg === undefined ? undefined : Number(p.pesoKg),
+    attivita: (p.attivita ?? undefined) as DatiCorpo['attivita'] | undefined,
+    obiettivo: (p.obiettivo ?? undefined) as DatiCorpo['obiettivo'] | undefined,
+  }
+
+  const conto = datiCompleti(corpo) ? fabbisognoDi(corpo) : null
+  const primaVolta = conto === null
+
   const perGruppo = new Map<string, typeof alimenti>()
   for (const a of alimenti) {
     perGruppo.set(a.gruppo, [...(perGruppo.get(a.gruppo) ?? []), a])
@@ -157,17 +222,135 @@ export default async function Wizard() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata />
+      <Testata attiva="profilo" />
 
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">
-          {salvato ? 'Le tue preferenze' : 'Due minuti e poi ci penso io'}
+          {primaVolta ? 'Prima di cominciare' : 'Il tuo profilo'}
         </h1>
-        <p className="mt-2 text-base text-fumo">
-          Da queste risposte nasce il piano della settimana. Puoi cambiarle quando vuoi.
+        <p className="mt-2 max-w-xl text-base text-fumo">
+          {primaVolta
+            ? 'Da qui nascono le tue porzioni e il piano. Senza questi dati i grammi sarebbero numeri generici, uguali per tutti.'
+            : 'Cambia quello che vuoi, quando vuoi: oggi vuoi perdere peso, fra un anno mantenere, e il piano si sposta con te.'}
         </p>
 
-        <form action={salva} className="mt-8 flex flex-col gap-5">
+        {errore ? (
+          <p className="rounded-controllo mt-5 bg-pomodoro-tenue px-4 py-3 text-sm text-pomodoro">
+            {errore}
+          </p>
+        ) : null}
+
+        {appenaSalvato ? (
+          <p className="rounded-controllo mt-5 bg-basilico-tenue px-4 py-3 text-sm text-basilico-scuro">
+            Salvato. I pasti si rifanno su questi numeri.
+          </p>
+        ) : null}
+
+        {conto ? (
+          <section className="scheda mt-6 p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-marchio text-xl text-inchiostro">Il tuo fabbisogno</h2>
+              <span className="cifre text-sm text-fumo">fermo: {conto.basale} kcal</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { nome: 'Kcal al giorno', valore: String(conto.giornaliero) },
+                { nome: 'Proteine', valore: `${conto.proteine} g` },
+                { nome: 'Carboidrati', valore: `${conto.carboidrati} g` },
+                { nome: 'Grassi', valore: `${conto.grassi} g` },
+              ].map((v) => (
+                <div key={v.nome} className="rounded-controllo bg-fondo px-4 py-3">
+                  <p className="cifre text-xl font-bold text-inchiostro">{v.valore}</p>
+                  <p className="text-sm text-fumo">{v.nome}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <form action={salva} className="mt-6 flex flex-col gap-5">
+          {benvenuto ? <input type="hidden" name="poi" value="ingredienti" /> : null}
+
+          <Sezione
+            titolo="Come sei fatto"
+            spiega="Serve a calcolare le porzioni invece di indovinarle. Resta nel tuo pannello e non lo vede nessun altro."
+          >
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="block text-sm font-semibold text-inchiostro">Sesso</span>
+                  <select name="sesso" defaultValue={corpo.sesso ?? 'uomo'} className={`${campo} mt-1.5`}>
+                    <option value="uomo">Uomo</option>
+                    <option value="donna">Donna</option>
+                  </select>
+                </label>
+                <Numero nome="eta" etichetta="Età" valore={corpo.eta ?? 30} max={100} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Numero nome="altezza" etichetta="Altezza in cm" valore={corpo.altezza ?? 175} max={230} />
+                <label className="block">
+                  <span className="block text-sm font-semibold text-inchiostro">Peso in kg</span>
+                  <input
+                    type="text"
+                    name="peso"
+                    inputMode="decimal"
+                    required
+                    defaultValue={corpo.pesoKg ?? ''}
+                    className={`${campo} cifre mt-1.5`}
+                  />
+                </label>
+              </div>
+
+              <fieldset>
+                <legend className="text-sm font-semibold text-inchiostro">Quanto ti muovi</legend>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {ATTIVITA.map((a) => (
+                    <label
+                      key={a}
+                      className="rounded-controllo flex cursor-pointer items-center gap-3 bg-fondo px-3 py-2"
+                    >
+                      <input
+                        type="radio"
+                        name="attivita"
+                        value={a}
+                        defaultChecked={(corpo.attivita ?? 'moderato') === a}
+                        className="size-4 accent-basilico"
+                      />
+                      <span className="text-sm text-inchiostro">{NOME_ATTIVITA[a]}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend className="text-sm font-semibold text-inchiostro">Cosa vuoi ottenere</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {OBIETTIVI.map((o) => (
+                    <label
+                      key={o}
+                      className="rounded-controllo flex cursor-pointer items-center gap-2 bg-fondo px-3 py-2"
+                    >
+                      <input
+                        type="radio"
+                        name="obiettivo"
+                        value={o}
+                        defaultChecked={(corpo.obiettivo ?? 'mantenere') === o}
+                        className="size-4 accent-basilico"
+                      />
+                      <span className="text-sm text-inchiostro">{NOME_OBIETTIVO[o]}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <p className="rounded-controllo bg-limone-tenue px-4 py-3 text-sm text-inchiostro">
+                Il conto è quello standard — Mifflin-St Jeor, il fattore di attività,
+                l&rsquo;obiettivo — e resta una stima: un nutrizionista guarda esami e storia, che
+                una formula non vede. Se hai una dieta vera, caricala e vince quella.
+              </p>
+            </div>
+          </Sezione>
           <Sezione titolo="Chi mangia">
             <div className="grid grid-cols-3 gap-4">
               <Numero nome="adulti" etichetta="Adulti" valore={p.adulti} />

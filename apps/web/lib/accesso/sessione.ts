@@ -229,3 +229,32 @@ export async function esci(): Promise<void> {
 export async function servelInvito(): Promise<boolean> {
   return (await quantiUtenti()) > 0
 }
+
+/**
+ * L'utente di questa richiesta, **col profilo compilato**.
+ *
+ * Chi non ha ancora dato i dati del corpo viene rimandato al profilo. Non e'
+ * burocrazia: senza quei numeri le porzioni sono generiche, e un'app che ti
+ * dice "mangia 80 g di pasta" senza sapere quanto pesi sta tirando a
+ * indovinare. Le pagine che compongono o mostrano un piano chiamano questa,
+ * non `utenteObbligatorio`.
+ */
+export async function utenteConProfilo(): Promise<number> {
+  const { redirect } = await import('next/navigation')
+  const { profilo } = await import('@prontooo/db')
+  const { eq } = await import('drizzle-orm')
+
+  const id = await utenteObbligatorio()
+
+  const [riga] = await db()
+    .select({ eta: profilo.eta, altezza: profilo.altezza, pesoKg: profilo.pesoKg })
+    .from(profilo)
+    .where(eq(profilo.utenteId, id))
+    .limit(1)
+
+  if (!riga || riga.eta === null || riga.altezza === null || riga.pesoKg === null) {
+    redirect('/profilo?benvenuto=1')
+  }
+
+  return id
+}

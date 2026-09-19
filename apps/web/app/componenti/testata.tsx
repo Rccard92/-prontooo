@@ -7,7 +7,7 @@ export function Testata({
   attiva,
   nome,
 }: {
-  attiva?: 'oggi' | 'ingredienti' | 'spesa' | 'offerte' | 'storico' | 'corpo' | 'ricette' | 'settimana' | 'catalogo' | 'wizard'
+  attiva?: 'oggi' | 'ingredienti' | 'spesa' | 'offerte' | 'storico' | 'profilo' | 'ricette' | 'settimana' | 'catalogo' | 'wizard'
   /** Chi sta guardando: si mostra solo dove serve saperlo. */
   nome?: string
 }) {
@@ -21,7 +21,7 @@ export function Testata({
     { href: '/spesa', nome: 'Spesa', chiave: 'spesa' },
     { href: '/offerte', nome: 'Offerte', chiave: 'offerte' },
     { href: '/storico', nome: 'Storico', chiave: 'storico' },
-    { href: '/corpo', nome: 'Porzioni', chiave: 'corpo' },
+    { href: '/profilo', nome: 'Profilo', chiave: 'profilo' },
   ]
 
   return (

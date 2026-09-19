@@ -3,7 +3,7 @@ import { asc } from 'drizzle-orm'
 
 import { alimenti as tabellaAlimenti, db } from '@prontooo/db'
 import { NOME_FASCIA as NOMI, FASCE } from '@/lib/ricette/fasce'
-import { utenteObbligatorio } from '@/lib/accesso/sessione'
+import { utenteConProfilo } from '@/lib/accesso/sessione'
 import { listaAttiva, righePerFascia, tutteLeListe, vociDi } from '@/lib/lista/archivio'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '@/lib/lista/modello'
 
@@ -82,7 +82,7 @@ export default async function Ingredienti({
   }>
 }) {
   const { errore, importate, dacollegare, salvati } = await searchParams
-  const utenteId = await utenteObbligatorio()
+  const utenteId = await utenteConProfilo()
   const lista = await listaAttiva(utenteId)
   const liste = await tutteLeListe(utenteId)
   const voci = lista ? await vociDi(utenteId, lista.id) : []

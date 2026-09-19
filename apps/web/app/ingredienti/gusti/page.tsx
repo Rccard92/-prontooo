@@ -5,7 +5,7 @@ import { alimenti as tabellaAlimenti, db } from '@prontooo/db'
 
 import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
 
-import { utenteObbligatorio } from '@/lib/accesso/sessione'
+import { utenteConProfilo } from '@/lib/accesso/sessione'
 import { CATEGORIE } from '@/lib/lista/gusti'
 import { leggiProfilo } from '@/lib/profilo/leggi'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
@@ -55,7 +55,7 @@ export default async function Gusti({
 }: {
   searchParams: Promise<{ errore?: string }>
 }) {
-  const utenteId = await utenteObbligatorio()
+  const utenteId = await utenteConProfilo()
   const { errore } = await searchParams
 
   const [vocabolario, profilo] = await Promise.all([

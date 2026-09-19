@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { utenteCorrente } from '@/lib/accesso/sessione'
+import { utenteConProfilo, utenteCorrente } from '@/lib/accesso/sessione'
 import { GRUPPI_FUORI, PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { type Scoperta, leggiGiornata, oggi, scopertePerUtente } from '@/lib/giornata/componi'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
@@ -292,7 +292,7 @@ export default async function Oggi() {
 
   if (!utente) redirect('/entra')
 
-  const utenteId = utente.id
+  const utenteId = await utenteConProfilo()
 
   try {
     lista = await listaAttiva(utenteId)

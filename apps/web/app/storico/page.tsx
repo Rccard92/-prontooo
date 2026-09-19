@@ -3,7 +3,7 @@ import { desc, eq } from 'drizzle-orm'
 
 import { db, pesi } from '@prontooo/db'
 
-import { utenteObbligatorio } from '@/lib/accesso/sessione'
+import { utenteConProfilo } from '@/lib/accesso/sessione'
 import { resoconto } from '@/lib/giornata/storico'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 import { NOME_TIPO_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
@@ -46,7 +46,7 @@ export default async function Storico() {
   let dati: Awaited<ReturnType<typeof resoconto>> | null = null
   let misure: { id: number; data: string; kg: string }[] = []
 
-  const utenteId = await utenteObbligatorio()
+  const utenteId = await utenteConProfilo()
 
   try {
     dati = await resoconto(utenteId, 30)
