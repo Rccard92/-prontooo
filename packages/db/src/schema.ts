@@ -273,6 +273,9 @@ export const alimenti = pgTable(
     // I mesi in cui ha senso comprarlo, 1-12. Vuoto = tutto l'anno. Vale per
     // frutta e verdura: la pasta non ha stagione.
     mesiStagione: jsonb('mesi_stagione').$type<number[]>().notNull().default([]),
+    // Si puo' mangiare e registrare, ma il piano lo propone di rado: salumi
+    // grassi, fritti, dolci veri. Vedi alimenti/occasionali.ts.
+    occasionale: boolean('occasionale').notNull().default(false),
   },
   (t) => [uniqueIndex('alimenti_nome_idx').on(t.nome)],
 )

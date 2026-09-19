@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { NUTRIENTI } from './nutrienti'
+import { OCCASIONALI } from './occasionali'
 import { ETICHETTE, FASCE_PASTO, GRUPPI, RUOLI_PASTO } from './tipi'
 import { VOCABOLARIO } from './vocabolario'
 
@@ -33,6 +34,28 @@ describe('il vocabolario', () => {
     const nomi = new Set(VOCABOLARIO.map((a) => a.nome))
 
     assert.deepEqual([...NUTRIENTI.keys()].filter((n) => !nomi.has(n)), [])
+  })
+
+  it('marca come occasionali solo alimenti che esistono', () => {
+    const nomi = new Set(VOCABOLARIO.map((a) => a.nome))
+
+    assert.deepEqual(OCCASIONALI.filter((n) => !nomi.has(n)), [])
+  })
+
+  it('non marca occasionale tutto un gruppo: resterebbe senza niente da proporre', () => {
+    const per = new Map<string, { totale: number; rari: number }>()
+
+    for (const a of VOCABOLARIO) {
+      const conto = per.get(a.gruppo) ?? { totale: 0, rari: 0 }
+
+      conto.totale += 1
+      if (OCCASIONALI.includes(a.nome)) conto.rari += 1
+      per.set(a.gruppo, conto)
+    }
+
+    for (const [gruppo, { totale, rari }] of per) {
+      assert.ok(rari < totale, `${gruppo}: tutti e ${totale} marcati occasionali`)
+    }
   })
 
   it('usa solo gruppi, ruoli, fasce ed etichette dichiarati', () => {

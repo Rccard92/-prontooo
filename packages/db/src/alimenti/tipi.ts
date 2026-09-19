@@ -78,6 +78,12 @@ export type VoceAlimento = {
    * tutta insieme e si corregge guardando l'anno intero.
    */
   mesi?: number[]
+  /**
+   * Si mangia, ma il piano non lo propone come voce fissa.
+   *
+   * Non si scrive qui voce per voce: sta in `occasionali.ts`.
+   */
+  occasionale?: boolean
 }
 
 /** Il reparto del supermercato: ordina la lista della spesa sul percorso fisico. */

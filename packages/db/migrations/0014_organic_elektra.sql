@@ -1,0 +1,1 @@
+ALTER TABLE "alimenti" ADD COLUMN "occasionale" boolean DEFAULT false NOT NULL;

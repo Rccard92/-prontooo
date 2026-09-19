@@ -1,6 +1,6 @@
 import { and, eq, gte, sql } from 'drizzle-orm'
 
-import { db, giornataPasti, giornate, offerte, volantini } from '@prontooo/db'
+import { alimenti, db, giornataPasti, giornate, offerte, volantini } from '@prontooo/db'
 
 import { SOGLIA_CERTA } from '../offerte/aggancia'
 
@@ -33,6 +33,15 @@ export const PASTI_MINIMI = 40
 const PESO_MASSIMO = 2.5
 const PESO_MINIMO = 0.4
 
+/**
+ * Quanto conta un alimento occasionale.
+ *
+ * Basso, non zero: "ogni tanto" e' proprio il posto giusto per una salsiccia.
+ * Se fosse zero tanto varrebbe toglierlo dal vocabolario, e allora non
+ * potresti nemmeno registrare quello che hai mangiato davvero.
+ */
+const PESO_OCCASIONALE = 0.25
+
 /** Quante volte ogni alimento e' finito in un pasto che hai spuntato. */
 async function abitudini(utenteId: number): Promise<{ conteggi: Map<number, number>; pasti: number }> {
   const daQuando = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10)
@@ -60,6 +69,16 @@ async function abitudini(utenteId: number): Promise<{ conteggi: Map<number, numb
   }
 
   return { conteggi, pasti: righe.length }
+}
+
+/** Gli alimenti che il piano propone di rado: salumi grassi, fritti, dolci. */
+async function occasionali(): Promise<Set<number>> {
+  const righe = await db()
+    .select({ id: alimenti.id })
+    .from(alimenti)
+    .where(eq(alimenti.occasionale, true))
+
+  return new Set(righe.map((r) => r.id))
 }
 
 /** Gli alimenti che questa settimana sono in offerta, con certezza. */
@@ -98,7 +117,11 @@ export function pesoDaAbitudine(volte: number, media: number): number {
 export async function pesiDiScelta(utenteId: number): Promise<Pesi> {
   const pesi: Pesi = new Map()
 
-  const [{ conteggi, pasti }, offerti] = await Promise.all([abitudini(utenteId), inOfferta()])
+  const [{ conteggi, pasti }, offerti, diRado] = await Promise.all([
+    abitudini(utenteId),
+    inOfferta(),
+    occasionali(),
+  ])
 
   if (pasti >= PASTI_MINIMI && conteggi.size > 0) {
     const media = [...conteggi.values()].reduce((t, v) => t + v, 0) / conteggi.size
@@ -108,6 +131,10 @@ export async function pesiDiScelta(utenteId: number): Promise<Pesi> {
 
   // L'offerta inclina la scelta, non la decide: un terzo in piu' e basta.
   for (const id of offerti) pesi.set(id, (pesi.get(id) ?? 1) * 1.35)
+
+  // L'occasionale schiaccia, e sta per ultimo apposta: nessuna abitudine e
+  // nessuna offerta deve poter promuovere la mortadella a piatto fisso.
+  for (const id of diRado) pesi.set(id, PESO_OCCASIONALE)
 
   return pesi
 }

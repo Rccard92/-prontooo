@@ -70,6 +70,7 @@ export default async function Gusti({
         unita: tabellaAlimenti.unita,
         mesiStagione: tabellaAlimenti.mesiStagione,
         etichette: tabellaAlimenti.etichette,
+        occasionale: tabellaAlimenti.occasionale,
       })
       .from(tabellaAlimenti)
       .orderBy(asc(tabellaAlimenti.nome)),
@@ -165,6 +166,11 @@ export default async function Gusti({
                           <span className="cifre block text-xs text-fumo">
                             {a.quantita} {a.unita} · {doveFinisce(a.fasce)}
                           </span>
+                          {a.occasionale ? (
+                            <span className="mt-1 block text-xs font-semibold text-fumo">
+                              ogni tanto · lo registri sempre, nel piano esce di rado
+                            </span>
+                          ) : null}
                           {a.mesiStagione.length > 0 && !diStagione(a.mesiStagione, mese) ? (
                             <span className="mt-1 block text-xs font-semibold text-pomodoro">
                               fuori stagione a {nomeMese} · torna a {primoMese(a.mesiStagione)}
