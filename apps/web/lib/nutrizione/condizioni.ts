@@ -198,3 +198,33 @@ export function alimentiToccati(
 
   return { diRado, piuSpesso }
 }
+
+export type Suggerimento = { etichetta: Etichetta; perche: string; condizione: string }
+
+/**
+ * Le esclusioni che le condizioni accese **propongono**, senza accenderle.
+ *
+ * E' la differenza che tiene in piedi tutto il resto: una condizione inclina
+ * le porzioni da sola, ma togliere un alimento per sempre lo decidi tu. Qui
+ * esce solo il suggerimento, col motivo scritto accanto; chi lo legge spunta
+ * o non spunta.
+ */
+export function esclusioniSuggeriteDa(condizioniAttive: string[]): Suggerimento[] {
+  const fuori: Suggerimento[] = []
+
+  for (const id of condizioniAttive) {
+    const trovata = condizione(id)
+
+    if (!trovata) continue
+
+    for (const e of trovata.esclusioniSuggerite ?? []) {
+      // Due condizioni possono proporre la stessa etichetta: il motivo lo
+      // scrive la prima, ripeterlo sarebbe rumore.
+      if (fuori.some((g) => g.etichetta === e.etichetta)) continue
+
+      fuori.push({ etichetta: e.etichetta, perche: e.perche, condizione: trovata.nome })
+    }
+  }
+
+  return fuori
+}

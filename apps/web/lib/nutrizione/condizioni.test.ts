@@ -3,7 +3,14 @@ import { describe, it } from 'node:test'
 
 import { VOCABOLARIO } from '@prontooo/db/alimenti'
 
-import { CONDIZIONI, alimentiToccati, chiaveRegola, condizione } from './condizioni'
+import {
+  CONDIZIONI,
+  alimentiToccati,
+  chiaveRegola,
+  condizione,
+  esclusioniSuggeriteDa,
+} from './condizioni'
+import { ESCLUSIONI } from './impostazioni'
 
 describe('le condizioni', () => {
   it('parlano solo di alimenti che esistono nel vocabolario', () => {
@@ -95,5 +102,44 @@ describe('alimentiToccati', () => {
   it('ignora una condizione che non esiste', () => {
     assert.equal(alimentiToccati(['non-esiste']).diRado.size, 0)
     assert.equal(condizione('non-esiste'), null)
+  })
+})
+
+describe('le esclusioni proposte da una condizione', () => {
+  it('arrivano solo dalle condizioni accese', () => {
+    assert.deepEqual(esclusioniSuggeriteDa([]), [])
+
+    const conHashimoto = esclusioniSuggeriteDa(['hashimoto'])
+
+    assert.ok(
+      conHashimoto.some((s) => s.etichetta === 'glutine'),
+      'con Hashimoto il glutine si propone',
+    )
+    assert.ok(
+      conHashimoto.every((s) => s.perche.length > 0 && s.condizione.length > 0),
+      'ogni proposta dice chi la fa e perche\u2019',
+    )
+  })
+
+  it('nominano etichette che esistono davvero fra le esclusioni', () => {
+    // Una proposta che nomina un\u2019etichetta sbagliata non accenderebbe nessuna
+    // casella, e chi legge penserebbe di avere una scelta che non c\u2019e\u2019.
+    for (const c of CONDIZIONI) {
+      for (const e of c.esclusioniSuggerite ?? []) {
+        assert.ok(
+          ESCLUSIONI.some((x) => x.id === e.etichetta),
+          `${c.id} propone ${e.etichetta}, che non e' fra le esclusioni`,
+        )
+      }
+    }
+  })
+
+  it('restano proposte: nessuna condizione accende un\u2019esclusione da sola', () => {
+    // La differenza che regge tutto il resto. Se questa funzione accendesse,
+    // meta' del vocabolario sparirebbe per una diagnosi scritta nel profilo.
+    const proposte = esclusioniSuggeriteDa(CONDIZIONI.map((c) => c.id))
+
+    assert.ok(proposte.length > 0)
+    assert.equal(new Set(proposte.map((p) => p.etichetta)).size, proposte.length)
   })
 })

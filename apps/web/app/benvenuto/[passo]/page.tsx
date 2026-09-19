@@ -1,7 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
-import { CONDIZIONI, chiaveRegola } from '@/lib/nutrizione/condizioni'
+import { PASSI_TOTALI, SOTTOTITOLO, TITOLO, ePasso, numeroDi } from '@/lib/benvenuto/passi'
+import { CONDIZIONI, chiaveRegola, esclusioniSuggeriteDa } from '@/lib/nutrizione/condizioni'
 import {
   ATTIVITA,
   type DatiCorpo,
@@ -15,7 +16,6 @@ import { ESCLUSIONI } from '@/lib/nutrizione/impostazioni'
 import { leggiProfilo } from '@/lib/profilo/leggi'
 
 import { salvaCondizioni, salvaCorpo, salvaEsclusioni, salvaMovimento } from '../azioni'
-import { PASSI_TOTALI, SOTTOTITOLO, TITOLO, ePasso, numeroDi } from '@/lib/benvenuto/passi'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +54,11 @@ export default async function Benvenuto({
   }
 
   const conto = datiCompleti(corpo) ? fabbisognoDi(corpo) : null
+
+  // Il passo prima ha appena chiesto come stai: se quello che hai acceso
+  // propone un'esclusione, la proposta compare qui, accanto alla sua casella.
+  // Proposta, non spunta: il divieto lo decidi tu.
+  const suggerite = esclusioniSuggeriteDa(p?.condizioni ?? [])
 
   return (
     <div className="flex min-h-dvh flex-col bg-fondo">
@@ -195,25 +200,39 @@ export default async function Benvenuto({
             ) : null}
 
             <div className="flex flex-col gap-2">
-              {ESCLUSIONI.map((e) => (
-                <label key={e.id} className={scelta}>
-                  <input
-                    type="checkbox"
-                    name={`esclusione-${e.id}`}
-                    value="si"
-                    defaultChecked={p?.esclusioni.includes(e.id)}
-                    className="mt-0.5 size-5 shrink-0 accent-basilico"
-                  />
-                  <span>
-                    <span className="block text-base font-semibold text-inchiostro">{e.nome}</span>
-                    <span className="block text-sm text-fumo">{e.spiega}</span>
-                  </span>
-                </label>
-              ))}
+              {ESCLUSIONI.map((e) => {
+                const proposta = suggerite.find((s) => s.etichetta === e.id)
+
+                return (
+                  <label
+                    key={e.id}
+                    className={proposta ? `${scelta} bg-limone-tenue` : scelta}
+                  >
+                    <input
+                      type="checkbox"
+                      name={`esclusione-${e.id}`}
+                      value="si"
+                      defaultChecked={p?.esclusioni.includes(e.id)}
+                      className="mt-0.5 size-5 shrink-0 accent-basilico"
+                    />
+                    <span>
+                      <span className="block text-base font-semibold text-inchiostro">{e.nome}</span>
+                      <span className="block text-sm text-fumo">{e.spiega}</span>
+                      {proposta ? (
+                        <span className="mt-1 block text-sm text-inchiostro">
+                          <strong>{proposta.condizione}:</strong> {proposta.perche}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
 
             <p className="text-sm text-fumo">
-              Se non devi togliere niente, vai avanti così.
+              {suggerite.length > 0
+                ? 'Quella in giallo te la propone una condizione che hai appena acceso: è un suggerimento, non l’ho spuntata io. Se non devi togliere niente, vai avanti così.'
+                : 'Se non devi togliere niente, vai avanti così.'}
             </p>
 
             <button type="submit" className="bottone w-full hover:bg-basilico-scuro">
