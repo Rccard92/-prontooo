@@ -1,0 +1,46 @@
+/**
+ * I passi del benvenuto.
+ *
+ * Una colonna di dieci schede da compilare la chiudi. Quattro domande alla
+ * volta no, e in piu' ogni passo puo' guardare le risposte di quelli prima:
+ * e' questo che permette di non mostrare il pesce a chi ha appena detto che
+ * il pesce non lo mangia.
+ */
+export const PASSI = ['corpo', 'movimento', 'togliere', 'salute'] as const
+export type Passo = (typeof PASSI)[number]
+
+export const TITOLO: Record<Passo, string> = {
+  corpo: 'Come sei fatto',
+  movimento: 'Quanto ti muovi',
+  togliere: 'Cosa non mangi',
+  salute: 'Come stai',
+}
+
+export const SOTTOTITOLO: Record<Passo, string> = {
+  corpo: 'Da qui nascono le tue porzioni: senza questi numeri i grammi sarebbero uguali per tutti.',
+  movimento: 'Il movimento e l’obiettivo decidono quanto mangi in un giorno.',
+  togliere: 'Quello che spunti qui non comparirà mai: né nei pasti, né fra gli ingredienti da scegliere.',
+  salute: 'Se c’è qualcosa che già sai di te, scrivilo una volta sola.',
+}
+
+export function ePasso(valore: string): valore is Passo {
+  return (PASSI as readonly string[]).includes(valore)
+}
+
+/** Il passo dopo, o null quando si e' all'ultimo. */
+export function prossimo(passo: Passo): Passo | null {
+  return PASSI[PASSI.indexOf(passo) + 1] ?? null
+}
+
+export function numeroDi(passo: Passo): number {
+  return PASSI.indexOf(passo) + 1
+}
+
+/**
+ * Quanti passi vede chi si iscrive.
+ *
+ * Uno in piu' di `PASSI`: la spunta degli ingredienti vive su
+ * `/ingredienti/gusti`, ma per chi compila e' l'ultimo passo del benvenuto e
+ * nella barra deve contarsi.
+ */
+export const PASSI_TOTALI = PASSI.length + 1

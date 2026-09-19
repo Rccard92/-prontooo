@@ -156,7 +156,7 @@ Italiano, tono diretto, frasi brevi. I pulsanti dicono cosa succede ("Salva il p
 
 Fase 0 chiusa: repo, Postgres con volume, web e worker in produzione, deploy automatico su push, migrazioni al deploy.
 
-Fatto: login multiutente, scelta degli ingredienti per macro-categorie, volantini scaricati da soli, catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, volantini e offerte con soglia di confidenza, PWA installabile che regge senza rete, promemoria push, storico e peso, import manuale come attrezzo da officina.
+Fatto: login multiutente, benvenuto a passi, scelta degli ingredienti per macro-categorie, volantini scaricati da soli, catalogo che si riempie da solo dalle sitemap, wizard, lista degli ingredienti (PDF del nutrizionista o scelta a mano), giornata ON/OFF con ricalibrazione, lista della spesa derivata, ricettario per componenti e modalita' cucina, volantini e offerte con soglia di confidenza, PWA installabile che regge senza rete, promemoria push, storico e peso, import manuale come attrezzo da officina.
 
 Manca, e serve `ANTHROPIC_API_KEY` su Railway: normalizzazione degli ingredienti delle **ricette**, e quindi allergeni sulle ricette, reparti e lista della spesa.
 
@@ -186,7 +186,7 @@ Le **sostituzioni equivalenti** (`lib/nutrizione/sostituzioni.ts`) rispondono a 
 
 Due vincoli che non si toccano: **mai sotto il metabolismo basale**, e chi dimagrisce prende **piu'** proteine (1,8 g/kg contro 1,4), perche' in deficit la proteina e' quello che tiene il muscolo mentre il resto cala. I macro si fissano su due vincoli - proteine dal peso, grassi al 27% delle calorie - e i carboidrati prendono quello che resta: fissarne tre da' percentuali che poi non tornano.
 
-I dati del corpo sono **facoltativi** e si cancellano da `/corpo`. Senza, tutto funziona come prima. E l'app dice che e' una stima: una formula non vede gli esami.
+I dati del corpo si danno al primo passo del benvenuto e si cambiano da `/profilo`: oggi dimagrire, fra un anno mantenere. E l'app dice che e' una stima: una formula non vede gli esami.
 
 ### Le stagioni
 
@@ -209,6 +209,14 @@ La compatibilita' ha tre livelli e non e' si'/no, perche' il si'/no butterebbe v
 `giornata_pasti.ricetta_libro` tiene quale hai scelto, cosi' "altra ricetta" non ricompone il pasto: i grammi restano quelli, cambia solo come li cucini. Ricomporre il pasto azzera la scelta.
 
 Il catalogo raccolto dai siti **non** compare piu' nella scheda del giorno. Quelle ricette non sono normalizzate, quindi non si puo' garantire che non contengano quello che non ti piace - ed e' esattamente la garanzia che regge il ricettario. Restano sfogliabili su `/ricette`, come archivio.
+
+### Il benvenuto a passi
+
+`apps/web/app/benvenuto/[passo]` e i passi in `apps/web/lib/benvenuto/passi.ts`. Chi si iscrive non trova una colonna di schede da compilare - quella la chiudi - ma una domanda per volta: **corpo**, **movimento**, **cosa non mangi**, **come stai**, e in fondo la spunta degli ingredienti, che e' l'ultimo passo anche se vive su `/ingredienti/gusti`. Per questo la barra conta `PASSI_TOTALI`, cioe' uno in piu' dei passi del benvenuto.
+
+Ogni passo **scrive subito** invece di tenere tutto in memoria fino alla fine. Serve a due cose: se chiudi il telefono a meta' non ricominci da capo, e soprattutto il passo dopo puo' leggere quello che hai appena scelto. E' cosi' che chi al terzo passo toglie il pesce, al quinto non se lo trova fra le caselle da spuntare - l'esclusione e' gia' nel database quando la schermata degli ingredienti fa la sua query. Una domanda che dipende da una risposta ancora in un campo nascosto non sarebbe personalizzata, sarebbe indovinata.
+
+`/profilo` resta la stessa roba per intero, su una pagina sola: il benvenuto e' il primo giro, il profilo e' dove si torna. Chi arriva su una pagina che compone un piano senza i dati del corpo viene mandato a `/benvenuto/corpo` da `utenteConProfilo()`, e dentro il benvenuto non si salta avanti: senza il primo passo gli altri non hanno su cosa appoggiarsi.
 
 ### Esclusioni e impostazione sono due cose diverse
 

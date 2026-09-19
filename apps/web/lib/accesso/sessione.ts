@@ -233,7 +233,7 @@ export async function servelInvito(): Promise<boolean> {
 /**
  * L'utente di questa richiesta, **col profilo compilato**.
  *
- * Chi non ha ancora dato i dati del corpo viene rimandato al profilo. Non e'
+ * Chi non ha ancora dato i dati del corpo viene rimandato al benvenuto. Non e'
  * burocrazia: senza quei numeri le porzioni sono generiche, e un'app che ti
  * dice "mangia 80 g di pasta" senza sapere quanto pesi sta tirando a
  * indovinare. Le pagine che compongono o mostrano un piano chiamano questa,
@@ -253,7 +253,7 @@ export async function utenteConProfilo(): Promise<number> {
     .limit(1)
 
   if (!riga || riga.eta === null || riga.altezza === null || riga.pesoKg === null) {
-    redirect('/profilo?benvenuto=1')
+    redirect('/benvenuto/corpo')
   }
 
   return id

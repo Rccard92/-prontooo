@@ -6,6 +6,7 @@ import { alimenti as tabellaAlimenti, db } from '@prontooo/db'
 import { diStagione, meseCorrente } from '@prontooo/db/alimenti'
 
 import { utenteConProfilo } from '@/lib/accesso/sessione'
+import { PASSI_TOTALI } from '@/lib/benvenuto/passi'
 import { CATEGORIE } from '@/lib/lista/gusti'
 import { ammessi } from '@/lib/nutrizione/esclusioni'
 import { leggiProfilo } from '@/lib/profilo/leggi'
@@ -54,10 +55,10 @@ function doveFinisce(fasce: string[]): string {
 export default async function Gusti({
   searchParams,
 }: {
-  searchParams: Promise<{ errore?: string }>
+  searchParams: Promise<{ errore?: string; benvenuto?: string }>
 }) {
   const utenteId = await utenteConProfilo()
-  const { errore } = await searchParams
+  const { errore, benvenuto } = await searchParams
 
   const [tuttiGliAlimenti, profilo] = await Promise.all([
     db()
@@ -91,12 +92,30 @@ export default async function Gusti({
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="ingredienti" />
+      {benvenuto ? (
+        <header className="border-b border-bordo bg-bianco/90 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+            <span className="font-marchio text-2xl leading-none text-inchiostro">èProntooo</span>
+            <span className="cifre text-sm text-fumo">
+              {PASSI_TOTALI} di {PASSI_TOTALI}
+            </span>
+          </div>
+          <div className="mx-auto mt-3 flex max-w-3xl gap-1">
+            {Array.from({ length: PASSI_TOTALI }, (_, i) => (
+              <span key={i} className="h-1 flex-1 rounded-full bg-basilico" />
+            ))}
+          </div>
+        </header>
+      ) : (
+        <Testata attiva="ingredienti" />
+      )}
 
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-        <Link href="/ingredienti" className="text-sm font-semibold text-fumo hover:text-basilico">
-          Torna agli ingredienti
-        </Link>
+        {benvenuto ? null : (
+          <Link href="/ingredienti" className="text-sm font-semibold text-fumo hover:text-basilico">
+            Torna agli ingredienti
+          </Link>
+        )}
 
         <h1 className="font-marchio mt-3 text-3xl text-inchiostro sm:text-4xl">
           Cosa ti piace mangiare
@@ -130,6 +149,8 @@ export default async function Gusti({
         ) : null}
 
         <form action={salvaGusti}>
+          {benvenuto ? <input type="hidden" name="poi" value="oggi" /> : null}
+
           <div className="mt-6 flex flex-col gap-5">
             {CATEGORIE.map((categoria) => {
               const suoi = vocabolario.filter((a) => a.gruppo === categoria.gruppo)
@@ -187,7 +208,7 @@ export default async function Gusti({
 
           <div className="sticky bottom-0 mt-6 border-t border-bordo bg-fondo/95 py-4 backdrop-blur">
             <button type="submit" className="bottone w-full hover:bg-basilico-scuro">
-              Salva e costruisci i pasti
+              {benvenuto ? 'Fatto, costruisci la mia giornata' : 'Salva e costruisci i pasti'}
             </button>
             <p className="mt-2 text-center text-xs text-fumo">
               Sostituisce la lista attiva. Le quantità sono le porzioni tipiche e le correggi dopo.

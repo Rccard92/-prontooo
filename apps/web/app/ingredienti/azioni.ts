@@ -91,15 +91,19 @@ export async function leggiPdf(dati: FormData) {
 export async function salvaGusti(dati: FormData) {
   const utenteId = await utenteObbligatorio()
 
+  // Durante il benvenuto un errore non deve buttare fuori dal giro: si torna
+  // alla stessa schermata, col passo ancora aperto.
+  const dalBenvenuto = String(dati.get('poi') ?? '') === 'oggi'
+  const indietro = (motivo: string) =>
+    '/ingredienti/gusti?' + (dalBenvenuto ? 'benvenuto=1&' : '') + 'errore=' + encodeURIComponent(motivo)
+
   const ids = dati
     .getAll('alimento')
     .map((v) => Number(v))
     .filter((n) => Number.isInteger(n))
 
   if (ids.length === 0) {
-    redirect(
-      '/ingredienti?errore=' + encodeURIComponent('Spunta almeno qualcosa: da niente non esce un pasto.'),
-    )
+    redirect(indietro('Spunta almeno qualcosa: da niente non esce un pasto.'))
   }
 
   // Il filtro c'e' anche nella schermata, ma un form si puo' rispedire a mano:
@@ -119,10 +123,7 @@ export async function salvaGusti(dati: FormData) {
   const voci = vociDaGusti(scelti)
 
   if (voci.length === 0) {
-    redirect(
-      '/ingredienti?errore=' +
-        encodeURIComponent('Quello che hai spuntato non copre nessun pasto intero. Aggiungi qualcosa.'),
-    )
+    redirect(indietro('Quello che hai spuntato non copre nessun pasto intero. Aggiungi qualcosa.'))
   }
 
   await salvaLista(utenteId, 'I miei ingredienti', 'manuale', voci)
@@ -139,7 +140,10 @@ export async function salvaGusti(dati: FormData) {
 
   revalidatePath('/ingredienti')
   revalidatePath('/')
-  redirect('/ingredienti?salvati=' + scelti.length)
+
+  // Chi arriva dal benvenuto ha appena finito: non lo si rimanda alle
+  // impostazioni, lo si porta al piatto.
+  redirect(dalBenvenuto ? '/' : '/ingredienti?salvati=' + scelti.length)
 }
 
 export async function cambiaQuantita(dati: FormData) {

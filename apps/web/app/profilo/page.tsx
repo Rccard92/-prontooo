@@ -133,7 +133,7 @@ async function salva(dati: FormData) {
     .values(valori)
     .onConflictDoUpdate({ target: tabellaProfilo.id, set: valori })
 
-  redirect(String(dati.get('poi') ?? '') === 'ingredienti' ? '/ingredienti/gusti' : '/profilo?salvato=1')
+  redirect('/profilo?salvato=1')
 }
 
 function Sezione({
@@ -204,9 +204,9 @@ const NOME_GRUPPO: Record<string, string> = {
 export default async function Profilo({
   searchParams,
 }: {
-  searchParams: Promise<{ errore?: string; salvato?: string; benvenuto?: string }>
+  searchParams: Promise<{ errore?: string; salvato?: string }>
 }) {
-  const { errore, salvato: appenaSalvato, benvenuto } = await searchParams
+  const { errore, salvato: appenaSalvato } = await searchParams
   const utenteId = await utenteObbligatorio()
   const salvato = await leggiProfilo(utenteId)
   const p = salvato ?? {
@@ -284,8 +284,6 @@ export default async function Profilo({
         ) : null}
 
         <form action={salva} className="mt-6 flex flex-col gap-5">
-          {benvenuto ? <input type="hidden" name="poi" value="ingredienti" /> : null}
-
           <Sezione
             titolo="Come sei fatto"
             spiega="Serve a calcolare le porzioni invece di indovinarle. Resta nel tuo pannello e non lo vede nessun altro."
