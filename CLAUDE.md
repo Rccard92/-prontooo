@@ -168,7 +168,14 @@ Adesso il piano si costruisce dagli alimenti, in tre strati:
 
 1. **`alimenti`** — il vocabolario, in `packages/db/src/alimenti/vocabolario.ts` e seminato a ogni deploy. Non e' un database nutrizionale completo: e' un elenco scritto a mano, nato in buona parte dalle diete su cui e' stato tarato il lettore PDF - che erano estive - e poi allargato. Quando manca qualcosa si aggiunge li', con i valori CREA in `nutrienti.ts` e i mesi in `stagioni.ts`. Ogni voce ha gruppo, ruoli che puo' coprire, fasce, porzione tipica ed **etichette** (lattosio, glutine, pane, maiale, carne rossa, pesce, uova, frutta a guscio, fritto, proteico, zuccheri)
 2. **La tua lista** — `liste` e `lista_voci`, riempite dal PDF del nutrizionista oppure dalla spunta per categorie su `/ingredienti/gusti`. Ogni riga e' un posto in una fascia, con dentro le alternative equivalenti e i grammi. Dalla spunta la lista si costruisce da sola (`lib/lista/gusti.ts`), e ogni alimento finisce **solo nelle fasce che il vocabolario gli concede**: non e' un filtro messo dopo, la fettina non entra proprio nella colazione
-3. **Il compositore** — `apps/web/lib/giornata/componi.ts`. Per ogni riga della fascia pesca **una** alternativa e le applica il moltiplicatore del tipo di giorno
+3. **Lo schema del pasto** — `apps/web/lib/giornata/schema.ts`. Quanti posti ha il piatto, e quali ruoli possono riempirli
+4. **Il compositore** — `apps/web/lib/giornata/componi.ts`. Riempie i posti dello schema pescando dalla tua lista, e applica il moltiplicatore del tipo di giorno
+
+Il terzo strato e' arrivato dopo, per una colazione vera che l'app aveva prodotto: torta fatta in casa, salmone affumicato, yogurt, avocado, marmellata, noci, mango e granita siciliana. Otto alimenti, ognuno lecito nella sua fascia, e insieme non una colazione ma un inventario. Il difetto non era la scelta di un alimento, era il **conteggio**: il compositore pescava una cosa da ogni riga, e le righe sono una per ruolo - quindi piu' spuntavi, peggio mangiavi.
+
+La regola che ne esce: **la lista dice cosa puo' entrare, lo schema dice quanti ne entrano, i pesi dicono chi entra oggi.** Un pranzo ha base, proteina, verdura e condimento; una colazione ha base, latticino, frutta e quello che ci metti sopra; uno spuntino ne ha due. Un test impedisce a qualunque fascia di superare i quattro posti, perche' e' esattamente li' che si torna all'inventario.
+
+Due conseguenze. L'obiettivo senza i dati del corpo si calcola su quello che il piano ti mette davvero nel piatto, non sulla somma di tutte le righe spuntate - sarebbe un bersaglio irraggiungibile. E "questo mese ti manca qualcosa" dice **cosa** manca ("Colazione senza la frutta"), perche' adesso sa quale posto e' rimasto vuoto
 
 La scelta fra alternative non e' un caso cieco: `lib/nutrizione/preferenze.ts` la inclina verso quello che mangi davvero (solo sopra `PASTI_MINIMI` pasti registrati - sotto, "mangi sempre il pollo" vuol dire che e' uscito due volte) e verso quello che e' in offerta questa settimana. I pesi cambiano **la frequenza, mai l'insieme**: le alternative restano quelle della tua lista, e un alimento con peso basso esce lo stesso ogni tanto, altrimenti dopo un mese mangeresti sempre le stesse quattro cose.
 
@@ -227,12 +234,24 @@ Non vanno mai mischiate nella stessa lista, ed e' questo che rendeva inutile la 
 - **Esclusioni** (`profilo.esclusioni`): etichette. Rigide. Un alimento che ne porta una non entra mai, in nessuno schema. Sono affidabili perche' l'etichetta sta sull'alimento
 - **Impostazione** (`profilo.impostazione`): una sola alla volta. Non toglie niente, sposta i moltiplicatori di porzione per ruolo. La proteica alza la proteina e abbassa la base, quella per dimagrire taglia i grassi ed esclude i fritti
 
+- **Attenuazioni** (`profilo.attenuazioni`): la via di mezzo, in `lib/nutrizione/attenuazioni.ts`. Esistono per due etichette sole e fanno due cose diverse. Il **glutine si riduce**: una fonte per pasto, non piu' di `PASTI_CON_GLUTINE` pasti al giorno, e se togliendola la riga resta vuota passa lo stesso - `preferiSenza` e' tutta qui, ed e' la differenza fra ridurre e togliere. Il **lattosio si sostituisce**: la mozzarella diventa mozzarella senza lattosio, stesso posto e stessi grammi (`packages/db/src/alimenti/lattosio.ts`). Gli stagionati restano dove sono, il lattosio se l'e' mangiato la stagionatura. Un'attenuazione su un'etichetta che escludi non ha senso e si scarta: vince l'esclusione, che e' la scelta piu' netta
+
+Perche' esistono: fra l'allergia e il niente c'e' il caso piu' comune di tutti - gli esami dicono che non sei celiaco, ma quando esageri con pasta e pane stai gonfio. Togliere il glutine a quella persona la fa vivere da celiaco senza esserlo, e senza la diagnosi nessuno controlla che la dieta resti completa.
+
 `profilo.alimentiScelti` sono gli ingredienti spuntati su `/ingredienti/gusti`: la stessa spunta che costruisce la lista, e che serve poi a pesare le alternative e a proporre le sostituzioni.
 
 Due regole che restano finche' manca la chiave:
 
 - Finche' `ricette.normalizzataIl` e' nulla, l'app **non** sa gli allergeni di quella ricetta e deve dirlo. Mai "senza allergeni" su una ricetta non normalizzata
 - Le esclusioni valgono sugli **alimenti**, non sulle ricette suggerite. La UI lo dichiara: chi ha un'allergia vera non deve fidarsi di un suggerimento di ricetta
+
+### Le condizioni di salute
+
+`apps/web/lib/nutrizione/condizioni.ts`, dieci: Hashimoto, colesterolo, pressione, glicemia, reflusso, colon irritabile, gotta, ferro basso, fegato grasso, stitichezza. Una condizione **inclina, non vieta** - sposta quanto spesso un alimento esce, e non toglie mai niente per sempre: il divieto sta fra le esclusioni, che scegli tu, e non si accende da solo per una diagnosi.
+
+Ogni regola dice cosa fa **e quanto si sa**, con le prove guardate una per una: sul kiwi nella stitichezza c'e' scritto che regge il confronto con lo psillio ed e' quello che si smette di prendere meno spesso; sulle ciliegie nella gotta c'e' scritto che la certezza e' bassa e le metto perche' non costano niente; sui tannini del te' c'e' scritto che conta **quando** lo bevi, e che la distanza dalla tazzina l'app non la sa. Le regole si spengono una alla volta.
+
+`esclusioniSuggeriteDa` fa proporre a una condizione un'esclusione senza accenderla - il glutine con Hashimoto - ed e' il motivo per cui nel benvenuto il passo "come stai" viene **prima** di "cosa non mangi". Nell'interfaccia le regole stanno chiuse finche' non spunti la patologia, e si aprono senza una riga di JavaScript (`app/componenti/salute.tsx`, una copia sola per benvenuto e profilo).
 
 ### La classificazione delle ricette
 
