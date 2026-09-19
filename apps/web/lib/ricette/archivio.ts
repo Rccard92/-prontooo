@@ -136,6 +136,11 @@ const DA_LEGGERE = and(
  *
  * Tocca solo quelle senza posti: le convertite stanno bene come sono, e
  * rileggerle sarebbe pagare due volte per lo stesso risultato.
+ *
+ * **Si accende, si usa, si spegne.** Lasciato acceso e' una perdita: le
+ * ricette che non passano non passeranno nemmeno al giro dopo - hanno dentro
+ * il caviale o l'umeboshi - e rimetterle in coda ogni mezz'ora vuol dire
+ * rileggerle ogni mezz'ora, pagando ogni volta lo stesso niente.
  */
 /**
  * Riclassifica quello che c'e' gia' in catalogo.

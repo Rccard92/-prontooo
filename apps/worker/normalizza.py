@@ -41,9 +41,14 @@ def _rimetti_in_coda(base: str, segreto: str) -> str:
     """Chiede al web di rimettere in coda le ricette lette ma non convertite.
 
     Attrezzo da officina, come il sondaggio delle fonti: si accende con
-    RIMETTI_IN_CODA, si legge quante ne sono tornate in coda, si spegne. Serve
-    quando il vocabolario si allarga - una ricetta ferma su "pangrattato"
-    merita un secondo tentativo adesso che il pangrattato lo conosciamo.
+    RIMETTI_IN_CODA, si legge quante ne sono tornate in coda, **si spegne**.
+    Serve quando il vocabolario si allarga - una ricetta ferma su
+    "pangrattato" merita un secondo tentativo adesso che il pangrattato lo
+    conosciamo.
+
+    Lasciarlo acceso e' una perdita vera: le ricette che non passano non
+    passeranno nemmeno al giro dopo, e rimetterle in coda ogni mezz'ora vuol
+    dire rileggerle ogni mezz'ora, pagando ogni volta lo stesso niente.
     """
     try:
         risposta = httpx.post(
