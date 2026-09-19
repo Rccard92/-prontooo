@@ -24,6 +24,87 @@ export type EsitoNormalizzazione = {
   convertite: number
   fallite: number
   restanti: number
+  /**
+   * Le righe che il vocabolario non ha saputo tradurre, le piu' frequenti
+   * prima.
+   *
+   * Sono la cosa piu' utile che questo giro produce, e per un motivo che si e'
+   * visto solo provando: del primo centinaio di ricette lette ne sono entrate
+   * nel piano tredici. La regola che le ferma e' giusta - una riga non capita
+   * toglie la garanzia a tutta la ricetta - ma quasi sempre quella riga e'
+   * vino bianco, o scalogno, o pangrattato: roba che al vocabolario manca e
+   * basta.
+   *
+   * Invece di indovinare cosa aggiungere, il giro lo scrive nei log. Si
+   * allarga il vocabolario su quello che le ricette chiedono davvero, e le
+   * ricette non passate si rimandano in lettura.
+   */
+  sconosciute: { riga: string; quante: number }[]
+}
+
+/** Quante righe sconosciute riportare: le altre sono una coda lunghissima. */
+const SCONOSCIUTE_DA_RIPORTARE = 25
+
+/**
+ * Le righe grezze ridotte a quello che le accomuna.
+ *
+ * "200 g di vino bianco secco" e "un bicchiere di vino bianco" sono la stessa
+ * mancanza, e contarle separate le terrebbe tutte e due in fondo alla
+ * classifica. Si buttano numeri, unita' e parole di quantita', e resta il
+ * nome.
+ */
+const MISURE = [
+  'g',
+  'gr',
+  'grammi',
+  'kg',
+  'ml',
+  'cl',
+  'l',
+  'litr[oi]',
+  'un',
+  'uno',
+  'una',
+  'di',
+  'd',
+  'del',
+  'dell[aeo]',
+  'dei',
+  'delle',
+  'circa',
+  'cucchiai[o]?',
+  'cucchiain[oi]',
+  'bicchier[ei]',
+  'tazz[ae]',
+  'pizzic(?:o|hi)',
+  'spicchi[o]?',
+  'fogli[ae]',
+  'rametti?',
+  'rametto',
+  'fett[ae]',
+  'mazzett[oi]',
+  'confezion[ei]',
+  'barattol[oi]',
+  'scatol[ae]',
+  'vasett[oi]',
+  'manciat[ae]',
+]
+
+export function nocciolo(riga: string): string {
+  return (
+    riga
+      .toLowerCase()
+      // Le parentesi portano note - "(a cubetti)", "(circa 2)" - non alimenti.
+      .replace(/\([^)]*\)/g, ' ')
+      // "q.b." prima dei numeri: dopo averlo spezzato in "q b" non si
+      // riconosce piu', e resterebbe attaccato al nome per sempre.
+      .replace(/\bq\.?\s?b\.?/g, ' ')
+      .replace(/\bquanto basta\b/g, ' ')
+      .replace(/[\d.,/]+/g, ' ')
+      .replace(new RegExp(`\\b(?:${MISURE.join('|')})\\b`, 'g'), ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /** Quante ne restano da leggere: serve al worker per sapere quando smettere. */
@@ -73,10 +154,11 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
     .limit(Math.max(1, Math.min(quante, 50)))
 
   if (daFare.length === 0) {
-    return { normalizzate: 0, convertite: 0, fallite: 0, restanti: 0 }
+    return { normalizzate: 0, convertite: 0, fallite: 0, restanti: 0, sconosciute: [] }
   }
 
   const vocaboli = await vocabolario()
+  const sconosciute = new Map<string, { riga: string; quante: number }>()
   let normalizzate = 0
   let convertite = 0
   let fallite = 0
@@ -119,6 +201,18 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
 
     const esito = converti(letti)
 
+    for (const letto of letti) {
+      if (letto.tipo !== 'sconosciuto') continue
+
+      const chiave = nocciolo(letto.nome)
+
+      if (chiave.length === 0) continue
+
+      const gia = sconosciute.get(chiave)
+
+      sconosciute.set(chiave, { riga: gia?.riga ?? letto.nome, quante: (gia?.quante ?? 0) + 1 })
+    }
+
     for (const [i, riga] of righe.entries()) {
       const letto = letti[i]
 
@@ -149,5 +243,13 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
     if (esito.affidabile && esito.posti.length > 0) convertite += 1
   }
 
-  return { normalizzate, convertite, fallite, restanti: await daNormalizzare() }
+  return {
+    normalizzate,
+    convertite,
+    fallite,
+    restanti: await daNormalizzare(),
+    sconosciute: [...sconosciute.values()]
+      .sort((a, b) => b.quante - a.quante)
+      .slice(0, SCONOSCIUTE_DA_RIPORTARE),
+  }
 }

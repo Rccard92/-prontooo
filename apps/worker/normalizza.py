@@ -29,6 +29,11 @@ PER_BLOCCO = int(os.environ.get("RICETTE_PER_BLOCCO", "20"))
 # Quanti blocchi di fila, finche' c'e' arretrato. Cinque blocchi da venti sono
 # cento ricette per giro: il catalogo si legge in un paio d'ore invece che in
 # dieci, e il giro resta comunque molto piu' corto del sonno che lo segue.
+#
+# Zero vuol dire fermo, ed e' un freno vero: si mette la variabile a 0 su
+# Railway e la lettura si ferma al giro dopo, senza un deploy. Serve quando si
+# sta per cambiare il vocabolario - leggere ricette col vocabolario vecchio
+# vuol dire pagarle due volte.
 BLOCCHI_PER_GIRO = int(os.environ.get("BLOCCHI_PER_GIRO", "5"))
 
 
@@ -64,13 +69,23 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     if esito.get("normalizzate", 0) == 0 and restanti == 0:
         return "catalogo gia' tutto normalizzato", 0
 
-    return (
+    messaggio = (
         f"normalizzate {esito.get('normalizzate', 0)} ricette"
         f" ({esito.get('convertite', 0)} entrano nel piano,"
         f" {esito.get('fallite', 0)} da riprovare),"
-        f" ne restano {restanti}",
-        restanti,
+        f" ne restano {restanti}"
     )
+
+    # Le righe che il vocabolario non conosce sono il motivo per cui una
+    # ricetta su otto entra nel piano invece di tutte. Stamparle e' il modo di
+    # sapere cosa aggiungere invece di indovinarlo.
+    sconosciute = esito.get("sconosciute") or []
+
+    if sconosciute:
+        elenco = ", ".join(f"{v.get('riga')} x{v.get('quante')}" for v in sconosciute)
+        messaggio += f"\n  al vocabolario mancano: {elenco}"
+
+    return messaggio, restanti
 
 
 def bussa() -> str:
@@ -80,10 +95,13 @@ def bussa() -> str:
     if not base or not segreto:
         return "normalizzazione saltata: manca la configurazione"
 
+    if BLOCCHI_PER_GIRO <= 0:
+        return "normalizzazione in pausa: BLOCCHI_PER_GIRO e' a zero"
+
     righe: list[str] = []
     prima = None
 
-    for _ in range(max(1, BLOCCHI_PER_GIRO)):
+    for _ in range(BLOCCHI_PER_GIRO):
         messaggio, restanti = _un_blocco(base, segreto)
         righe.append(messaggio)
 
