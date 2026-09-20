@@ -137,3 +137,60 @@ describe('quando la fonte non dichiara la categoria', () => {
     assert.equal(classifica(null, '', 'Frittata di zucchine').ruolo, 'secondo')
   })
 })
+
+describe('gli impasti non sono primi piatti', () => {
+  // Tutti casi veri, presi dal log delle ricette che il catalogo aveva
+  // accettato e pagato per leggere. La parola "pasta" vinceva prima che
+  // "crostata" potesse dire la sua.
+  const daTitolo = (titolo: string) => classifica(null, '', titolo)
+
+  it('tiene fuori i dolci fatti con la pasta sfoglia o la frolla', () => {
+    for (const titolo of [
+      'Calze della befana di pasta sfoglia',
+      'Fiore di pasta sfoglia alla Nutella',
+      'Crostata di mele con pasta sfoglia',
+      'Pasta frolla al cacao e nocciole',
+      'Pasta di zucchero',
+      'Treccine di pasta frolla',
+    ]) {
+      assert.equal(daTenereInCatalogo(daTitolo(titolo).ruolo), false, `${titolo} e' entrata in catalogo`)
+    }
+  })
+
+  it('tiene fuori i dolci che si riconoscono da un ingrediente, non dalla categoria', () => {
+    for (const titolo of [
+      'Gnocchi al cacao',
+      'Tagliatelle al cacao',
+      'Ravioli al cacao',
+      'Torta charlotte alla zuppa inglese',
+      'Cupcake carnevaleschi',
+    ]) {
+      assert.equal(daTenereInCatalogo(daTitolo(titolo).ruolo), false, `${titolo} e' entrata in catalogo`)
+    }
+  })
+
+  it('ma i primi veri restano primi', () => {
+    // La prova che il veto non ha tagliato troppo largo.
+    assert.equal(daTitolo('Pasta alla Norma in bianco').ruolo, 'primo')
+    assert.equal(daTitolo('Pasta e patate al forno').ruolo, 'primo')
+    assert.equal(daTitolo('Pasta fredda con tonno').ruolo, 'primo')
+    assert.equal(daTitolo('Zuppa di ceci').ruolo, 'primo')
+    assert.equal(daTitolo('Ravioli alla caprese').ruolo, 'primo')
+  })
+
+  it('e i piatti salati si riconoscono lo stesso, quando il titolo lo dice', () => {
+    assert.equal(daTitolo('Torta salata con carciofi').ruolo, 'secondo')
+    assert.equal(daTitolo('Quiche alle cipolle').ruolo, 'secondo')
+    assert.equal(daTitolo('Cestini di pasta fillo con cotechino').ruolo, 'secondo')
+  })
+
+  it('quello che resta senza nome non entra, ed e’ la scelta prudente', () => {
+    // "Chiocciole di pasta fillo ai funghi" prima era un primo, e lo era solo
+    // per la parola "pasta". Adesso non e' niente: nel titolo non c'e'
+    // nessuna parola che dica che pranzo o cena e'. Meglio perdere una
+    // ricetta salata che pagarne dieci di pasta frolla - e il giorno che una
+    // parola nuova entra nella tabella, la riclassificazione la ripesca senza
+    // che nessuno debba ricordarsene.
+    assert.equal(daTenereInCatalogo(daTitolo('Chiocciole di pasta fillo ai funghi').ruolo), false)
+  })
+})

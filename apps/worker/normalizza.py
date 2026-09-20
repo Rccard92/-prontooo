@@ -91,6 +91,34 @@ def _catalogo(esito: dict) -> str:
     )
 
 
+def _riclassifica(base: str, segreto: str) -> str:
+    """Rimette in ordine i ruoli di quello che c'e' gia' in catalogo.
+
+    Separato dalla rimessa in coda, e per un motivo di soldi: questo non costa
+    niente e fa risparmiare - un dolce che torna a essere un dolce esce dalla
+    coda e non lo si legge piu' - mentre rimettere in coda si paga. Finche'
+    erano la stessa richiesta, per avere il risparmio bisognava comprare la
+    spesa.
+
+    Si accende con RICLASSIFICA dopo aver cambiato la tabella delle parole in
+    fasce.ts, si legge quante ne ha spostate, si spegne.
+    """
+    try:
+        risposta = httpx.post(
+            f"{base.rstrip('/')}/api/interno/normalizza",
+            headers={"x-segreto-interno": segreto},
+            json={"riclassifica": True},
+            timeout=120,
+        )
+    except httpx.HTTPError as errore:
+        return f"riclassificazione non chiesta: {errore}"
+
+    if risposta.status_code != 200:
+        return f"riclassificazione: il web ha risposto {risposta.status_code}"
+
+    return f"riclassificate {risposta.json().get('riclassificate', 0)} ricette"
+
+
 def _solo_stato(base: str, segreto: str) -> str:
     """I conteggi del catalogo, senza leggere niente."""
     try:
@@ -177,6 +205,11 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     return messaggio, restanti
 
 
+def _acceso(nome: str) -> bool:
+    """Gli attrezzi da officina si accendono con una variabile, e si spengono."""
+    return os.environ.get(nome, "").strip().lower() in ("1", "si", "true", "on")
+
+
 def bussa() -> str:
     base = os.environ.get("URL_WEB_INTERNO")
     segreto = os.environ.get("SEGRETO_INTERNO")
@@ -194,9 +227,12 @@ def bussa() -> str:
     righe: list[str] = []
     prima = None
 
-    # Prima di leggere, non dopo: cosi' quelle rimesse in coda le prende
-    # questo stesso giro invece del prossimo.
-    if os.environ.get("RIMETTI_IN_CODA", "").strip().lower() in ("1", "si", "true", "on"):
+    # Prima di leggere, non dopo: cosi' quelle rimesse in coda - e quelle che
+    # la riclassificazione toglie dalla coda - contano da questo giro.
+    if _acceso("RICLASSIFICA"):
+        righe.append(_riclassifica(base, segreto))
+
+    if _acceso("RIMETTI_IN_CODA"):
         righe.append(_rimetti_in_coda(base, segreto))
 
     for _ in range(BLOCCHI_PER_GIRO):

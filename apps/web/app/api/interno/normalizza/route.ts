@@ -39,12 +39,14 @@ export async function POST(richiesta: Request) {
   let quante = PREDEFINITE
   let rileggi = false
   let soloStato = false
+  let soloRiclassifica = false
 
   try {
     const corpo = (await richiesta.json()) as {
       quante?: unknown
       rileggi?: unknown
       stato?: unknown
+      riclassifica?: unknown
     }
 
     if (typeof corpo.quante === 'number' && Number.isFinite(corpo.quante)) {
@@ -53,6 +55,7 @@ export async function POST(richiesta: Request) {
 
     rileggi = corpo.rileggi === true
     soloStato = corpo.stato === true
+    soloRiclassifica = corpo.riclassifica === true
   } catch {
     // Corpo vuoto o illeggibile: va bene lo stesso, si usa il predefinito.
   }
@@ -62,6 +65,16 @@ export async function POST(richiesta: Request) {
   // siamo - e' una query, non costa niente.
   if (soloStato) {
     return NextResponse.json({ ok: true, catalogo: await statoCatalogo() })
+  }
+
+  // Solo la riclassificazione, senza rimettere in coda.
+  //
+  // Le due cose stavano insieme e non potevano: riclassificare non costa
+  // niente e **fa risparmiare**, perche' un dolce che torna a essere un dolce
+  // esce dalla coda e non lo si legge piu'. Rimettere in coda invece si paga.
+  // Attaccate, per avere la prima bisognava comprare la seconda.
+  if (soloRiclassifica) {
+    return NextResponse.json({ ok: true, riclassificate: await riclassifica() })
   }
 
   // Attrezzo da officina: dopo che il vocabolario si allarga, rimette in coda

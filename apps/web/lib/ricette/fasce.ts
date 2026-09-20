@@ -44,12 +44,29 @@ const FASCE_PER_RUOLO: Record<Ruolo, Fascia[]> = {
 const INDIZI: [RegExp, Ruolo][] = [
   [/torte salate|torta salata|rustici|quiche|sformat/, 'secondo'],
   [/piatti unici|piatto unico|one pot/, 'piatto_unico'],
+
+  // Il veto dei dolci, prima di tutto il resto.
+  //
+  // Serve perche' i dolci non si riconoscono dalla categoria ma da un
+  // ingrediente che sta in mezzo al titolo: "Gnocchi al cacao" e "Tagliatelle
+  // al cacao" passavano per primi, "Torta charlotte alla zuppa inglese" pure,
+  // e finivano in catalogo. Sono ricette che il piano non proporra' mai, e
+  // ogni una costa una lettura.
   [
-    /primi piatti|\bprimi\b|paste|\bpasta\b|risott|zupp|minestr|gnocchi|lasagne|vellutat|spaghett|penne|rigatoni|paccheri|tagliatelle|fusilli|orecchiette|ravioli|tortell|cannelloni|couscous|farro|orzott/,
+    /cacao|cioccolat|nutella|\bfrolla\b|pasta di zucchero|zucchero a velo|crema pasticcera|marzapane|amaretti|panettone|pandoro|cupcake|zuppa inglese|mering|glassa/,
+    'dolce',
+  ],
+
+  [
+    // "Pasta" da sola vuol dire primo piatto, ma "pasta frolla", "pasta
+    // sfoglia" e "pasta di zucchero" sono impasti, non piatti. Erano loro a
+    // trascinare in catalogo le calze della befana e le crostate: la parola
+    // "pasta" vinceva prima che "crostata" potesse dire la sua.
+    /primi piatti|\bprimi\b|paste\b|\bpasta\b(?!\s+(?:frolla|sfoglia|bris|matta|madre|choux|fillo|kataifi|biscotto|di zucchero|di mandorle))|risott|zupp(?!a inglese)|minestr|gnocchi|lasagne|vellutat|spaghett|penne|rigatoni|paccheri|tagliatelle|fusilli|orecchiette|ravioli|tortell|cannelloni|couscous|farro|orzott/,
     'primo',
   ],
   [
-    /secondi piatti|\bsecondi\b|carne|pesce|uova e frittate|frittat|spezzatin|polpett|cotolett|scaloppin|arrost|brasat|straccett|hamburger|pollo|tacchino|manzo|vitello|maiale|agnello|coniglio|cinghiale|salmone|merluzzo|tonno|orata|branzino|gamber|calamar|cozze|vongole|seppie|polpo|baccal|stracotto|coda alla|spiedini/,
+    /secondi piatti|\bsecondi\b|carne|pesce|uova e frittate|frittat|spezzatin|polpett|cotolett|scaloppin|arrost|brasat|straccett|hamburger|pollo|tacchino|manzo|vitello|maiale|agnello|coniglio|cinghiale|salmone|merluzzo|tonno|orata|branzino|gamber|calamar|cozze|vongole|seppie|polpo|baccal|stracotto|coda alla|spiedini|cotechino|salsicc|salame|speck|prosciutto|guancial|pancett|bresaola|anatra|faraona|capriolo|trippa|sgombro|trigli|gallinella|scampi|moscardin|persico|pescatrice|sogliol|platess|spigol|cernia|ricciol|alici|acciugh|totani|astice|granchio|wurstel|bistecc|filetto|costine|costolette|lonza|arista|tagliata|carpaccio|tartare/,
     'secondo',
   ],
   [/antipasti|antipasto|finger food|stuzzichini|aperitivo|crostin|bruschett/, 'antipasto'],
