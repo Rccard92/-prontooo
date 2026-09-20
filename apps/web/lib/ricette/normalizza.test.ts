@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { VOCABOLARIO } from '@prontooo/db/alimenti'
 
-import { type VoceVocabolario, abbinaAlVocabolario, parole } from './normalizza'
+import { type VoceVocabolario, abbinaAlVocabolario, parole, radice } from './normalizza'
 
 const TRE_ALIMENTI: VoceVocabolario[] = [
   { id: 1, nome: 'Pasta di semola', gruppo: 'cereale', ruoli: ['base'], etichette: ['glutine'] },
@@ -149,5 +149,57 @@ describe('le paroline e i numeri', () => {
     // Senza questa riga "Yogurt greco 5%" e "Yogurt greco 0%" cadono sulla
     // stessa chiave e il piano ti da' l'uno per l'altro.
     assert.notEqual(parole('Yogurt greco 5%'), parole('Yogurt greco 0%'))
+  })
+})
+
+describe('singolari, plurali e accenti', () => {
+  const CINQUE: VoceVocabolario[] = [
+    { id: 1, nome: 'Cipolla', gruppo: 'verdura', ruoli: ['verdura'], etichette: [] },
+    { id: 2, nome: 'Carote', gruppo: 'verdura', ruoli: ['verdura'], etichette: [] },
+    { id: 3, nome: 'Baccala', gruppo: 'pesce', ruoli: ['proteina'], etichette: ['pesce'] },
+    { id: 4, nome: 'Yogurt greco 0%', gruppo: 'latticino', ruoli: ['latticino'], etichette: [] },
+    { id: 5, nome: 'Yogurt greco 5%', gruppo: 'latticino', ruoli: ['latticino'], etichette: [] },
+  ]
+
+  const abbina = (nome: string) =>
+    abbinaAlVocabolario([nome], [{ posizione: 0, alimento: nome, grammi: 100, tipo: 'alimento' }], CINQUE)[0]!
+
+  it('prende il plurale quando il vocabolario ha il singolare', () => {
+    // Il caso vero: il vocabolario dice "Cipolla", le ricette scrivono
+    // "Cipolle", e quella riga faceva cadere la ricetta intera.
+    assert.equal(abbina('Cipolle').alimentoId, 1)
+  })
+
+  it('e il singolare quando il vocabolario ha il plurale', () => {
+    assert.equal(abbina('Carota').alimentoId, 2)
+  })
+
+  it('non si ferma davanti a un accento', () => {
+    assert.equal(abbina('Baccalà').alimentoId, 3)
+  })
+
+  it('continua a tenere separati due alimenti che differiscono per un numero', () => {
+    assert.equal(abbina('Yogurt greco 5%').alimentoId, 5)
+    assert.equal(abbina('Yogurt greco 0%').alimentoId, 4)
+  })
+
+  it('non inventa un abbinamento quando l’alimento non c’e’ davvero', () => {
+    assert.equal(abbina('Umeboshi').tipo, 'sconosciuto')
+  })
+
+  it('nel vocabolario vero due alimenti non hanno la stessa radice', () => {
+    // E' la condizione che rende sicuro l'ultimo livello, il piu' largo dei
+    // tre: se due voci avessero la stessa radice, una riga finirebbe
+    // sull'alimento sbagliato e nessuno se ne accorgerebbe. Vale soprattutto
+    // per le coppie che differiscono per una vocale sola.
+    const viste = new Map<string, string>()
+
+    for (const alimento of VOCABOLARIO) {
+      const chiave = radice(alimento.nome)
+      const gia = viste.get(chiave)
+
+      assert.equal(gia, undefined, `"${alimento.nome}" e "${gia}" hanno la stessa radice`)
+      viste.set(chiave, alimento.nome)
+    }
   })
 })

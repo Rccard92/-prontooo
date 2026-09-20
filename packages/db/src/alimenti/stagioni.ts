@@ -100,6 +100,8 @@ export const STAGIONI: Record<string, number[]> = {
   Valeriana: da(10, 4),
   Verza: da(10, 3),
   Zucca: da(9, 12),
+  'Fiori di zucca': da(6, 9),
+  Topinambur: da(10, 3),
   Zucchine: da(5, 9),
 }
 

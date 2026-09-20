@@ -381,4 +381,69 @@ export const VOCABOLARIO: VoceAlimento[] = [
   { nome: 'Caprino', gruppo: 'latticino', ruoli: ['proteina', 'spalmabile'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
   { nome: 'Nduja', gruppo: 'carne', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 25, unita: 'g', etichette: ['maiale'] },
   { nome: 'Cavolo viola', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 200, unita: 'g' },
+
+  // ---------- Quello che le ricette chiedevano davvero ----------
+  // Non scelti a tavolino: sono le righe che il catalogo ha bocciato piu'
+  // spesso in ottocento letture. Il worker le stampa nei log a ogni giro, e
+  // questa e' la lista di quelle che tornavano - tagli di maiale, pesce di
+  // banco, farine, formaggi da grattugiare. Ognuna di queste mancanze faceva
+  // cadere una ricetta intera, perche' una riga non capita toglie la garanzia
+  // a tutte le altre.
+
+  // Carne: i tagli che le ricette usano e il vocabolario non aveva.
+  { nome: 'Costine di maiale', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 250, unita: 'g', etichette: ['proteico', 'maiale', 'carne_rossa'] },
+  { nome: 'Macinato di maiale', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'maiale', 'carne_rossa'] },
+  { nome: 'Filetto di maiale', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'maiale', 'carne_rossa'] },
+  { nome: 'Cotechino', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 100, unita: 'g', etichette: ['proteico', 'maiale', 'carne_rossa'] },
+  { nome: 'Cinghiale', gruppo: 'carne', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'carne_rossa'] },
+
+  // Pesce di banco: erano quasi tutti fra le righe bocciate.
+  { nome: 'Pesce persico', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Rana pescatrice', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Triglie', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Gallinella', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Moscardini', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Scampi', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['proteico', 'pesce'] },
+  { nome: 'Polpa di granchio', gruppo: 'pesce', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 100, unita: 'g', etichette: ['proteico', 'pesce'] },
+
+  // Formaggi: quelli da grattugiare e quelli da farcire.
+  { nome: 'Robiola', gruppo: 'latticino', ruoli: ['proteina', 'spalmabile'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 60, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Ricotta salata', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Ricotta di pecora', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 100, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Emmental', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Groviera', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['lattosio', 'proteico'] },
+  { nome: 'Formaggio a fette', gruppo: 'latticino', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 40, unita: 'g', etichette: ['lattosio', 'proteico'] },
+
+  // Farine e impasti. Qui l'etichetta conta piu' del resto: erano righe che
+  // portavano glutine e che, restando sconosciute, lasciavano la ricetta
+  // senza garanzia proprio su quello.
+  { nome: 'Farina di mais', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Farina di riso', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Farina di castagne', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Farina di farro', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Farina di ceci', gruppo: 'legume', ruoli: ['base', 'proteina'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['proteico'] },
+  { nome: 'Farina di mandorle', gruppo: 'frutta_secca', ruoli: ['base'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 30, unita: 'g', etichette: ['frutta_guscio'] },
+  { nome: 'Amido di mais', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 10, unita: 'g' },
+  { nome: 'Panko', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 30, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Pasta fillo', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 50, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Pasta brisee', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine', 'lattosio'] },
+  { nome: 'Ravioli', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['glutine', 'uova', 'lattosio'] },
+  { nome: 'Fregola', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Noodles di riso', gruppo: 'cereale', ruoli: ['base'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Seitan', gruppo: 'cereale', ruoli: ['proteina'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g', etichette: ['glutine', 'proteico'] },
+
+  // Condimenti che non potevano restare fuori, e non per gusto: la
+  // Worcestershire ha dentro le acciughe e la teriyaki la soia. Chiamarle
+  // "libere" avrebbe voluto dire garantire a una cena senza pesce che il
+  // pesce non c'era.
+  { nome: 'Olio di semi di arachide', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 10, unita: 'g' },
+  { nome: 'Strutto', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 10, unita: 'g', etichette: ['maiale'] },
+  { nome: 'Salsa Worcestershire', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 10, unita: 'g', etichette: ['pesce', 'glutine'] },
+  { nome: 'Salsa teriyaki', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 10, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Miso', gruppo: 'grasso', ruoli: ['grasso'], fasce: ['pranzo', 'cena'], quantita: 15, unita: 'g', etichette: ['glutine'] },
+  { nome: 'Semi di papavero', gruppo: 'frutta_secca', ruoli: ['semi'], fasce: ['colazione', 'pranzo', 'cena'], quantita: 10, unita: 'g' },
+
+  // Verdure di stagione che mancavano.
+  { nome: 'Fiori di zucca', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 80, unita: 'g' },
+  { nome: 'Topinambur', gruppo: 'verdura', ruoli: ['verdura'], fasce: ['pranzo', 'cena'], quantita: 150, unita: 'g' },
 ]

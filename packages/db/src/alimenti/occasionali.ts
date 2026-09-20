@@ -45,6 +45,14 @@ export const OCCASIONALI: string[] = [
   'Plumcake',
   'Torta fatta in casa',
   'Biscotti secchi',
+
+  // Aggiunti col vocabolario delle ricette: si mangiano e si registrano, ma
+  // un piano settimanale non ci mette le costine il martedi'.
+  'Costine di maiale',
+  'Cotechino',
+  'Cinghiale',
+  'Strutto',
+  'Pasta brisee',
 ]
 
 const INSIEME = new Set(OCCASIONALI)
