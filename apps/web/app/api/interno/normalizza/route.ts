@@ -5,6 +5,7 @@ import {
   normalizzaProssime,
   riclassifica,
   rimettiInCoda,
+  statoCatalogo,
 } from '@/lib/ricette/archivio'
 import { chiaveConfigurata } from '@/lib/ricette/normalizza'
 
@@ -70,7 +71,12 @@ export async function POST(richiesta: Request) {
   }
 
   try {
-    return NextResponse.json({ ok: true, ...(await normalizzaProssime(quante)) })
+    const esito = await normalizzaProssime(quante)
+
+    // Il catalogo accanto all'esito del blocco: e' una query di conteggio in
+    // coda a una chiamata che ne fa gia' una, e risparmia di andare a contare
+    // a mano sul database per sapere a che punto siamo.
+    return NextResponse.json({ ok: true, ...esito, catalogo: await statoCatalogo() })
   } catch (errore) {
     console.error('normalizzazione del catalogo fallita:', errore)
 

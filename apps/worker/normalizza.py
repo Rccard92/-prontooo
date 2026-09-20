@@ -71,6 +71,26 @@ def _rimetti_in_coda(base: str, segreto: str) -> str:
     )
 
 
+def _catalogo(esito: dict) -> str:
+    """Il catalogo in una riga, cosi' come il web l'ha contato.
+
+    Quattro numeri e non uno perche' rispondono a quattro domande diverse, e
+    quella che conta e' l'ultima: non quante ricette abbiamo preso dai siti,
+    ma quante hanno i posti e finiscono davvero nella schermata di oggi.
+    """
+    c = esito.get("catalogo") or {}
+
+    if not c:
+        return ""
+
+    return (
+        f"\n  catalogo: {c.get('raccolte', 0)} raccolte,"
+        f" {c.get('daPiano', 0)} da pranzo o cena,"
+        f" {c.get('lette', 0)} lette,"
+        f" {c.get('nelPiano', 0)} nel piano"
+    )
+
+
 def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     """Un blocco solo. Torna il messaggio e quante ne restano, se si sa."""
     try:
@@ -101,7 +121,7 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     restanti = esito.get("restanti", 0)
 
     if esito.get("normalizzate", 0) == 0 and restanti == 0:
-        return "catalogo gia' tutto normalizzato", 0
+        return "catalogo gia' tutto normalizzato" + _catalogo(esito), 0
 
     messaggio = (
         f"normalizzate {esito.get('normalizzate', 0)} ricette"
@@ -130,6 +150,11 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
             f"{v.get('titolo')} ({v.get('nonCapite')}/{v.get('righe')})" for v in bloccate
         )
         messaggio += f"\n  restano fuori: {elenco}"
+
+    # Solo sull'ultimo blocco del giro: durante un arretrato sarebbero cinque
+    # righe uguali, e il numero che cambia e' l'ultimo.
+    if restanti == 0:
+        messaggio += _catalogo(esito)
 
     return messaggio, restanti
 

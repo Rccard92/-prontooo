@@ -215,6 +215,38 @@ export async function rimettiInCoda(): Promise<number> {
   return rimesse.length
 }
 
+/**
+ * Il catalogo in quattro numeri, per il log di ogni giro.
+ *
+ * Serve a rispondere alla domanda che si fa davvero - "a che punto siamo, e
+ * quanto costa arrivare in fondo" - senza andare a contare a mano sul
+ * database. Una query sola, nessun modello: sta accanto al conteggio che il
+ * giro fa gia' per sapere quando smettere.
+ *
+ * I quattro numeri non sono intercambiabili, ed e' il motivo per cui ci sono
+ * tutti e quattro: `raccolte` e' quanto abbiamo preso dai siti, `daPiano` e'
+ * quanto di quello potrebbe reggere un pranzo o una cena, `lette` e' quanto
+ * abbiamo pagato per leggere, e `nelPiano` e' l'unico che conta davvero -
+ * quante ricette hanno i posti e finiscono nella schermata di oggi.
+ */
+export async function statoCatalogo(): Promise<{
+  raccolte: number
+  daPiano: number
+  lette: number
+  nelPiano: number
+}> {
+  const [riga] = await db()
+    .select({
+      raccolte: sql<number>`count(*)::int`,
+      daPiano: sql<number>`(count(*) filter (where ${inArray(ricette.ruolo, RUOLI_IN_CATALOGO)}))::int`,
+      lette: sql<number>`(count(*) filter (where ${isNotNull(ricette.normalizzataIl)}))::int`,
+      nelPiano: sql<number>`(count(*) filter (where jsonb_array_length(${ricette.posti}) > 0))::int`,
+    })
+    .from(ricette)
+
+  return riga ?? { raccolte: 0, daPiano: 0, lette: 0, nelPiano: 0 }
+}
+
 /** Quante ne restano da leggere: serve al worker per sapere quando smettere. */
 export async function daNormalizzare(): Promise<number> {
   const [riga] = await db()
