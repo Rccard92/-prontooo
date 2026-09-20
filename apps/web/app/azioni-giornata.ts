@@ -12,6 +12,7 @@ import {
   oggi,
 } from '@/lib/giornata/componi'
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
+import { eData } from '@/lib/giornata/settimana'
 import { type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giornata/modello'
 import { PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { ricalibra } from '@/lib/giornata/ricalibra'
@@ -36,13 +37,28 @@ async function pastoDi(utenteId: number, pastoId: number) {
   return riga?.pasto ?? null
 }
 
-export async function generaOggi(dati: FormData) {
+/**
+ * Il giorno su cui agire, preso dal form.
+ *
+ * Arriva da un campo nascosto, quindi da chiunque: una data che non esiste
+ * viene buttata e si torna a oggi. E non si compone niente **prima** di oggi -
+ * un menu per martedi' scorso non vuol dire niente, e il pulsante nella
+ * schermata infatti non c'e': questo e' il controllo che regge quando il form
+ * arriva lo stesso.
+ */
+function giornoDaComporre(dati: FormData): string {
+  const chiesto = dati.get('data')
+
+  return eData(chiesto) && chiesto >= oggi() ? chiesto : oggi()
+}
+
+export async function generaGiorno(dati: FormData) {
   const utenteId = await utenteObbligatorio()
   const tipo = String(dati.get('tipo') ?? '') as TipoGiorno
 
   await generaGiornata(
     utenteId,
-    oggi(),
+    giornoDaComporre(dati),
     ['standard', 'on', 'off'].includes(tipo) ? tipo : undefined,
   )
   revalidatePath('/')
@@ -54,7 +70,7 @@ export async function cambiaTipoGiorno(dati: FormData) {
 
   if (!['standard', 'on', 'off'].includes(tipo)) return
 
-  await generaGiornata(utenteId, oggi(), tipo)
+  await generaGiornata(utenteId, giornoDaComporre(dati), tipo)
   revalidatePath('/')
 }
 

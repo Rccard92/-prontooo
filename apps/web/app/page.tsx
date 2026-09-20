@@ -3,7 +3,14 @@ import { redirect } from 'next/navigation'
 
 import { utenteConProfilo, utenteCorrente } from '@/lib/accesso/sessione'
 import { GRUPPI_FUORI, PIATTI_FUORI } from '@/lib/giornata/piatti'
-import { type Scoperta, leggiGiornata, oggi, scopertePerUtente } from '@/lib/giornata/componi'
+import {
+  type Scoperta,
+  leggiGiornata,
+  oggi,
+  scopertePerUtente,
+  settimana,
+} from '@/lib/giornata/componi'
+import { eData, giornoPerEsteso, quando, settimanaDi } from '@/lib/giornata/settimana'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
@@ -18,11 +25,12 @@ import {
   cambiaRicetta,
   sostituisciComponente,
   cambiaTipoGiorno,
-  generaOggi,
+  generaGiorno,
   registraFuori,
   saltaPasto,
   spuntaPasto,
 } from './azioni-giornata'
+import { Calendario } from './componenti/calendario'
 import { Testata, durata } from './componenti/testata'
 
 export const dynamic = 'force-dynamic'
@@ -34,13 +42,6 @@ const stileFascia: Record<string, string> = {
   pranzo: 'bg-basilico-tenue text-basilico-scuro',
   cena: 'bg-pomodoro-tenue text-pomodoro',
 }
-
-const dataLunga = new Intl.DateTimeFormat('it-IT', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  timeZone: 'UTC',
-})
 
 type Pasto = NonNullable<Awaited<ReturnType<typeof leggiGiornata>>>['pasti'][number]
 
@@ -312,9 +313,21 @@ function SchedaPasto({
   )
 }
 
-export default async function Oggi() {
+export default async function Oggi({
+  searchParams,
+}: {
+  searchParams: Promise<{ giorno?: string }>
+}) {
+  // Il giorno guardato sta nell'indirizzo, cosi' e' un link che si condivide e
+  // che il tasto indietro riporta indietro. Senza, e' oggi - ed e' giusto che
+  // sia oggi: domani questa stessa pagina mostra domani da sola.
+  const chiesto = (await searchParams).giorno
+  const data = eData(chiesto) ? chiesto : oggi()
+  const eOggi = data === oggi()
+
   let giorno = null
   let lista = null
+  let giorniSettimana: Awaited<ReturnType<typeof settimana>> = []
 
   let ricette = new Map<number, RicettaDelPasto>()
   let alternative: AlternativeDiPasto = new Map()
@@ -329,7 +342,8 @@ export default async function Oggi() {
 
   try {
     lista = await listaAttiva(utenteId)
-    giorno = await leggiGiornata(utenteId)
+    giorno = await leggiGiornata(utenteId, data)
+    giorniSettimana = await settimana(utenteId, settimanaDi(data))
 
     if (giorno) {
       const previsti = giorno.pasti.filter((p) => p.stato === 'previsto')
@@ -364,9 +378,8 @@ export default async function Oggi() {
     )
   }
 
-  const data = oggi()
-  const [anno, mese, giornoMese] = data.split('-').map(Number)
-  const etichettaData = dataLunga.format(new Date(Date.UTC(anno ?? 2026, (mese ?? 1) - 1, giornoMese ?? 1)))
+  const etichettaData = giornoPerEsteso(data)
+  const passato = quando(data, oggi()) === 'passato'
 
   const obiettivo = giorno?.giornata.obiettivo
   const consumato = giorno?.consumato
@@ -377,8 +390,10 @@ export default async function Oggi() {
       <Testata attiva="oggi" nome={utente.nome} />
 
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Oggi</h1>
-        <p className="mt-1 text-sm text-fumo">{etichettaData}</p>
+        <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl first-letter:uppercase">
+          {eOggi ? 'Oggi' : etichettaData.split(' ')[0]}
+        </h1>
+        <p className="mt-1 text-sm text-fumo first-letter:uppercase">{etichettaData}</p>
 
         {!lista ? (
           <div className="scheda mt-6 px-6 py-12 text-center">
@@ -393,7 +408,10 @@ export default async function Oggi() {
           </div>
         ) : (
           <>
+            <Calendario giorni={giorniSettimana} scelto={data} oggi={oggi()} />
+
             <form action={cambiaTipoGiorno} className="scheda mt-5 flex flex-wrap items-center gap-2 p-4">
+              <input type="hidden" name="data" value={data} />
               {TIPI_GIORNO.map((tipo) => {
                 const attivo = (giorno?.giornata.tipoGiorno ?? 'standard') === tipo
 
@@ -463,15 +481,30 @@ export default async function Oggi() {
             ) : null}
 
             {!giorno || giorno.pasti.length === 0 ? (
-              <form action={generaOggi} className="scheda mt-5 px-6 py-12 text-center">
-                <h2 className="font-marchio text-2xl text-inchiostro">Non c&rsquo;è ancora la giornata</h2>
-                <p className="mx-auto mt-2 max-w-md text-base text-fumo">
-                  Compongo i pasti dai tuoi ingredienti, con i grammi giusti.
-                </p>
-                <button type="submit" className="bottone mt-6 hover:bg-basilico-scuro">
-                  Prepara la giornata
-                </button>
-              </form>
+              passato ? (
+                // Un giorno passato si guarda, non si compone: un menu per
+                // martedi' scorso non vuol dire niente, e un pulsante che lo
+                // offre e' un invito a sporcare lo storico.
+                <div className="scheda mt-5 px-6 py-12 text-center">
+                  <h2 className="font-marchio text-2xl text-inchiostro">Quel giorno non c&rsquo;era niente</h2>
+                  <p className="mx-auto mt-2 max-w-md text-base text-fumo">
+                    Non hai preparato la giornata e non hai registrato nulla.
+                  </p>
+                </div>
+              ) : (
+                <form action={generaGiorno} className="scheda mt-5 px-6 py-12 text-center">
+                  <input type="hidden" name="data" value={data} />
+                  <h2 className="font-marchio text-2xl text-inchiostro">
+                    {eOggi ? 'Non c’è ancora la giornata' : 'Questo giorno è da preparare'}
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-md text-base text-fumo">
+                    Compongo i pasti dai tuoi ingredienti, con i grammi giusti.
+                  </p>
+                  <button type="submit" className="bottone mt-6 hover:bg-basilico-scuro">
+                    Prepara la giornata
+                  </button>
+                </form>
+              )
             ) : (
               <>
                 <div className="mt-6 flex flex-col gap-4">
@@ -486,11 +519,14 @@ export default async function Oggi() {
                   ))}
                 </div>
 
-                <form action={generaOggi} className="mt-6">
-                  <button type="submit" className="bottone-chiaro w-full hover:bg-basilico hover:text-bianco">
-                    Rifai la giornata
-                  </button>
-                </form>
+                {passato ? null : (
+                  <form action={generaGiorno} className="mt-6">
+                    <input type="hidden" name="data" value={data} />
+                    <button type="submit" className="bottone-chiaro w-full hover:bg-basilico hover:text-bianco">
+                      Rifai la giornata
+                    </button>
+                  </form>
+                )}
               </>
             )}
           </>

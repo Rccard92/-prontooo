@@ -402,6 +402,120 @@ export async function generaGiornata(
   return giornata.id
 }
 
+/** Quel che serve a disegnare una casella del calendario. */
+export type GiornoDiSettimana = {
+  data: string
+  /** C'e' un piano per quel giorno, o la casella e' vuota. */
+  esiste: boolean
+  tipoGiorno: TipoGiorno
+  /** Le kcal della giornata: quelle registrate dove hai mangiato, quelle previste dove no. */
+  kcal: number
+  kcalObiettivo: number
+  registrati: number
+  pasti: number
+}
+
+/**
+ * I sette giorni in una volta sola, per la striscia del calendario.
+ *
+ * Tre query per tutta la settimana invece di tre per giorno: le giornate, i
+ * loro pasti, e gli alimenti citati da tutti. Chiamare `leggiGiornata` sette
+ * volte sarebbe stato piu' corto da scrivere e avrebbe fatto ventuno viaggi
+ * sul database per disegnare una riga di caselle.
+ */
+export async function settimana(utenteId: number, date: string[]): Promise<GiornoDiSettimana[]> {
+  const vuota = (data: string): GiornoDiSettimana => ({
+    data,
+    esiste: false,
+    tipoGiorno: 'standard',
+    kcal: 0,
+    kcalObiettivo: 0,
+    registrati: 0,
+    pasti: 0,
+  })
+
+  if (date.length === 0) return []
+
+  const connessione = db()
+
+  const righe = await connessione
+    .select()
+    .from(giornate)
+    .where(and(eq(giornate.utenteId, utenteId), inArray(giornate.data, date)))
+
+  if (righe.length === 0) return date.map(vuota)
+
+  const pasti = await connessione
+    .select({
+      giornataId: giornataPasti.giornataId,
+      stato: giornataPasti.stato,
+      previsti: giornataPasti.previsti,
+      consumati: giornataPasti.consumati,
+    })
+    .from(giornataPasti)
+    .where(
+      inArray(
+        giornataPasti.giornataId,
+        righe.map((r) => r.id),
+      ),
+    )
+
+  // Gli alimenti di tutta la settimana in un colpo: i previsti portano i
+  // grammi ma non le calorie, che stanno sull'alimento.
+  const ids = [
+    ...new Set(
+      pasti.flatMap((p) => p.previsti.map((c) => c.alimentoId)).filter((id): id is number => id !== null),
+    ),
+  ]
+
+  const perAlimento = new Map(
+    ids.length === 0
+      ? []
+      : (await connessione.select().from(alimenti).where(inArray(alimenti.id, ids))).map((a) => [a.id, a]),
+  )
+
+  const perGiornata = new Map(righe.map((r) => [r.id, r]))
+  const conto = new Map<string, GiornoDiSettimana>(date.map((d) => [d, vuota(d)]))
+
+  for (const riga of righe) {
+    const giorno = conto.get(riga.data)
+
+    if (!giorno) continue
+
+    giorno.esiste = true
+    giorno.tipoGiorno = (riga.tipoGiorno as TipoGiorno) || 'standard'
+    giorno.kcalObiettivo = Math.round(riga.obiettivo?.kcal ?? 0)
+  }
+
+  for (const pasto of pasti) {
+    const riga = perGiornata.get(pasto.giornataId)
+    const giorno = riga ? conto.get(riga.data) : undefined
+
+    if (!giorno) continue
+
+    giorno.pasti += 1
+
+    // Dove hai registrato vale quello che hai mangiato, dove no vale il
+    // piano. Mettere sempre il previsto direbbe che la giornata e' andata
+    // come doveva anche quando non e' andata cosi'.
+    if (pasto.stato === 'previsto') {
+      giorno.kcal += pasto.previsti.reduce(
+        (t, c) => t + nutrientiDi(c.alimentoId === null ? null : (perAlimento.get(c.alimentoId) ?? null), c.quantita).kcal,
+        0,
+      )
+    } else {
+      giorno.registrati += 1
+      giorno.kcal += pasto.consumati.reduce((t, c) => t + c.kcal, 0)
+    }
+  }
+
+  return date.map((d) => {
+    const giorno = conto.get(d) ?? vuota(d)
+
+    return { ...giorno, kcal: Math.round(giorno.kcal) }
+  })
+}
+
 /** La giornata con dentro i pasti, pronta da mostrare. */
 export async function leggiGiornata(utenteId: number, data = oggi()) {
   const [giornata] = await db()
