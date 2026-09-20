@@ -36,26 +36,32 @@ export async function POST(richiesta: Request) {
     return NextResponse.json({ ok: false, motivo: 'non autorizzato' }, { status: 401 })
   }
 
-  if (!chiaveConfigurata()) {
-    return NextResponse.json(
-      { ok: false, motivo: 'ANTHROPIC_API_KEY non configurata', restanti: await daNormalizzare() },
-      { status: 503 },
-    )
-  }
-
   let quante = PREDEFINITE
   let rileggi = false
+  let soloStato = false
 
   try {
-    const corpo = (await richiesta.json()) as { quante?: unknown; rileggi?: unknown }
+    const corpo = (await richiesta.json()) as {
+      quante?: unknown
+      rileggi?: unknown
+      stato?: unknown
+    }
 
     if (typeof corpo.quante === 'number' && Number.isFinite(corpo.quante)) {
       quante = corpo.quante
     }
 
     rileggi = corpo.rileggi === true
+    soloStato = corpo.stato === true
   } catch {
     // Corpo vuoto o illeggibile: va bene lo stesso, si usa il predefinito.
+  }
+
+  // Solo i conteggi, nessuna lettura. Serve quando la lettura e' in pausa: il
+  // freno ferma la spesa, non deve fermare anche il modo di sapere a che punto
+  // siamo - e' una query, non costa niente.
+  if (soloStato) {
+    return NextResponse.json({ ok: true, catalogo: await statoCatalogo() })
   }
 
   // Attrezzo da officina: dopo che il vocabolario si allarga, rimette in coda
@@ -68,6 +74,16 @@ export async function POST(richiesta: Request) {
     const rimesse = await rimettiInCoda()
 
     return NextResponse.json({ ok: true, riclassificate, rimesseInCoda: rimesse })
+  }
+
+  // Qui e non piu' in alto: la chiave serve a leggere le ricette, non a
+  // contarle ne' a rimetterle in coda. Tenendo il controllo in cima, un giorno
+  // senza chiave avrebbe spento anche il modo di sapere a che punto siamo.
+  if (!chiaveConfigurata()) {
+    return NextResponse.json(
+      { ok: false, motivo: 'ANTHROPIC_API_KEY non configurata', restanti: await daNormalizzare() },
+      { status: 503 },
+    )
   }
 
   try {

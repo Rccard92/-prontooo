@@ -91,6 +91,24 @@ def _catalogo(esito: dict) -> str:
     )
 
 
+def _solo_stato(base: str, segreto: str) -> str:
+    """I conteggi del catalogo, senza leggere niente."""
+    try:
+        risposta = httpx.post(
+            f"{base.rstrip('/')}/api/interno/normalizza",
+            headers={"x-segreto-interno": segreto},
+            json={"stato": True},
+            timeout=60,
+        )
+    except httpx.HTTPError:
+        return ""
+
+    if risposta.status_code != 200:
+        return ""
+
+    return _catalogo(risposta.json())
+
+
 def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     """Un blocco solo. Torna il messaggio e quante ne restano, se si sa."""
     try:
@@ -167,7 +185,11 @@ def bussa() -> str:
         return "normalizzazione saltata: manca la configurazione"
 
     if BLOCCHI_PER_GIRO <= 0:
-        return "normalizzazione in pausa: BLOCCHI_PER_GIRO e' a zero"
+        # In pausa si smette di leggere, non di guardare: il conteggio non
+        # chiama nessun modello e dice a che punto e' rimasto il catalogo.
+        return "normalizzazione in pausa: BLOCCHI_PER_GIRO e' a zero" + _solo_stato(
+            base, segreto
+        )
 
     righe: list[str] = []
     prima = None
