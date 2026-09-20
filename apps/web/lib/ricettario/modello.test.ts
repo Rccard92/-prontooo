@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import { LIBRO, PER_ID } from './libro'
 import {
   type ComponenteAbbinabile,
+  type RicettaComponibile,
   abbina,
   occorrente,
   passiDi,
@@ -314,5 +315,72 @@ describe('quando la ricetta non e’ di questo pasto', () => {
     ])
 
     assert.notEqual(esito, null)
+  })
+})
+
+describe('fra il libro di casa e una ricetta vera', () => {
+  // Il pranzo della schermata di oggi: pasta, legumi, pomodoro, olive.
+  const PRANZO_VERO: ComponenteAbbinabile[] = [
+    comp('Tortellini di carne', 'base', 'cereale', 115, ['glutine']),
+    comp('Fagioli borlotti', 'proteina', 'legume', 170),
+    comp('Passata di pomodoro', 'verdura', 'verdura', 170),
+    comp('Olive nere', 'grasso', 'grasso', 55),
+  ]
+
+  // Una del catalogo, normalizzata: stessi posti, ma con la foto, il
+  // procedimento della fonte e il link.
+  const VERA: RicettaComponibile = {
+    id: 'catalogo-812',
+    titolo: 'Pasta e fagioli alla veneta',
+    fasce: ['pranzo', 'cena'],
+    minuti: 45,
+    posti: [
+      { chiave: 'base', ruolo: 'base', gruppi: ['cereale'] },
+      { chiave: 'proteina', ruolo: 'proteina', gruppi: ['legume'] },
+      { chiave: 'verdura', ruolo: 'verdura', gruppi: ['verdura'] },
+      { chiave: 'grasso', ruolo: 'grasso', gruppi: ['grasso'], facoltativo: true },
+    ],
+    passi: [],
+    immagineUrl: 'https://esempio.it/pasta-e-fagioli.jpg',
+    fonte: { nome: 'Esempio', url: 'https://esempio.it/r/812' },
+  }
+
+  it('vince quella vera, perche’ ha la foto e il procedimento', () => {
+    // Prima vinceva sempre il libro scritto a mano: calza uguale, punteggio
+    // uguale, e l'ordinamento stabile lo teneva davanti perche' nell'elenco
+    // viene prima. Risultato: mille ricette raccolte e nella schermata di
+    // oggi non se ne vedeva una.
+    const elenco = proposte('pranzo', PRANZO_VERO, [VERA])
+
+    assert.ok(elenco.length > 1, 'il libro di casa non ha proposto niente')
+    assert.equal(elenco[0]!.ricetta.id, 'catalogo-812')
+    assert.equal(elenco[0]!.livello, 'calza')
+  })
+
+  it('ma il libro resta davanti se calza meglio', () => {
+    // La foto non compra un posto migliore: se la ricetta vera lascia fuori
+    // un componente e quella di casa no, vince quella di casa. L'ordine e'
+    // prima quanto calza, poi la foto.
+    const stretta: RicettaComponibile = {
+      ...VERA,
+      id: 'catalogo-999',
+      posti: [
+        { chiave: 'base', ruolo: 'base', gruppi: ['cereale'] },
+        { chiave: 'proteina', ruolo: 'proteina', gruppi: ['pesce'] },
+      ],
+    }
+
+    const elenco = proposte('pranzo', PRANZO_VERO, [stretta])
+
+    assert.notEqual(elenco[0]!.ricetta.id, 'catalogo-999')
+  })
+
+  it('e senza catalogo il libro di casa regge da solo', () => {
+    // E' il motivo per cui il libro esiste: senza chiave e senza ricette
+    // lette, la schermata di oggi deve comunque proporre qualcosa.
+    const elenco = proposte('pranzo', PRANZO_VERO)
+
+    assert.ok(elenco.length > 0)
+    assert.ok(!elenco[0]!.ricetta.id.startsWith('catalogo-'))
   })
 })

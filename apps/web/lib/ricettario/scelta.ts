@@ -132,7 +132,35 @@ export function proposte(
     .filter((r) => r.fasce.includes(fascia))
     .map((r) => abbina(r, componenti))
     .filter((a): a is Abbinamento => a !== null)
-    .sort((a, b) => ordine[a.livello] - ordine[b.livello] || b.punteggio - a.punteggio)
+    .sort(
+      (a, b) =>
+        ordine[a.livello] - ordine[b.livello] ||
+        b.punteggio - a.punteggio ||
+        concretezza(b.ricetta) - concretezza(a.ricetta),
+    )
+}
+
+/**
+ * Quanto una ricetta e' una ricetta vera, e non un'impalcatura.
+ *
+ * Serve solo a decidere i pari merito, e li decide quasi tutti: il libro
+ * scritto a mano e' fatto sugli stessi posti del compositore, quindi calza
+ * sempre e calza uguale a una ricetta del catalogo che calza. Con
+ * l'ordinamento stabile vinceva sempre lui, perche' nell'elenco viene prima -
+ * e il risultato era mille ricette raccolte e nella schermata di oggi
+ * "Pasta e legumi".
+ *
+ * Il libro di casa e' il **pavimento**, non il soffitto: esiste perche' senza
+ * chiave e senza catalogo la giornata deve comunque proporre qualcosa. Quando
+ * una ricetta vera calza uguale, la ricetta vera e' meglio - ha la foto, il
+ * procedimento di qualcuno che l'ha cucinata, e una fonte da citare.
+ *
+ * Non compra pero' un posto migliore: prima viene quanto calza, poi il
+ * punteggio, e solo in fondo questo. Una ricetta con la foto che lascia fuori
+ * un componente resta dietro a una di casa che non ne lascia fuori nessuno.
+ */
+function concretezza(ricetta: RicettaComponibile): number {
+  return (ricetta.immagineUrl ? 2 : 0) + (ricetta.fonte ? 1 : 0)
 }
 
 /** Da un abbinamento, la ricetta scritta coi grammi del pasto. */
