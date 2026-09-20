@@ -57,6 +57,15 @@ const INDIZI: [RegExp, Ruolo][] = [
     'dolce',
   ],
 
+  // Pane, pizza e focaccia, prima di tutto il resto che potrebbe rubarle.
+  //
+  // L'ordine qui e' la correzione di un errore mio: avevo aggiunto salame e
+  // prosciutto alle parole dei secondi, e da quel momento "Pizza ripiena
+  // mascarpone e salame" era un secondo ed entrava in catalogo. Il condimento
+  // non cambia cos'e' il piatto - una pizza resta una pizza - e lo stesso
+  // vale per "Pane al farro", che finiva fra i primi per via del farro.
+  [/lievitati|\bpane\b|pizze|\bpizza\b|focacc|brioche|croissant|cornetti|panini/, 'lievitato'],
+
   [
     // "Pasta" da sola vuol dire primo piatto, ma "pasta frolla", "pasta
     // sfoglia" e "pasta di zucchero" sono impasti, non piatti. Erano loro a
@@ -66,12 +75,11 @@ const INDIZI: [RegExp, Ruolo][] = [
     'primo',
   ],
   [
-    /secondi piatti|\bsecondi\b|carne|pesce|uova e frittate|frittat|spezzatin|polpett|cotolett|scaloppin|arrost|brasat|straccett|hamburger|pollo|tacchino|manzo|vitello|maiale|agnello|coniglio|cinghiale|salmone|merluzzo|tonno|orata|branzino|gamber|calamar|cozze|vongole|seppie|polpo|baccal|stracotto|coda alla|spiedini|cotechino|salsicc|salame|speck|prosciutto|guancial|pancett|bresaola|anatra|faraona|capriolo|trippa|sgombro|trigli|gallinella|scampi|moscardin|persico|pescatrice|sogliol|platess|spigol|cernia|ricciol|alici|acciugh|totani|astice|granchio|wurstel|bistecc|filetto|costine|costolette|lonza|arista|tagliata|carpaccio|tartare/,
+    /secondi piatti|\bsecondi\b|carne|pesce|uova e frittate|frittat|spezzatin|polpett|cotolett|scaloppin|arrost|brasat|straccett|hamburger|pollo|tacchino|manzo|vitello|maiale|agnello|coniglio|cinghiale|salmone|merluzzo|tonno|orata|branzino|gamber|calamar|cozze|vongole|seppie|polpo|baccal|stracotto|coda alla|spiedini|cotechino|salsicc|salame|speck|prosciutto|guancial|pancett|bresaola|anatra|faraona|capriolo|trippa|sgombro|trigli|gallinella|scampi|moscardin|persico|pescatrice|sogliol|platess|spigol|cernia|ricciol|alici|acciugh|totani|astice|granchio|wurstel|bistecc|filetto|costine|costolette|lonza|arista|tagliata|carpaccio|tartare|fegato|lampredotto|coratella|animelle/,
     'secondo',
   ],
   [/antipasti|antipasto|finger food|stuzzichini|aperitivo|crostin|bruschett/, 'antipasto'],
   [/contorni|contorno|insalat|verdure|patate al forno|puree/, 'contorno'],
-  [/lievitati|\bpane\b|pizze|\bpizza\b|focacc|brioche|croissant|cornetti|panini/, 'lievitato'],
   [
     /dolci|dolce|dessert|tort|crostat|biscott|budin|gelat|creme|marmellate|muffin|cheesecake|tiramis|panna cotta|frittelle dolci|ciambell|plumcake|pastiera|aspic/,
     'dolce',

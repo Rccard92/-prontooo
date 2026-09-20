@@ -100,12 +100,7 @@ export async function POST(richiesta: Request) {
   }
 
   try {
-    const esito = await normalizzaProssime(quante)
-
-    // Il catalogo accanto all'esito del blocco: e' una query di conteggio in
-    // coda a una chiamata che ne fa gia' una, e risparmia di andare a contare
-    // a mano sul database per sapere a che punto siamo.
-    return NextResponse.json({ ok: true, ...esito, catalogo: await statoCatalogo() })
+    return NextResponse.json({ ok: true, ...(await normalizzaProssime(quante)) })
   } catch (errore) {
     console.error('normalizzazione del catalogo fallita:', errore)
 

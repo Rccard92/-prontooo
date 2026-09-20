@@ -167,7 +167,7 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
     restanti = esito.get("restanti", 0)
 
     if esito.get("normalizzate", 0) == 0 and restanti == 0:
-        return "catalogo gia' tutto normalizzato" + _catalogo(esito), 0
+        return "catalogo gia' tutto normalizzato", 0
 
     messaggio = (
         f"normalizzate {esito.get('normalizzate', 0)} ricette"
@@ -196,11 +196,6 @@ def _un_blocco(base: str, segreto: str) -> tuple[str, int | None]:
             f"{v.get('titolo')} ({v.get('nonCapite')}/{v.get('righe')})" for v in bloccate
         )
         messaggio += f"\n  restano fuori: {elenco}"
-
-    # Solo sull'ultimo blocco del giro: durante un arretrato sarebbero cinque
-    # righe uguali, e il numero che cambia e' l'ultimo.
-    if restanti == 0:
-        messaggio += _catalogo(esito)
 
     return messaggio, restanti
 
@@ -254,5 +249,11 @@ def bussa() -> str:
             break
 
         prima = restanti
+
+    # In coda al giro, una volta sola: e' la riga che risponde alla domanda che
+    # ci si fa davvero - a che punto siamo. Prima usciva solo quando la coda
+    # finiva, cioe' proprio mai durante un arretrato, che e' quando la si
+    # vuole. Costa una query di conteggio ogni mezz'ora.
+    righe.append(_solo_stato(base, segreto).strip() or "catalogo: non l'ho saputo contare")
 
     return " | ".join(righe)

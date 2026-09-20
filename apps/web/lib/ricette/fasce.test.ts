@@ -194,3 +194,31 @@ describe('gli impasti non sono primi piatti', () => {
     assert.equal(daTenereInCatalogo(daTitolo('Chiocciole di pasta fillo ai funghi').ruolo), false)
   })
 })
+
+describe('il condimento non cambia cos’e’ il piatto', () => {
+  // Correzione di un errore introdotto allargando le parole della carne:
+  // "salame" e "prosciutto" facevano diventare secondi le pizze, e da li'
+  // entravano in catalogo e si pagavano per leggerle.
+  const daTitolo = (titolo: string) => classifica(null, '', titolo)
+
+  it('una pizza resta una pizza anche col salame sopra', () => {
+    assert.equal(daTitolo('Pizza ripiena mascarpone e salame').ruolo, 'lievitato')
+    assert.equal(daTitolo('Pizza con crema di tartufo e prosciutto').ruolo, 'lievitato')
+    assert.equal(daTenereInCatalogo(daTitolo('Pizza ripiena mascarpone e salame').ruolo), false)
+  })
+
+  it('e il pane resta pane anche col farro dentro', () => {
+    // "Pane al farro" finiva fra i primi, perche' "farro" e' una parola dei
+    // primi e arrivava prima.
+    assert.equal(daTitolo('Pane al farro').ruolo, 'lievitato')
+    assert.equal(daTitolo('Pane con farina di semola e pasta madre').ruolo, 'lievitato')
+  })
+
+  it('ma i secondi di carne e di pesce passano', () => {
+    // La prova che spostare i lievitati non ha rotto quello che serviva.
+    assert.equal(daTitolo('Cestini di pasta fillo con cotechino').ruolo, 'secondo')
+    assert.equal(daTitolo('Tagliata di tonno con pesto di menta').ruolo, 'secondo')
+    assert.equal(daTitolo('Costine con piselli e patate').ruolo, 'secondo')
+    assert.equal(daTitolo('Fegato alla veneziana').ruolo, 'secondo')
+  })
+})
