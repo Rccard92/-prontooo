@@ -222,3 +222,19 @@ describe('il condimento non cambia cos’e’ il piatto', () => {
     assert.equal(daTitolo('Fegato alla veneziana').ruolo, 'secondo')
   })
 })
+
+describe('un participio non fa un dolce', () => {
+  it('le costine glassate restano un secondo', () => {
+    // Avevo messo "glassa" fra le parole dei dolci, e prendeva "glassate":
+    // le costine diventavano un dolce, e i dolci vanno a colazione e merenda.
+    // E' cosi' che e' arrivato un piatto di costine cinesi alle cinque del
+    // pomeriggio.
+    assert.equal(classifica(null, '', 'Costine di maiale glassate cinesi').ruolo, 'secondo')
+    assert.equal(classifica(null, '', 'Alette di pollo glassate con salsa di soia').ruolo, 'secondo')
+  })
+
+  it('ma la glassa vera resta un dolce', () => {
+    assert.equal(daTenereInCatalogo(classifica(null, '', 'Glassa reale per biscotti').ruolo), false)
+    assert.equal(daTenereInCatalogo(classifica(null, '', 'Glassatura al cioccolato').ruolo), false)
+  })
+})

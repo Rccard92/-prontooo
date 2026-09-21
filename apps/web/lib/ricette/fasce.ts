@@ -53,7 +53,7 @@ const INDIZI: [RegExp, Ruolo][] = [
   // e finivano in catalogo. Sono ricette che il piano non proporra' mai, e
   // ogni una costa una lettura.
   [
-    /cacao|cioccolat|nutella|\bfrolla\b|pasta di zucchero|zucchero a velo|crema pasticcera|marzapane|amaretti|panettone|pandoro|cupcake|zuppa inglese|mering|glassa/,
+    /cacao|cioccolat|nutella|\bfrolla\b|pasta di zucchero|zucchero a velo|crema pasticcera|marzapane|amaretti|panettone|pandoro|cupcake|zuppa inglese|mering|\\bglassa\\b|glassatura/,
     'dolce',
   ],
 

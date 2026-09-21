@@ -47,7 +47,38 @@ const DAL_CATALOGO = 'catalogo-'
 /** Quante candidate guardare prima di arrendersi, per fascia. */
 const DA_PROVARE = 12
 
-type Candidata = { id: number; titolo: string; fasce: string[]; etichette: string[] }
+/**
+ * Cosa ci sta in un pasto, e quanto tempo hai.
+ *
+ * Le fasce che non compaiono qui **non prendono ricette dal catalogo**, e si
+ * compongono dai tuoi alimenti come hanno sempre fatto. Non e' una mancanza:
+ * in catalogo ci sono primi, secondi e piatti unici, cioe' roba da pranzo e da
+ * cena. Una merenda e' due cose prese dalla dispensa, e il giorno che ti
+ * arriva un piatto di costine glassate alle cinque del pomeriggio - con
+ * un'ora e dieci di preparazione - il difetto non e' la ricetta, e' averla
+ * cercata li'.
+ *
+ * I minuti sono l'altra meta': una ricetta puo' essere giustissima per la
+ * fascia e sbagliata per la giornata. Quaranta minuti a cena sono il tetto di
+ * chi torna dal lavoro, non una regola di cucina.
+ *
+ * Sono i valori di partenza. Il posto giusto per cambiarli e' il profilo:
+ * chi cena alle dieci e cucina volentieri vuole numeri diversi da chi alle
+ * otto ha fame.
+ */
+export const LIMITI: Record<string, { ruoli: string[]; minuti: number }> = {
+  pranzo: { ruoli: ['primo', 'piatto_unico', 'secondo'], minuti: 45 },
+  cena: { ruoli: ['secondo', 'piatto_unico', 'primo'], minuti: 40 },
+}
+
+type Candidata = {
+  id: number
+  titolo: string
+  fasce: string[]
+  etichette: string[]
+  ruolo: string | null
+  minuti: number | null
+}
 
 /**
  * Le ricette che possono reggere un pasto, gia' scremate dalle esclusioni.
@@ -64,6 +95,8 @@ async function candidate(): Promise<Candidata[]> {
       titolo: ricette.titolo,
       fasce: ricette.fasce,
       etichette: ricette.etichette,
+      ruolo: ricette.ruolo,
+      minuti: ricette.minutiTotali,
     })
     .from(ricette)
     .where(and(isNotNull(ricette.normalizzataIl), sql`jsonb_array_length(${ricette.posti}) > 0`))
@@ -158,12 +191,24 @@ export async function pastiDalleRicette(
   const esito = new Map<string, PastoDaRicetta>()
 
   for (const fascia of volute) {
+    const limiti = LIMITI[fascia]
+
+    // Niente ricette dove non ci vanno: colazione, spuntino e merenda si
+    // compongono dai tuoi alimenti, e restano due cose prese dalla dispensa.
+    if (!limiti) continue
+
     // Si guarda anche l'etichetta salvata, ma solo per scartare in fretta il
     // grosso: quella vera e' la verifica sugli ingredienti, piu' sotto.
     const perQuestaFascia = tutte.filter(
       (r) =>
         r.fasce.includes(fascia) &&
         !evitate.has(r.id) &&
+        r.ruolo !== null &&
+        limiti.ruoli.includes(r.ruolo) &&
+        // Chi non dichiara i minuti passa: non sapere quanto ci vuole non e'
+        // lo stesso che metterci troppo, e scartarle tutte butterebbe via
+        // mezzo catalogo per un campo vuoto.
+        (r.minuti === null || r.minuti <= limiti.minuti) &&
         r.etichette.every((e) => !esclusi.has(e) || (e === 'lattosio' && cambiaIlLattosio)),
     )
 

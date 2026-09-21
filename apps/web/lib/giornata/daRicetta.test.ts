@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { numeroDiRicetta, scalaRicetta } from './daRicetta'
+import { LIMITI, numeroDiRicetta, scalaRicetta } from './daRicetta'
 import type { Componente } from './modello'
 
 const BACCALA: Componente[] = [
@@ -70,6 +70,40 @@ describe('riconoscere una ricetta del catalogo', () => {
     // finire in una query come se fossero numeri.
     for (const id of ['pasta-legumi', 'catalogo-', 'catalogo-abc', '', null, undefined]) {
       assert.equal(numeroDiRicetta(id), null, `${String(id)} e’ passato`)
+    }
+  })
+})
+
+describe('dove ci vanno le ricette del catalogo', () => {
+  it('solo a pranzo e a cena', () => {
+    // Il caso vero: costine di maiale glassate cinesi proposte per merenda,
+    // con un'ora e dieci di preparazione. Il difetto non era la ricetta, era
+    // averla cercata li'.
+    assert.ok(LIMITI.pranzo)
+    assert.ok(LIMITI.cena)
+
+    for (const fascia of ['colazione', 'spuntino', 'merenda']) {
+      assert.equal(LIMITI[fascia], undefined, `${fascia} pesca dal catalogo`)
+    }
+  })
+
+  it('e con un tetto di tempo che sta in una sera', () => {
+    for (const [fascia, limite] of Object.entries(LIMITI)) {
+      assert.ok(limite.minuti > 0 && limite.minuti <= 60, `${fascia}: ${limite.minuti} minuti`)
+      assert.ok(limite.ruoli.length > 0, `${fascia} non accetta nessun tipo di piatto`)
+    }
+  })
+
+  it('accetta solo piatti che reggono un pasto', () => {
+    // Antipasti, contorni e dolci non fanno un pranzo da soli: se entrassero
+    // qui, la giornata proporrebbe un contorno come cena.
+    for (const limite of Object.values(LIMITI)) {
+      for (const ruolo of limite.ruoli) {
+        assert.ok(
+          ['primo', 'secondo', 'piatto_unico'].includes(ruolo),
+          `${ruolo} non regge un pasto`,
+        )
+      }
     }
   })
 })
