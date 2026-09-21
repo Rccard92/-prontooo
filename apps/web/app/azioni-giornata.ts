@@ -12,7 +12,7 @@ import {
   oggi,
 } from '@/lib/giornata/componi'
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
-import { eData } from '@/lib/giornata/settimana'
+import { eData, settimanaDi } from '@/lib/giornata/settimana'
 import { type Componente, type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giornata/modello'
 import { PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { ricalibra } from '@/lib/giornata/ricalibra'
@@ -64,6 +64,49 @@ export async function generaGiorno(dati: FormData) {
     giornoDaComporre(dati),
     ['standard', 'on', 'off'].includes(tipo) ? tipo : undefined,
   )
+  revalidatePath('/')
+}
+
+/**
+ * Prepara in un colpo i giorni della settimana che non ci sono ancora.
+ *
+ * Tre regole, e sono tutte e tre per non fare danni.
+ *
+ * **Solo da oggi in avanti.** Comporre un menu per martedi' scorso non vuol
+ * dire niente, e riscriverebbe uno storico che e' gia' successo.
+ *
+ * **Solo i giorni vuoti.** Un giorno che hai gia' preparato - magari
+ * sistemato a mano, cambiando due ricette - non si tocca. Per rifarlo c'e'
+ * "rifai la giornata", che sta su quel giorno e riguarda solo lui.
+ *
+ * **Le ricette non si ripetono.** Ogni giorno dice quali ha usato e il giorno
+ * dopo le evita: senza, cinque giorni pescati a caso dallo stesso catalogo
+ * danno il salmone in crosta due volte, ed e' la prima cosa che si nota.
+ */
+export async function preparaSettimana(dati: FormData) {
+  const utenteId = await utenteObbligatorio()
+  const chiesto = dati.get('data')
+  const dentro = eData(chiesto) ? chiesto : oggi()
+
+  const gia = new Set<string>(
+    (
+      await db()
+        .select({ data: giornate.data })
+        .from(giornate)
+        .where(eq(giornate.utenteId, utenteId))
+    ).map((r) => r.data),
+  )
+
+  const evita: number[] = []
+
+  for (const giorno of settimanaDi(dentro)) {
+    if (giorno < oggi() || gia.has(giorno)) continue
+
+    const fatto = await generaGiornata(utenteId, giorno, undefined, evita)
+
+    if (fatto) evita.push(...fatto.ricetteUsate)
+  }
+
   revalidatePath('/')
 }
 

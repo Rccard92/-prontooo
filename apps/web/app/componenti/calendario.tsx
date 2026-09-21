@@ -3,6 +3,8 @@ import Link from 'next/link'
 import type { GiornoDiSettimana } from '@/lib/giornata/componi'
 import { INIZIALI, lunediDi, meseEAnno, numeroDelMese, quando, sposta } from '@/lib/giornata/settimana'
 
+import { preparaSettimana } from '../azioni-giornata'
+
 /**
  * I sette giorni in cima alla schermata.
  *
@@ -25,6 +27,11 @@ export function Calendario({
 }) {
   const lunedi = lunediDi(scelto)
   const settimanaDiOggi = lunediDi(oggi) === lunedi
+
+  // Da preparare sono i giorni vuoti da oggi in avanti. Quelli passati non si
+  // compongono - un menu per ieri non vuol dire niente - e quelli gia' fatti
+  // non si toccano: magari li hai sistemati a mano.
+  const daPreparare = giorni.filter((g) => !g.esiste && g.data >= oggi).length
 
   return (
     <nav className="scheda p-3" aria-label="Settimana">
@@ -50,6 +57,21 @@ export function Calendario({
           </li>
         ))}
       </ol>
+
+      {/* Il pulsante sta qui perche' qui si vede il problema: sette caselle e
+          cinque con un trattino. Un tasto in fondo al profilo avrebbe chiesto
+          di ricordarsene; questo lo trovi mentre lo pensi. */}
+      {daPreparare > 0 ? (
+        <form action={preparaSettimana} className="mt-3 border-t border-bordo pt-3">
+          <input type="hidden" name="data" value={lunedi} />
+          <button
+            type="submit"
+            className="bottone-chiaro w-full hover:bg-basilico hover:text-bianco"
+          >
+            {daPreparare === 1 ? 'Prepara il giorno che manca' : `Prepara i ${daPreparare} giorni che mancano`}
+          </button>
+        </form>
+      ) : null}
     </nav>
   )
 }

@@ -126,7 +126,12 @@ async function leggiGemelli(nomi: string[]): Promise<Map<string, Alimento>> {
  * che mangi davvero e quello che e' in offerta. La scelta resta dentro la
  * lista: i pesi cambiano la frequenza, mai l'insieme.
  */
-export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
+export async function componiGiorno(
+  utenteId: number,
+  tipoGiorno: TipoGiorno,
+  /** Ricette gia' usate altrove nella settimana: qui non si ripetono. */
+  evitaRicette: number[] = [],
+) {
   const lista = await listaAttiva(utenteId)
 
   if (!lista) return null
@@ -276,6 +281,7 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
     // il lattosio non ce l'ha piu', e scartarla sarebbe togliere un piatto
     // che va benissimo.
     sostituisceLattosio || esclusioni.includes('lattosio'),
+    evitaRicette,
   )
 
   const nutrientiDelPasto = new Map<string, ReturnType<typeof sommaNutrienti>>()
@@ -340,7 +346,18 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
         ),
       )
 
-  return { listaId: lista.id, pasti, obiettivo, scoperte }
+  return {
+    listaId: lista.id,
+    pasti,
+    obiettivo,
+    scoperte,
+    // Quali ricette sono finite in questa giornata. Chi prepara la settimana
+    // le accumula e le passa al giorno dopo: cosi' il salmone in crosta non
+    // esce tre volte in cinque giorni.
+    ricetteUsate: [...conRicetta.pasti.values()]
+      .map((p) => Number(p.ricetta.slice('catalogo-'.length)))
+      .filter((n) => Number.isInteger(n)),
+  }
 }
 
 /**
@@ -398,6 +415,7 @@ export async function generaGiornata(
   utenteId: number,
   data = oggi(),
   tipoGiorno?: TipoGiorno,
+  evitaRicette: number[] = [],
 ) {
   const connessione = db()
 
@@ -408,7 +426,7 @@ export async function generaGiornata(
     .limit(1)
 
   const tipo = tipoGiorno ?? ((esistente?.tipoGiorno as TipoGiorno) || 'standard')
-  const composto = await componiGiorno(utenteId, tipo)
+  const composto = await componiGiorno(utenteId, tipo, evitaRicette)
 
   if (!composto) return null
 
@@ -464,7 +482,7 @@ export async function generaGiornata(
       })
   }
 
-  return giornata.id
+  return { id: giornata.id, ricetteUsate: composto.ricetteUsate }
 }
 
 /** Quel che serve a disegnare una casella del calendario. */

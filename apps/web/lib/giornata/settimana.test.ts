@@ -88,3 +88,35 @@ describe('il numero da scrivere nella casella', () => {
     assert.equal(numeroDelMese('2026-12-31'), 31)
   })
 })
+
+describe('quali giorni prepara il pulsante della settimana', () => {
+  // La stessa scelta che fa `preparaSettimana`, provata qui dove non serve il
+  // database: prende i giorni vuoti da oggi in avanti, e nient'altro.
+  const daPreparare = (settimana: { data: string; esiste: boolean }[], oggi: string) =>
+    settimana.filter((g) => !g.esiste && g.data >= oggi).map((g) => g.data)
+
+  const SETTIMANA = settimanaDi('2026-09-23').map((data) => ({ data, esiste: false }))
+
+  it('lascia stare il passato', () => {
+    // Comporre un menu per lunedi' scorso non vuol dire niente, e
+    // riscriverebbe uno storico che e' gia' successo.
+    const scelti = daPreparare(SETTIMANA, '2026-09-23')
+
+    assert.deepEqual(scelti, ['2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27'])
+  })
+
+  it('lascia stare i giorni gia’ preparati', () => {
+    // Un giorno sistemato a mano - due ricette cambiate, un pasto spuntato -
+    // non si rifa' di nascosto. Per quello c'e' "rifai la giornata".
+    const conQualcosa = SETTIMANA.map((g) =>
+      g.data === '2026-09-25' ? { ...g, esiste: true } : g,
+    )
+
+    assert.equal(daPreparare(conQualcosa, '2026-09-23').includes('2026-09-25'), false)
+  })
+
+  it('e quando non c’e’ niente da fare non fa niente', () => {
+    assert.deepEqual(daPreparare(SETTIMANA.map((g) => ({ ...g, esiste: true })), '2026-09-23'), [])
+    assert.deepEqual(daPreparare(SETTIMANA, '2026-09-30'), [])
+  })
+})
