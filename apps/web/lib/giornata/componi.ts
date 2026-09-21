@@ -25,6 +25,7 @@ import { arrotonda, nutrientiDi, sommaNutrienti } from '../lista/modello'
 import { FASCE } from '../ricette/fasce'
 
 import { MOLTIPLICATORI, type Componente, type TipoGiorno, nutrientiConsumati } from './modello'
+import { pastiDalleRicette, scalaRicetta } from './daRicetta'
 import { postiDi, riempiPosti } from './schema'
 import { ricalibra, scalaComponenti, type PastoDaRicalibrare } from './ricalibra'
 
@@ -219,7 +220,7 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
 
     if (glutineQui) pastiColGlutine += 1
 
-    return { fascia, componenti }
+    return { fascia, componenti, ricetta: null as string | null }
   }).filter((p) => p.componenti.length > 0)
 
   const corpo: Partial<DatiCorpo> = {
@@ -238,12 +239,14 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
   // riferimento e poi si scala ogni pasto sulle kcal che gli spettano.
   const fabbisogno = datiCompleti(corpo) ? fabbisognoDi(corpo, fattoreGiorno) : null
 
-  if (fabbisogno) {
-    const bersagli = kcalPerFascia(
-      fabbisogno.giornaliero,
-      pasti.map((p) => p.fascia),
-    )
+  const bersagli = fabbisogno
+    ? kcalPerFascia(
+        fabbisogno.giornaliero,
+        pasti.map((p) => p.fascia),
+      )
+    : null
 
+  if (bersagli) {
     for (const pasto of pasti) {
       const bersaglio = bersagli.get(pasto.fascia)
       const adesso = kcalDiComponenti(pasto.componenti, voci)
@@ -252,6 +255,56 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
 
       pasto.componenti = scalaComponenti(pasto.componenti, bersaglio / adesso)
     }
+  }
+
+  // Dove il catalogo ha una ricetta vera, il pasto diventa **quella ricetta**.
+  //
+  // Prima di qui i componenti erano i tuoi alimenti, e la ricetta arrivava
+  // dopo a fare da vestito: si prendeva la forma del piatto e ci si infilava
+  // la tua roba, per cui "Baccala' alle verdure" finiva coi calamari. Adesso
+  // il piatto e' quello scritto dalla fonte, e a tornare sui tuoi numeri e'
+  // la proporzione: stessi ingredienti, meno grammi.
+  //
+  // Il bersaglio e' quello del fabbisogno se lo conosciamo; se no, le kcal
+  // che quel pasto aveva con le porzioni di riferimento. In tutti e due i
+  // casi si scala su un numero che vuol dire qualcosa.
+  const conRicetta = await pastiDalleRicette(
+    pasti.map((p) => p.fascia),
+    esclusioni,
+    // Il gemello senza lattosio serve a chi lo attenua **e** a chi lo
+    // esclude: una ricetta in cui la mozzarella e' diventata senza lattosio
+    // il lattosio non ce l'ha piu', e scartarla sarebbe togliere un piatto
+    // che va benissimo.
+    sostituisceLattosio || esclusioni.includes('lattosio'),
+  )
+
+  const nutrientiDelPasto = new Map<string, ReturnType<typeof sommaNutrienti>>()
+
+  for (const pasto of pasti) {
+    const dalla = conRicetta.pasti.get(pasto.fascia)
+
+    if (!dalla) continue
+
+    const bersaglio = bersagli?.get(pasto.fascia) ?? kcalDiComponenti(pasto.componenti, voci)
+    const fattore = bersaglio > 0 ? bersaglio / dalla.nutrienti.kcal : 1
+
+    pasto.componenti = scalaRicetta(dalla.componenti, fattore)
+    pasto.ricetta = dalla.ricetta
+
+    // Ricontati sui grammi scalati, non stimati dal fattore: lo scalino di
+    // cinque grammi e i minimi fanno scarto, e questo numero finisce
+    // nell'obiettivo della giornata.
+    nutrientiDelPasto.set(
+      pasto.fascia,
+      sommaNutrienti(
+        pasto.componenti.map((c) =>
+          nutrientiDi(
+            c.alimentoId === null ? null : (conRicetta.alimenti.get(c.alimentoId) ?? null),
+            c.quantita,
+          ),
+        ),
+      ),
+    )
   }
 
   const obiettivo = fabbisogno
@@ -267,16 +320,23 @@ export async function componiGiorno(utenteId: number, tipoGiorno: TipoGiorno) {
         // - darebbe un bersaglio che nessuna giornata puo' raggiungere: nel
         // pasto ne entrano quattro, non quaranta.
         sommaNutrienti(
-          pasti.flatMap((pasto) =>
-            pasto.componenti.map((c) =>
+          pasti.flatMap((pasto) => {
+            // Un pasto che viene da una ricetta li ha gia' contati, e sui suoi
+            // alimenti: cercarli nella tua lista non li troverebbe, perche'
+            // sono quelli della ricetta.
+            const gia = nutrientiDelPasto.get(pasto.fascia)
+
+            if (gia) return [gia]
+
+            return pasto.componenti.map((c) =>
               nutrientiDi(
                 c.alimentoId === null
                   ? null
                   : (voci.find((v) => v.alimentoId === c.alimentoId)?.alimento ?? null),
                 c.quantita,
               ),
-            ),
-          ),
+            )
+          }),
         ),
       )
 
@@ -388,13 +448,18 @@ export async function generaGiornata(
         giornataId: giornata.id,
         fascia: pasto.fascia,
         previsti: pasto.componenti,
+        ricettaLibro: pasto.ricetta,
       })
       .onConflictDoUpdate({
         target: [giornataPasti.giornataId, giornataPasti.fascia],
         set: {
           previsti: pasto.componenti,
-          // I componenti sono cambiati: la ricetta scelta prima non vale piu'.
-          ricettaLibro: null,
+          // Quando il pasto **e'** una ricetta, quale ricetta e' parte del
+          // pasto e va salvato con lui: i componenti sono i suoi ingredienti,
+          // e cercarne un'altra vorrebbe dire rimettere un titolo sbagliato
+          // sopra lo stesso piatto. Dove invece i componenti vengono dalla tua
+          // lista si riparte da zero, come prima.
+          ricettaLibro: pasto.ricetta,
         },
       })
   }

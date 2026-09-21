@@ -3,6 +3,7 @@ import { and, inArray, isNotNull, sql } from 'drizzle-orm'
 import { alimenti, db, ricette } from '@prontooo/db'
 
 import type { Componente } from '../giornata/modello'
+import { numeroDiRicetta } from '../giornata/daRicetta'
 import { eFascia } from '../ricette/fasce'
 
 import { LIBRO } from './libro'
@@ -13,6 +14,7 @@ import {
   abbina,
   occorrente,
   passiDi,
+  scrivi,
 } from './modello'
 
 type DatiAlimento = { gruppo: string; etichette: string[] }
@@ -96,9 +98,9 @@ export async function catalogoComponibile(): Promise<RicettaComponibile[]> {
 
 /** I passi di una ricetta del catalogo: si leggono solo per quella scelta. */
 async function passiDalCatalogo(id: string): Promise<string[]> {
-  const numero = Number(id.slice(DAL_CATALOGO.length))
+  const numero = numeroDiRicetta(id)
 
-  if (!Number.isInteger(numero)) return []
+  if (numero === null) return []
 
   const [riga] = await db()
     .select({ passaggi: ricette.passaggi })
@@ -204,6 +206,56 @@ async function conIPassi(vestita: RicettaDelPasto | null): Promise<RicettaDelPas
   return { ...vestita, passi: await passiDalCatalogo(vestita.id) }
 }
 
+/**
+ * La ricetta **e'** il pasto: si mostra e basta, non si riabbina.
+ *
+ * Quando la giornata nasce da una ricetta del catalogo, i componenti del pasto
+ * sono gia' i suoi ingredienti, scalati. Farli ripassare da `abbina` sarebbe
+ * assurdo due volte: e' la stessa ricetta che cerca se stessa, e con piu' di
+ * quattro ingredienti si scarterebbe da sola - il limite dei posti esiste per
+ * i piatti da comporre, non per una ricetta che arriva gia' fatta.
+ */
+async function laRicettaStessa(
+  id: string,
+  componenti: ComponenteAbbinabile[],
+): Promise<RicettaDelPasto | null> {
+  const numero = numeroDiRicetta(id)
+
+  if (numero === null) return null
+
+  const [riga] = await db()
+    .select({
+      titolo: ricette.titolo,
+      minuti: ricette.minutiTotali,
+      passaggi: ricette.passaggi,
+      immagineUrl: ricette.immagineUrl,
+      fonteNome: ricette.fonteNome,
+      fonteUrl: ricette.fonteUrl,
+    })
+    .from(ricette)
+    .where(inArray(ricette.id, [numero]))
+    .limit(1)
+
+  if (!riga) return null
+
+  return {
+    id,
+    titolo: riga.titolo,
+    minuti: riga.minuti ?? 0,
+    // Non e' un adattamento riuscito bene: e' la ricetta, coi suoi
+    // ingredienti. Non c'e' niente che manchi e niente che avanzi.
+    livello: 'calza',
+    nota: null,
+    occorrente: componenti.map(scrivi),
+    passi: riga.passaggi,
+    mancanti: [],
+    avanzati: [],
+    immagineUrl: riga.immagineUrl,
+    fonte: { nome: riga.fonteNome, url: riga.fonteUrl },
+    alternative: [],
+  }
+}
+
 function scegli(
   fascia: string,
   componenti: ComponenteAbbinabile[],
@@ -239,6 +291,10 @@ export async function ricettaDelPasto(
   componenti: Componente[],
   scelta?: string | null,
 ): Promise<RicettaDelPasto | null> {
+  if (scelta?.startsWith(DAL_CATALOGO)) {
+    return laRicettaStessa(scelta, await arricchisci(componenti))
+  }
+
   const [arricchiti, catalogo] = await Promise.all([
     arricchisci(componenti),
     catalogoComponibile(),
@@ -272,6 +328,18 @@ export async function ricetteDeiPasti(
   const gia = new Set<string>()
 
   for (const pasto of pasti) {
+    // Il pasto **e'** una ricetta del catalogo: si mostra quella, senza
+    // rimetterla in discussione.
+    if (pasto.ricettaLibro?.startsWith(DAL_CATALOGO)) {
+      const sua = await laRicettaStessa(pasto.ricettaLibro, unisci(pasto.previsti, dati))
+
+      if (sua) {
+        per.set(pasto.id, sua)
+        gia.add(sua.id)
+        continue
+      }
+    }
+
     const ricetta = scegli(
       pasto.fascia,
       unisci(pasto.previsti, dati),

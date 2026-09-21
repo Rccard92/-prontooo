@@ -13,11 +13,14 @@ import {
 } from '@/lib/giornata/componi'
 import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { eData } from '@/lib/giornata/settimana'
-import { type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giornata/modello'
+import { type Componente, type Consumato, type TipoGiorno, nutrientiConsumati } from '@/lib/giornata/modello'
 import { PIATTI_FUORI } from '@/lib/giornata/piatti'
 import { ricalibra } from '@/lib/giornata/ricalibra'
 import { nutrientiDi } from '@/lib/lista/modello'
 import { ricettaDelPasto, ricettaSuccessiva } from '@/lib/ricettario/scelta'
+import { numeroDiRicetta, pastiDalleRicette, scalaRicetta } from '@/lib/giornata/daRicetta'
+import { leggiProfilo } from '@/lib/profilo/leggi'
+import { attive, senzaLeEscluse } from '@/lib/nutrizione/attenuazioni'
 
 /**
  * Legge un pasto **solo se e' di questo utente**.
@@ -105,6 +108,18 @@ export async function cambiaRicetta(dati: FormData) {
   const pasto = await pastoDi(utenteId, id)
 
   if (!pasto) return
+
+  // Quando il pasto **e'** una ricetta del catalogo, "altra ricetta" vuol dire
+  // un altro piatto, non un altro vestito sugli stessi grammi: i grammi sono
+  // gli ingredienti di questa ricetta, e senza di lei non vogliono dire
+  // niente. Si pesca un'altra ricetta e la si scala sulle stesse kcal, cosi'
+  // la giornata continua a tornare.
+  if (numeroDiRicetta(pasto.ricettaLibro) !== null) {
+    await cambiaTuttoIlPiatto(utenteId, pasto)
+    revalidatePath('/')
+
+    return
+  }
 
   const prossima = await ricettaSuccessiva(pasto.fascia, pasto.previsti, pasto.ricettaLibro)
 
@@ -316,4 +331,41 @@ async function applicaRicalibrazione(utenteId: number): Promise<void> {
       .set({ previsti: pasto.componenti })
       .where(eq(giornataPasti.id, pasto.id))
   }
+}
+
+/**
+ * Sostituisce il piatto intero, tenendo le calorie che aveva.
+ *
+ * Serve quando il pasto viene da una ricetta del catalogo. Le kcal di adesso
+ * sono il bersaglio: la ricetta nuova arriva coi suoi grammi e si scala su
+ * quel numero, cosi' cambi piatto senza cambiare giornata.
+ */
+async function cambiaTuttoIlPiatto(
+  utenteId: number,
+  pasto: { id: number; fascia: string; previsti: Componente[]; ricettaLibro: string | null },
+) {
+  const profilo = await leggiProfilo(utenteId)
+  const esclusioni = profilo?.esclusioni ?? []
+  const attenuazioni = senzaLeEscluse(profilo?.attenuazioni ?? [], esclusioni)
+
+  const bersaglio = await kcalDi(pasto.previsti)
+  const evitare = numeroDiRicetta(pasto.ricettaLibro)
+
+  const trovate = await pastiDalleRicette(
+    [pasto.fascia],
+    esclusioni,
+    attive(attenuazioni, 'sostituisci').includes('lattosio') || esclusioni.includes('lattosio'),
+    evitare === null ? [] : [evitare],
+  )
+
+  const nuova = trovate.pasti.get(pasto.fascia)
+
+  if (!nuova) return
+
+  const fattore = bersaglio > 0 && nuova.nutrienti.kcal > 0 ? bersaglio / nuova.nutrienti.kcal : 1
+
+  await db()
+    .update(giornataPasti)
+    .set({ previsti: scalaRicetta(nuova.componenti, fattore), ricettaLibro: nuova.ricetta })
+    .where(eq(giornataPasti.id, pasto.id))
 }
