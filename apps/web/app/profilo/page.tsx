@@ -24,6 +24,7 @@ import { GIORNI, PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/
 import { Condizioni, CosaTogliere } from '../componenti/salute'
 import { Navigazione } from '../componenti/navigazione'
 import { esciDallApp } from '../entra/azioni'
+import { CodiceInvito } from './codice'
 
 export const dynamic = 'force-dynamic'
 
@@ -236,6 +237,11 @@ export default async function Profilo({
 
   const conto = datiCompleti(corpo) ? fabbisognoDi(corpo) : null
   const primaVolta = conto === null
+
+  // Si legge qui, sul server, e arriva alla pagina gia' scritto: e' lo stesso
+  // valore che `registra` confronta, quindi non c'e' modo che quello mostrato
+  // e quello che funziona siano due cose diverse.
+  const invito = process.env.CODICE_INVITO?.trim() ?? ''
 
   const perGruppo = new Map<string, typeof alimenti>()
   for (const a of alimenti) {
@@ -556,6 +562,34 @@ export default async function Profilo({
             {salvato ? 'Salva le preferenze' : 'Salva e genera la settimana'}
           </button>
         </form>
+
+        {/* Il codice per far entrare qualcun altro. Sta qui e non su Railway
+            perche' e' una cosa che si passa a voce o in chat, e andare a
+            cercarlo in un pannello di deploy ogni volta non e' un modo di
+            invitare nessuno. */}
+        <section className="scheda mt-6 p-5">
+          <h2 className="font-marchio text-xl text-inchiostro">Invita qualcuno</h2>
+
+          {invito ? (
+            <>
+              <p className="mt-1 mb-3 text-sm text-fumo">
+                Con questo codice si crea il suo pannello: la sua dieta, i suoi giorni, il suo
+                peso. Non vede i tuoi.
+              </p>
+              <CodiceInvito codice={invito} />
+              <p className="mt-3 text-sm text-fumo">
+                È uno solo e vale per tutti. Se gira troppo lo cambi da Railway, e il vecchio
+                smette di funzionare subito.
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-fumo">
+              Non c&rsquo;è nessun codice impostato, quindi le iscrizioni sono chiuse: nessuno può
+              crearsi un pannello. Si riapre mettendo <code className="cifre">CODICE_INVITO</code>{' '}
+              fra le variabili del servizio web.
+            </p>
+          )}
+        </section>
 
         {/* Quello che stava nella testata e nella barra in basso non ci sta:
             cinque voci sono quante ne prende il pollice. La lista la scrivi
