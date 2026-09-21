@@ -14,8 +14,6 @@ import { eData, quando, settimanaDi } from '@/lib/giornata/settimana'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
-import { type AlternativeDiPasto, alternativeDei, chiaveComponente } from '@/lib/nutrizione/alternative'
-import { offertePerAlimenti } from '@/lib/offerte/archivio'
 import { NOME_LIVELLO } from '@/lib/ricettario/modello'
 import { type RicettaDelPasto, ricetteDeiPasti } from '@/lib/ricettario/scelta'
 
@@ -23,7 +21,6 @@ import {
   annullaRegistrazione,
   cambiaPasto,
   cambiaRicetta,
-  sostituisciComponente,
   cambiaTipoGiorno,
   generaGiorno,
   registraFuori,
@@ -73,17 +70,67 @@ function Barra({ nome, valore, obiettivo, colore }: { nome: string; valore: numb
   )
 }
 
-function SchedaPasto({
-  pasto,
-  ricetta,
-  alternative,
-  inOfferta,
-}: {
-  pasto: Pasto
-  ricetta?: RicettaDelPasto
-  alternative: AlternativeDiPasto
-  inOfferta: Set<number>
-}) {
+/**
+ * Gli attrezzi nell'angolo della scheda: cambia ricetta, e il resto.
+ *
+ * Stanno qui e non fra i pulsanti in basso perche' sono due cose diverse.
+ * Sotto ci sono le azioni del **pasto** - l'ho mangiato, ho mangiato fuori -
+ * e quelle le tocchi ogni giorno. Qui ci sono le cose che fai **alla scheda**
+ * quando la proposta non ti va: cambiarla, rifarla, saltarla. Confonderle
+ * voleva dire sei pulsanti uguali su tre righe, e quello di ogni giorno in
+ * mezzo agli altri.
+ */
+function Attrezzi({ pasto, ricetta }: { pasto: Pasto; ricetta: RicettaDelPasto }) {
+  const tondo =
+    'flex size-9 items-center justify-center rounded-full bg-bianco/90 text-inchiostro shadow-appoggio backdrop-blur'
+
+  return (
+    <div className="absolute top-3 right-3 z-10 flex items-start gap-2">
+      {ricetta.alternative.length > 0 ? (
+        <form action={cambiaRicetta}>
+          <input type="hidden" name="pasto" value={pasto.id} />
+          <button type="submit" className={tondo} aria-label="Cambia ricetta" title="Cambia ricetta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4">
+              <path d="M21 12a9 9 0 1 1-2.6-6.4" />
+              <path d="M21 3v6h-6" />
+            </svg>
+          </button>
+        </form>
+      ) : null}
+
+      <details className="relative">
+        <summary
+          aria-label="Altre opzioni"
+          className={`${tondo} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" className="size-4" aria-hidden="true">
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+          </svg>
+        </summary>
+
+        <div className="rounded-scheda absolute right-0 z-10 mt-2 w-52 border border-bordo bg-bianco p-1 shadow-sollevata">
+          <form action={cambiaPasto}>
+            <input type="hidden" name="pasto" value={pasto.id} />
+            <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
+              Cambia gli alimenti
+            </button>
+          </form>
+
+          <form action={saltaPasto}>
+            <input type="hidden" name="pasto" value={pasto.id} />
+            <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
+              Saltato
+            </button>
+          </form>
+        </div>
+      </details>
+    </div>
+  )
+}
+
+function SchedaPasto({ pasto, ricetta }: { pasto: Pasto; ricetta?: RicettaDelPasto }) {
   const nome = eFascia(pasto.fascia) ? NOME_FASCIA[pasto.fascia] : pasto.fascia
   const registrato = pasto.stato !== 'previsto'
   const kcalConsumate = pasto.consumati.reduce((t, c) => t + c.kcal, 0)
@@ -91,7 +138,7 @@ function SchedaPasto({
   const stile = stileFascia[pasto.fascia] ?? 'bg-basilico-tenue text-basilico-scuro'
 
   return (
-    <article className={`scheda overflow-hidden ${registrato ? 'opacity-70' : ''}`}>
+    <article className={`scheda relative overflow-hidden ${registrato ? 'opacity-70' : ''}`}>
       {/* La foto sta sopra e sta grande: e' la ricetta, non una decorazione.
           Un pasto gia' registrato non la porta - li' il piatto e' fatto, e
           quello che serve e' il conto di cosa hai mangiato. */}
@@ -121,6 +168,12 @@ function SchedaPasto({
           </div>
         </Link>
       ) : null}
+
+      {/* Gli attrezzi stanno sull'angolo della foto, non in mezzo ai pulsanti
+          sotto. Cambiare ricetta e' una cosa che fai **a** questa scheda, non
+          un'azione del pasto: il posto e' l'angolo, come su una scheda di
+          carta si gira l'orecchio. */}
+      {ricetta && !registrato ? <Attrezzi pasto={pasto} ricetta={ricetta} /> : null}
 
       <div className="p-4">
         {!ricetta || registrato ? (
@@ -159,74 +212,7 @@ function SchedaPasto({
               ))
             )}
           </ul>
-        ) : (
-          // Gli ingredienti servono qui, e servono a colpo d'occhio: cosa
-          // mangi e quanto, senza aprire la ricetta. Erano pero' quattro
-          // schede dentro una scheda, ognuna col suo fondo e la sua ombra, e
-          // una lista di quattro cose diventava piu' alta della foto. Adesso
-          // sono quattro righe separate da un filo.
-          <ul className="divide-bordo mt-3 divide-y border-t border-bordo">
-            {pasto.previsti.map((c, indice) => {
-              const cambi = alternative.get(chiaveComponente(pasto.id, indice)) ?? []
-
-              return (
-                <li key={`${c.ruolo}-${c.nome}`} className="py-2">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm text-inchiostro">
-                      {c.nome}
-                      {c.alimentoId !== null && inOfferta.has(c.alimentoId) ? (
-                        <span className="pillola ml-2 bg-basilico-tenue text-basilico-scuro">
-                          in offerta
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="cifre shrink-0 text-sm font-semibold text-inchiostro">
-                      {c.quantita === 0 ? 'q.b.' : `${c.quantita} ${c.unita}`}
-                    </span>
-                  </div>
-
-                  {cambi.length > 0 ? (
-                    <details className="mt-0.5">
-                      <summary className="cursor-pointer text-xs text-fumo">
-                        Non ce l&rsquo;ho
-                      </summary>
-                      <ul className="mt-2 flex flex-col gap-1">
-                        {cambi.map((alternativa) => (
-                          <li key={alternativa.id}>
-                            <form action={sostituisciComponente} className="flex items-center gap-2">
-                              <input type="hidden" name="pasto" value={pasto.id} />
-                              <input type="hidden" name="indice" value={indice} />
-                              <input type="hidden" name="alimento" value={alternativa.id} />
-                              <input type="hidden" name="quantita" value={alternativa.quantita} />
-                              <button
-                                type="submit"
-                                className="rounded-controllo flex w-full items-baseline justify-between gap-3 bg-bianco px-3 py-1.5 text-left hover:bg-basilico-tenue"
-                              >
-                                <span className="text-sm text-inchiostro">
-                                  {alternativa.nome}
-                                  {alternativa.fuoriLista ? (
-                                    <span className="text-fumo"> · non in lista</span>
-                                  ) : null}
-                                </span>
-                                <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
-                                  {alternativa.quantita} {alternativa.unita}
-                                </span>
-                              </button>
-                            </form>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 text-xs text-fumo">
-                        Le quantità non sono le stesse: reggono lo stesso nutriente, non lo stesso
-                        peso.
-                      </p>
-                    </details>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
-        )}
+        ) : null}
 
 
         {registrato ? (
@@ -237,11 +223,11 @@ function SchedaPasto({
             </button>
           </form>
         ) : (
-          // Sei pulsanti tutti uguali che andavano a capo su tre righe, e
-          // quello che si tocca ogni giorno - "l'ho mangiato" - stava in
-          // mezzo agli altri. Adesso: uno che comanda, uno accanto, e gli
-          // altri quattro sotto i puntini, dove si va quando serve.
-          <div className="mt-4">
+          // Due pulsanti, e sono le due cose che fai ogni giorno: l'ho
+          // mangiato, oppure ho mangiato altro. Cambiare ricetta, cambiare
+          // gli alimenti e saltare sono passati negli attrezzi d'angolo:
+          // quelle si fanno alla scheda, queste al pasto.
+          <div className="mt-4 flex flex-col gap-2">
             <div className="flex items-stretch gap-2">
               <form action={spuntaPasto} className="flex-1">
                 <input type="hidden" name="pasto" value={pasto.id} />
@@ -250,62 +236,23 @@ function SchedaPasto({
                 </button>
               </form>
 
-              {ricetta ? (
-                <Link
-                  href={`/cucina/${pasto.id}`}
-                  className="bottone-chiaro flex items-center hover:bg-basilico hover:text-bianco"
-                >
-                  Cucina
-                </Link>
-              ) : null}
-
-              <details className="group relative">
-                <summary
-                  aria-label="Altre opzioni"
-                  className="bottone-chiaro flex h-full cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
-                    <circle cx="5" cy="12" r="1.8" />
-                    <circle cx="12" cy="12" r="1.8" />
-                    <circle cx="19" cy="12" r="1.8" />
-                  </svg>
-                </summary>
-
-                {/* Si apre sotto invece che sopra il contenuto: dentro una
-                    scheda un menu che galleggia finisce tagliato, e su un
-                    telefono non c'e' spazio per farlo galleggiare bene. */}
-                <div className="rounded-scheda absolute right-0 z-10 mt-2 w-56 border border-bordo bg-bianco p-1 shadow-sollevata">
-                  {ricetta && ricetta.alternative.length > 0 ? (
-                    <form action={cambiaRicetta}>
-                      <input type="hidden" name="pasto" value={pasto.id} />
-                      <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
-                        Altra ricetta
-                      </button>
-                    </form>
-                  ) : null}
-
-                  <form action={cambiaPasto}>
-                    <input type="hidden" name="pasto" value={pasto.id} />
-                    <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
-                      Cambia gli alimenti
-                    </button>
-                  </form>
-
-                  <form action={saltaPasto}>
-                    <input type="hidden" name="pasto" value={pasto.id} />
-                    <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
-                      Saltato
-                    </button>
-                  </form>
-                </div>
-              </details>
+              {/* Casella nascosta ed etichetta: e' il modo di aprire un
+                  pannello senza una riga di JavaScript, lo stesso delle
+                  fisarmoniche delle condizioni. Il pulsante sta nella riga,
+                  il pannello si apre sotto a tutta larghezza - dentro meta'
+                  scheda il menu dei piatti non ci starebbe. */}
+              <label
+                htmlFor={`fuori-${pasto.id}`}
+                className="bottone-chiaro flex flex-1 cursor-pointer items-center justify-center text-center"
+              >
+                Ho mangiato fuori
+              </label>
             </div>
 
-            <details className="rounded-controllo mt-2 bg-fondo px-3 py-2">
-              <summary className="cursor-pointer text-sm text-fumo">
-                Ho mangiato fuori
-              </summary>
-              <form action={registraFuori} className="mt-3 flex flex-wrap items-center gap-2">
+            <input type="checkbox" id={`fuori-${pasto.id}`} className="peer sr-only" />
+
+            <div className="rounded-controllo hidden bg-fondo p-3 peer-checked:block">
+              <form action={registraFuori} className="flex flex-wrap items-center gap-2">
                 <input type="hidden" name="pasto" value={pasto.id} />
                 <select
                   name="piatto"
@@ -330,7 +277,7 @@ function SchedaPasto({
                   max={4}
                   step={0.5}
                   defaultValue={1}
-                  className="cifre w-16 rounded-controllo border border-bordo bg-bianco px-2 py-2 text-right text-sm text-inchiostro outline-none focus:border-basilico"
+                  className="cifre rounded-controllo w-16 border border-bordo bg-bianco px-2 py-2 text-right text-sm text-inchiostro outline-none focus:border-basilico"
                 />
                 <button type="submit" className="bottone-chiaro">
                   Registra
@@ -339,7 +286,7 @@ function SchedaPasto({
               <p className="mt-2 text-xs text-fumo">
                 Sono stime: una pizza cambia di duecento calorie fra un posto e l&rsquo;altro.
               </p>
-            </details>
+            </div>
           </div>
         )}
       </div>
@@ -364,8 +311,6 @@ export default async function Oggi({
   let giorniSettimana: Awaited<ReturnType<typeof settimana>> = []
 
   let ricette = new Map<number, RicettaDelPasto>()
-  let alternative: AlternativeDiPasto = new Map()
-  let inOfferta = new Set<number>()
   let scoperte: Scoperta[] = []
 
   const utente = await utenteCorrente()
@@ -384,17 +329,6 @@ export default async function Oggi({
 
       scoperte = await scopertePerUtente(utenteId)
       ricette = await ricetteDeiPasti(previsti)
-      alternative = await alternativeDei(utenteId, previsti)
-
-      const ids = previsti.flatMap((p) =>
-        p.previsti.map((c) => c.alimentoId).filter((id): id is number => id !== null),
-      )
-
-      inOfferta = new Set(
-        [...(await offertePerAlimenti(ids)).entries()]
-          .filter(([, offerte]) => offerte.some((o) => o.certa))
-          .map(([id]) => id),
-      )
     }
   } catch (errore) {
     console.error('lettura della giornata fallita:', errore)
@@ -539,8 +473,6 @@ export default async function Oggi({
                       key={pasto.id}
                       pasto={pasto}
                       ricetta={ricette.get(pasto.id)}
-                      alternative={alternative}
-                      inOfferta={inOfferta}
                     />
                   ))}
                 </div>

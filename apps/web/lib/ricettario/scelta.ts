@@ -1,6 +1,6 @@
-import { and, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 
-import { alimenti, db, ricette } from '@prontooo/db'
+import { alimenti, db, ricettaIngredienti, ricette } from '@prontooo/db'
 
 import type { Componente } from '../giornata/modello'
 import { numeroDiRicetta } from '../giornata/daRicetta'
@@ -96,6 +96,23 @@ export async function catalogoComponibile(): Promise<RicettaComponibile[]> {
   }))
 }
 
+/**
+ * Le righe di una ricetta del catalogo che non si pesano.
+ *
+ * Sono quelle che la normalizzazione ha segnato come libere: sale, aglio,
+ * erbe. Non hanno un alimento collegato, e si mostrano com'erano scritte -
+ * "Sale q.b." e' gia' la frase giusta, riscriverla non la migliora.
+ */
+async function liberiDalCatalogo(ricettaId: number): Promise<string[]> {
+  const righe = await db()
+    .select({ riga: ricettaIngredienti.rigaGrezza })
+    .from(ricettaIngredienti)
+    .where(and(eq(ricettaIngredienti.ricettaId, ricettaId), isNull(ricettaIngredienti.alimentoId)))
+    .orderBy(asc(ricettaIngredienti.posizione))
+
+  return righe.map((r) => r.riga)
+}
+
 /** I passi di una ricetta del catalogo: si leggono solo per quella scelta. */
 async function passiDalCatalogo(id: string): Promise<string[]> {
   const numero = numeroDiRicetta(id)
@@ -174,6 +191,9 @@ function vestila(scelto: Abbinamento, elenco: Abbinamento[]) {
     livello: scelto.livello,
     nota: scelto.ricetta.nota ?? null,
     occorrente: occorrente(scelto),
+    // Sale, aglio, prezzemolo: si scrivono e non si pesano, ma senza di loro
+    // la lista della ricetta e' incompleta e chi cucina se ne accorge.
+    liberi: scelto.ricetta.liberi ?? [],
     passi: passiDi(scelto),
     mancanti: scelto.mancanti.map((p) => p.gruppi[0] ?? p.ruolo),
     avanzati: scelto.avanzati.map((c) => c.nome),
@@ -223,18 +243,23 @@ async function laRicettaStessa(
 
   if (numero === null) return null
 
-  const [riga] = await db()
-    .select({
-      titolo: ricette.titolo,
-      minuti: ricette.minutiTotali,
-      passaggi: ricette.passaggi,
-      immagineUrl: ricette.immagineUrl,
-      fonteNome: ricette.fonteNome,
-      fonteUrl: ricette.fonteUrl,
-    })
-    .from(ricette)
-    .where(inArray(ricette.id, [numero]))
-    .limit(1)
+  const [righe, liberi] = await Promise.all([
+    db()
+      .select({
+        titolo: ricette.titolo,
+        minuti: ricette.minutiTotali,
+        passaggi: ricette.passaggi,
+        immagineUrl: ricette.immagineUrl,
+        fonteNome: ricette.fonteNome,
+        fonteUrl: ricette.fonteUrl,
+      })
+      .from(ricette)
+      .where(inArray(ricette.id, [numero]))
+      .limit(1),
+    liberiDalCatalogo(numero),
+  ])
+
+  const riga = righe[0]
 
   if (!riga) return null
 
@@ -247,6 +272,7 @@ async function laRicettaStessa(
     livello: 'calza',
     nota: null,
     occorrente: componenti.map(scrivi),
+    liberi,
     passi: riga.passaggi,
     mancanti: [],
     avanzati: [],

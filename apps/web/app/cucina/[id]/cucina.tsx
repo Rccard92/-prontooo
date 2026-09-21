@@ -1,21 +1,26 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
- * Modalita' cucina: un passo alla volta, schermo acceso.
+ * Gli aiuti che servono davvero mentre cucini: lo schermo acceso e un timer.
  *
- * In cucina hai le mani sporche e il telefono appoggiato al muro. Quindi:
- * caratteri grandi, un passo per schermata, avanti con un tocco qualsiasi
- * sulla scheda, e lo schermo che non si spegne mentre aspetti la pentola.
+ * Prima qui c'era un passo per schermata, con avanti e indietro. Sembrava
+ * giusto e non lo era: per sapere cosa viene dopo dovevi toccare, e per
+ * tornare su una cosa letta male dovevi tornare indietro - con le mani
+ * sporche, che e' il momento in cui il telefono non lo vuoi toccare. Una
+ * ricetta si legge tutta, come su un libro aperto sul tavolo.
+ *
+ * Questi due pero' restano, perche' non sono modi di leggere: sono attrezzi.
+ * Lo schermo che non si spegne mentre aspetti la pentola, e i minuti che
+ * scorrono senza aprire un'altra app.
  */
-export function Cucina({ passi, titolo }: { passi: string[]; titolo: string }) {
-  const [indice, setIndice] = useState(0)
+export function AiutiCucina() {
   const [timer, setTimer] = useState<number | null>(null)
   const chiusura = useRef<(() => void) | null>(null)
 
-  // Lo schermo resta acceso finche' si cucina. Non tutti i telefoni lo
-  // permettono, e va bene: e' una comodita', non un requisito.
+  // Lo schermo resta acceso finche' si sta su questa pagina. Non tutti i
+  // telefoni lo permettono, e va bene: e' una comodita', non un requisito.
   useEffect(() => {
     let vivo = true
 
@@ -54,6 +59,7 @@ export function Cucina({ passi, titolo }: { passi: string[]; titolo: string }) {
 
   useEffect(() => {
     if (timer === null) return
+
     if (timer <= 0) {
       setTimer(null)
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.(600)
@@ -66,30 +72,14 @@ export function Cucina({ passi, titolo }: { passi: string[]; titolo: string }) {
     return () => clearTimeout(battito)
   }, [timer])
 
-  const avanti = useCallback(() => setIndice((i) => Math.min(i + 1, passi.length - 1)), [passi.length])
-  const indietro = useCallback(() => setIndice((i) => Math.max(i - 1, 0)), [])
-
-  useEffect(() => {
-    const tasto = (evento: KeyboardEvent) => {
-      if (evento.key === 'ArrowRight' || evento.key === ' ') avanti()
-      if (evento.key === 'ArrowLeft') indietro()
-    }
-
-    window.addEventListener('keydown', tasto)
-
-    return () => window.removeEventListener('keydown', tasto)
-  }, [avanti, indietro])
-
-  const ultimo = indice === passi.length - 1
   const minuti = Math.floor((timer ?? 0) / 60)
   const secondi = (timer ?? 0) % 60
 
   return (
-    <section className="scheda p-5 sm:p-8">
-      <div className="flex items-center justify-between gap-3">
-        <span className="pillola bg-basilico-tenue text-basilico-scuro">
-          Passo {indice + 1} di {passi.length}
-        </span>
+    <section className="scheda p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-fumo">Metti un timer</p>
+
         {timer !== null ? (
           <button
             type="button"
@@ -101,59 +91,18 @@ export function Cucina({ passi, titolo }: { passi: string[]; titolo: string }) {
         ) : null}
       </div>
 
-      <div className="mt-1 flex gap-1">
-        {passi.map((_, i) => (
-          <span
-            key={i}
-            className={`h-1 flex-1 rounded-full ${i <= indice ? 'bg-basilico' : 'bg-fondo'}`}
-          />
+      <div className="mt-3 flex flex-wrap gap-2">
+        {[3, 5, 8, 10, 15, 20, 30].map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setTimer(m * 60)}
+            className="pillola cifre bg-fondo text-inchiostro hover:bg-limone-tenue"
+          >
+            {m} min
+          </button>
         ))}
       </div>
-
-      <button
-        type="button"
-        onClick={avanti}
-        className="mt-6 w-full text-left text-2xl leading-relaxed font-semibold text-inchiostro sm:text-3xl"
-      >
-        {passi[indice]}
-      </button>
-
-      <div className="mt-8 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={indietro}
-          disabled={indice === 0}
-          className="bottone-chiaro disabled:opacity-40"
-        >
-          Indietro
-        </button>
-        <button
-          type="button"
-          onClick={avanti}
-          disabled={ultimo}
-          className="bottone disabled:opacity-40"
-        >
-          {ultimo ? 'È pronto' : 'Fatto, avanti'}
-        </button>
-      </div>
-
-      <div className="mt-6 border-t border-bordo pt-4">
-        <p className="text-sm font-semibold text-fumo">Metti un timer</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {[3, 5, 8, 10, 15, 20, 30].map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setTimer(m * 60)}
-              className="pillola cifre bg-fondo text-inchiostro hover:bg-limone-tenue"
-            >
-              {m} min
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <p className="sr-only">{titolo}</p>
     </section>
   )
 }
