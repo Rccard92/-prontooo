@@ -19,6 +19,7 @@ import { ricalibra } from '@/lib/giornata/ricalibra'
 import { nutrientiDi } from '@/lib/lista/modello'
 import { ricettaDelPasto, ricettaSuccessiva } from '@/lib/ricettario/scelta'
 import { numeroDiRicetta, pastiDalleRicette, scalaRicetta } from '@/lib/giornata/daRicetta'
+import { dosiRagionevoli } from '@/lib/giornata/dosi'
 import { leggiProfilo } from '@/lib/profilo/leggi'
 import { attive, senzaLeEscluse } from '@/lib/nutrizione/attenuazioni'
 
@@ -409,6 +410,9 @@ async function cambiaTuttoIlPiatto(
 
   await db()
     .update(giornataPasti)
-    .set({ previsti: scalaRicetta(nuova.componenti, fattore), ricettaLibro: nuova.ricetta })
+    .set({
+      previsti: dosiRagionevoli(scalaRicetta(nuova.componenti, fattore), trovate.alimenti),
+      ricettaLibro: nuova.ricetta,
+    })
     .where(eq(giornataPasti.id, pasto.id))
 }

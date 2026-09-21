@@ -205,6 +205,26 @@ Quando una riga resta senza niente di stagione - hai spuntato solo frutta estiva
 
 Un test controlla che ogni mese dell'anno abbia almeno tre frutti e tre verdure disponibili: e' quello che impedisce di accendere le stagioni e scoprire che da ottobre a marzo non c'e' niente da proporre.
 
+### Le dosi non sono quelle della ricetta
+
+`apps/web/lib/giornata/dosi.ts`, e nasce da un pranzo vero: pasta col pesto, 30 g di olio, tre formaggi grattugiati da 5 g l'uno. Nessuno dei due numeri e' un errore di calcolo - sono quelli della fonte, ridotti in proporzione. Ed e' li' il problema.
+
+Una ricetta di un sito di cucina e' scritta per far venire buono il piatto, non per far tornare la tua giornata. L'olio e' abbondante perche' l'olio fa buono, e chi cucina non lo pesa. **Scalare in proporzione conserva la verita' della ricetta - ed e' per questo che si scala - ma conserva anche le sue esagerazioni**: un piatto in cui meta' delle calorie e' condimento resta meta' condimento anche quando diventa piccolo.
+
+Il metro non si inventa, c'e' gia': **ogni alimento del vocabolario ha scritto quanto e' una sua porzione**. 10 g di olio, 80 g di pasta, 30 g di parmigiano. Finora servivano solo a comporre i pasti dalla lista; qui diventano il limite. La ricetta dice **cosa** c'e' dentro, il vocabolario dice **quanto** ne va in un piatto. La prima cosa non si tocca mai, la seconda e' nostra - ed e' esattamente la riga fra citare una ricetta e riscriverla.
+
+Tre passaggi, e il terzo conta quanto il primo:
+
+1. **Il tetto.** Nessun ingrediente supera la sua porzione per piu' di 2,5 volte. Sta largo apposta: scatta solo quando la ricetta e' fuori scala, e una ricetta abbondante resta abbondante. I grassi aggiunti e i dolci stanno a 1,5, la frutta secca a 1,8, perche' sono l'unico posto dove tutte le ricette sbandano nella stessa direzione e dove a 9 kcal al grammo si vede subito
+2. **Il q.b.** Sotto un quarto della porzione - e sotto i 20 g - non si scrive un peso. "Pecorino 5 g" ti fa comprare, pesare e sporcare una bilancia per un cucchiaino, e sembra una precisione che non abbiamo. Vale per condimenti, latticini, erbe, frutta: **non** per pasta, pane, carne, pesce, uova e legumi, che sono quello su cui il piatto si regge - se vengono minuscoli il difetto sta altrove, e un "q.b." lo nasconderebbe
+3. **Le calorie tolte tornano.** Togliere 15 g di olio vuol dire togliere 135 kcal, e un pranzo che doveva darne 650 e ne da' 515 non e' piu' sano: ti fa alzare con fame, che e' il modo piu' sicuro di mollare una dieta. Tornano **sul resto** - piu' pasta, piu' verdura, piu' proteina - che e' quello che direbbe chiunque davanti a un piatto troppo condito: meno olio, non meno piatto. Sul condimento non tornano mai, altrimenti il primo passaggio si annullerebbe da solo
+
+Sul pranzo da cui e' nato: da 57% di calorie dal grasso a 32%, calorie invariate.
+
+**Il catalogo non si tocca.** Le dosi si sistemano quando il piatto si compone, non riscrivendo le 2000 righe in database: su `/ricette` la ricetta resta quella scaricata, com'e' giusto, e cambia il **tuo** piatto. E una dose ridotta si dichiara - la pillola "ridotto" accanto all'ingrediente - perche' chi apre la ricetta alla fonte trova scritto il doppio dell'olio e senza una riga penserebbe a un errore.
+
+Quello che dosare **non** puo' fare e' aggiungere quello che nel piatto non c'e': un pesto resta senza proteine per quanto lo si aggiusti. Quello e' mestiere della **scelta** della ricetta (`distanza` in `daRicetta.ts`), che e' l'altra meta' ed e' un problema diverso.
+
 ### Dal catalogo al ricettario
 
 `apps/web/lib/ricette/normalizza.ts` e `posti.ts`, con `archivio.ts` che tiene il conto.

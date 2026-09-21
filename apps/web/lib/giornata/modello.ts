@@ -30,6 +30,15 @@ export type Componente = {
   nome: string
   quantita: number
   unita: string
+  /**
+   * La ricetta ne metteva di piu' e l'app l'ha ridotto.
+   *
+   * Serve a dirlo invece di farlo di nascosto: chi apre la ricetta trova
+   * scritto 30 g di olio e nel piatto ne trova 15, e senza una parola
+   * penserebbe a un errore. E' facoltativo perche' le giornate composte
+   * prima che questo esistesse non ce l'hanno, e vanno lette lo stesso.
+   */
+  ridotto?: boolean
 }
 
 export type Consumato = {

@@ -455,7 +455,18 @@ export const giornataPasti = pgTable(
     stato: text('stato').notNull().default('previsto'),
     bloccato: boolean('bloccato').notNull().default(false),
     previsti: jsonb('previsti')
-      .$type<{ ruolo: string; alimentoId: number | null; nome: string; quantita: number; unita: string }[]>()
+      .$type<
+        {
+          ruolo: string
+          alimentoId: number | null
+          nome: string
+          quantita: number
+          unita: string
+          // Vero quando la dose e' piu' bassa di quella della ricetta. Facoltativo
+          // perche' le giornate composte prima non ce l'hanno, e vanno lette lo stesso.
+          ridotto?: boolean
+        }[]
+      >()
       .notNull()
       .default([]),
     consumati: jsonb('consumati')

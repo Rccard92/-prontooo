@@ -174,6 +174,16 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
             <section className="scheda p-6">
               <h2 className="font-marchio text-xl text-inchiostro">Cosa ti serve</h2>
 
+              {/* Una dose ridotta si dichiara. Chi apre la ricetta alla fonte
+                  trova scritto il doppio dell'olio, e senza una riga qui
+                  penserebbe a un errore nostro invece che a una scelta. */}
+              {pasto.previsti.some((c) => c.ridotto) ? (
+                <p className="mt-2 text-sm text-fumo">
+                  Qualche dose è più bassa di quella della ricetta: il condimento in cucina si
+                  mette abbondante, e qui deve starci dentro la tua giornata.
+                </p>
+              ) : null}
+
               <ul className="mt-4 divide-y divide-bordo border-y border-bordo">
                 {pasto.previsti.map((c, indice) => {
                   const cambi = alternative.get(chiaveComponente(pasto.id, indice)) ?? []
@@ -186,6 +196,11 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
                           {c.alimentoId !== null && inOfferta.has(c.alimentoId) ? (
                             <span className="pillola ml-2 bg-basilico-tenue text-basilico-scuro">
                               in offerta
+                            </span>
+                          ) : null}
+                          {c.ridotto ? (
+                            <span className="pillola ml-2 bg-limone-tenue text-inchiostro">
+                              ridotto
                             </span>
                           ) : null}
                         </span>

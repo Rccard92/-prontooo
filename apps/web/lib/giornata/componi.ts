@@ -26,6 +26,7 @@ import { FASCE } from '../ricette/fasce'
 
 import { MOLTIPLICATORI, type Componente, type TipoGiorno, nutrientiConsumati } from './modello'
 import { numeroDiRicetta, pastiDalleRicette, scalaRicetta } from './daRicetta'
+import { dosiRagionevoli } from './dosi'
 import { sposta } from './settimana'
 import { postiDi, riempiPosti } from './schema'
 import { ricalibra, scalaComponenti, type PastoDaRicalibrare } from './ricalibra'
@@ -311,7 +312,10 @@ export async function componiGiorno(
     const bersaglio = bersagli?.get(pasto.fascia) ?? kcalDiComponenti(pasto.componenti, voci)
     const fattore = bersaglio > 0 ? bersaglio / dalla.nutrienti.kcal : 1
 
-    pasto.componenti = scalaRicetta(dalla.componenti, fattore)
+    // Prima in proporzione - la ricetta resta se stessa - e poi dosata, che
+    // e' dove l'app fa il nutrizionista: la fonte dice cosa c'e' dentro, il
+    // vocabolario dice quanto ne va in un piatto.
+    pasto.componenti = dosiRagionevoli(scalaRicetta(dalla.componenti, fattore), conRicetta.alimenti)
     pasto.ricetta = dalla.ricetta
 
     // Ricontati sui grammi scalati, non stimati dal fattore: lo scalino di
