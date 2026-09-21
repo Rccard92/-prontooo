@@ -119,6 +119,34 @@ def _riclassifica(base: str, segreto: str) -> str:
     return f"riclassificate {risposta.json().get('riclassificate', 0)} ricette"
 
 
+def _ricostruisci(base: str, segreto: str) -> str:
+    """Rifa' i posti delle ricette gia' lette, senza ripagare il modello.
+
+    Si puo' perche' la normalizzazione salva l'alimento riga per riga, non
+    solo i posti: il lavoro che si paga e' gia' in archivio, e rifare i posti
+    da li' e' aritmetica.
+
+    Attrezzo da officina come gli altri: si accende con RICOSTRUISCI_POSTI dopo
+    aver cambiato la regola che fabbrica i posti, si legge quante ne ha
+    rifatte, si spegne. Duemila UPDATE ogni mezz'ora non servono a nessuno.
+    """
+    try:
+        risposta = httpx.post(
+            f"{base.rstrip('/')}/api/interno/normalizza",
+            headers={"x-segreto-interno": segreto},
+            json={"ricostruisci": True},
+            # Duemila ricette da ricalcolare e riscrivere: il tempo va dato.
+            timeout=600,
+        )
+    except httpx.HTTPError as errore:
+        return f"ricostruzione non chiesta: {errore}"
+
+    if risposta.status_code != 200:
+        return f"ricostruzione: il web ha risposto {risposta.status_code}"
+
+    return f"ricostruiti i posti di {risposta.json().get('ricostruite', 0)} ricette"
+
+
 def _solo_stato(base: str, segreto: str) -> str:
     """I conteggi del catalogo, senza leggere niente."""
     try:
@@ -224,6 +252,11 @@ def bussa() -> str:
 
     # Prima di leggere, non dopo: cosi' quelle rimesse in coda - e quelle che
     # la riclassificazione toglie dalla coda - contano da questo giro.
+    # Prima di tutto: cambia cosa le ricette sono, e il resto del giro lavora
+    # su quello.
+    if _acceso("RICOSTRUISCI_POSTI"):
+        righe.append(_ricostruisci(base, segreto))
+
     if _acceso("RICLASSIFICA"):
         righe.append(_riclassifica(base, segreto))
 

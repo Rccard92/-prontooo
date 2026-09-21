@@ -143,6 +143,30 @@ export type PostoRicetta = {
   ruolo: string
   gruppi: string[]
   facoltativo?: boolean
+  /**
+   * L'alimento che ha generato questo posto, nelle ricette del catalogo.
+   *
+   * Le ricette scritte a mano non ce l'hanno e non devono averlo: "Pasta e
+   * legumi" e' fatta per accettare qualunque pasta e qualunque legume, ed e'
+   * quello il suo mestiere. Una ricetta del catalogo invece nasce da alimenti
+   * precisi, e perderli vuol dire perdere di cosa parla.
+   */
+  alimentoId?: number
+  nome?: string
+  /**
+   * L'alimento di questo posto e' scritto nel titolo della ricetta.
+   *
+   * E' la riga che impedisce a un titolo di mentire. "Baccala' alle verdure"
+   * aveva un posto di gruppo `pesce`, e il gruppo `pesce` lo riempiono anche i
+   * calamari e i gamberi: il piatto proposto diceva baccala' e dentro aveva i
+   * calamari. Quando il nome e' nel titolo, quel posto vuole **quell'**
+   * alimento e nessun altro.
+   *
+   * Dove il titolo non nomina niente - "Risotto alla monzese", "Zuppa di
+   * verdure" - non scatta niente e la ricetta resta larga com'era: li' non c'e'
+   * nessuna promessa da mantenere.
+   */
+  nelTitolo?: boolean
 }
 
 export const ricette = pgTable(

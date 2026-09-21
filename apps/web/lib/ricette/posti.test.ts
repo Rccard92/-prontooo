@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { POSTI_MASSIMI, type IngredienteRiconosciuto, converti } from './posti'
+import { POSTI_MASSIMI, type IngredienteRiconosciuto, converti, nominatoNel } from './posti'
 
 function ing(
   nome: string,
@@ -123,5 +123,72 @@ describe('le etichette di una ricetta convertita', () => {
 
   it('tiene da parte quello che si scrive e non si pesa', () => {
     assert.deepEqual(converti(PASTA_POMODORO).liberi, ['Basilico', 'Sale'])
+  })
+})
+
+describe('il posto si ricorda con cosa e’ nato', () => {
+  it('tiene l’alimento, non solo il gruppo', () => {
+    const esito = converti(
+      [
+        ing('Baccala', 'pesce', 'proteina', 400),
+        ing('Patate', 'tubero', 'base', 500),
+        ing('Zucchine', 'verdura', 'verdura', 300),
+      ],
+      'Baccalà alle verdure',
+    )
+
+    const proteina = esito.posti.find((p) => p.ruolo === 'proteina')
+
+    assert.equal(proteina?.nome, 'Baccala')
+    // Il titolo lo nomina: quel posto vuole quello e nessun altro pesce.
+    assert.equal(proteina?.nelTitolo, true)
+  })
+
+  it('non accende la promessa dove il titolo non nomina niente', () => {
+    const esito = converti(
+      [
+        ing('Baccala', 'pesce', 'proteina', 400),
+        ing('Patate', 'tubero', 'base', 500),
+      ],
+      'Zuppa del pescatore',
+    )
+
+    assert.ok(esito.posti.every((p) => p.nelTitolo !== true))
+  })
+
+  it('senza titolo si comporta come prima', () => {
+    // Le ricette lette prima di questa regola non avevano il titolo qui
+    // dentro: devono continuare a funzionare, larghe com'erano.
+    const esito = converti([
+      ing('Baccala', 'pesce', 'proteina', 400),
+      ing('Patate', 'tubero', 'base', 500),
+    ])
+
+    assert.ok(esito.posti.every((p) => p.nelTitolo !== true))
+  })
+})
+
+describe('quando un nome e’ scritto nel titolo', () => {
+  it('serve tutto il nome, non una parola sola', () => {
+    // Con una parola sola "Pasta e fagioli" pretenderebbe la Pasta di semola
+    // esatta, e non si proporrebbe quasi mai.
+    assert.equal(nominatoNel('Pasta e fagioli', 'Pasta di semola'), false)
+    assert.equal(nominatoNel('Pasta e fagioli', 'Fagioli borlotti'), false)
+  })
+
+  it('e scatta dove il titolo e’ davvero specifico', () => {
+    assert.equal(nominatoNel('Baccalà alle verdure', 'Baccala'), true)
+    assert.equal(nominatoNel('Petto di pollo alla griglia', 'Petto di pollo'), true)
+    assert.equal(nominatoNel('Gamberi in tempura', 'Gamberi'), true)
+  })
+
+  it('non si fa fermare da accenti e maiuscole', () => {
+    assert.equal(nominatoNel('BACCALÀ al forno', 'Baccala'), true)
+  })
+
+  it('e non dice di sì quando il nome non c’e’', () => {
+    assert.equal(nominatoNel('Baccalà alle verdure', 'Calamari'), false)
+    assert.equal(nominatoNel('', 'Baccala'), false)
+    assert.equal(nominatoNel('Baccalà alle verdure', ''), false)
   })
 })

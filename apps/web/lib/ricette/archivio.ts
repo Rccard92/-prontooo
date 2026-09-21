@@ -4,7 +4,7 @@ import { alimenti, db, ricettaIngredienti, ricette } from '@prontooo/db'
 
 import { RUOLI_IN_CATALOGO, classifica } from './fasce'
 import { chiaveConfigurata, leggiIngredienti } from './normalizza'
-import { converti } from './posti'
+import { type IngredienteRiconosciuto, converti } from './posti'
 
 /**
  * Normalizzare il catalogo, una ricetta alla volta.
@@ -247,6 +247,101 @@ export async function statoCatalogo(): Promise<{
   return riga ?? { raccolte: 0, daPiano: 0, lette: 0, nelPiano: 0 }
 }
 
+/**
+ * Rifa' i posti di quello che e' gia' stato letto, **senza chiamare il modello**.
+ *
+ * Si puo' fare per un motivo solo, ed e' una fortuna: la normalizzazione non
+ * salva soltanto i posti, salva anche l'alimento riga per riga su
+ * `ricetta_ingredienti`. Quel lavoro - l'unico che si paga - e' gia' in
+ * archivio. Rifare i posti da li' e' aritmetica.
+ *
+ * Serve adesso perche' un posto ha imparato a ricordarsi con quale alimento e'
+ * nato, e senza quel ricordo "Baccala' alle verdure" arrivava in tavola coi
+ * calamari: il posto chiedeva gruppo `pesce`, e il gruppo pesce lo riempiono
+ * anche i calamari e i gamberi.
+ *
+ * Tocca solo le ricette che **hanno** dei posti. Quelle con i posti vuoti o non
+ * sono state lette o avevano una riga non capita: in tutti e due i casi
+ * ricostruirle non cambierebbe niente, e su quelle una riga senza alimento non
+ * si sa se era libera o sconosciuta. Qui invece si sa: se la ricetta ha dei
+ * posti vuol dire che era affidabile, e allora ogni riga senza alimento era
+ * una riga libera.
+ */
+export async function ricostruisciPosti(): Promise<number> {
+  const connessione = db()
+
+  const daRifare = await connessione
+    .select({ id: ricette.id, titolo: ricette.titolo })
+    .from(ricette)
+    .where(and(isNotNull(ricette.normalizzataIl), sql`jsonb_array_length(${ricette.posti}) > 0`))
+
+  if (daRifare.length === 0) return 0
+
+  const righe = await connessione
+    .select({
+      ricettaId: ricettaIngredienti.ricettaId,
+      rigaGrezza: ricettaIngredienti.rigaGrezza,
+      grammi: ricettaIngredienti.grammi,
+      alimentoId: alimenti.id,
+      nome: alimenti.nome,
+      gruppo: alimenti.gruppo,
+      ruoli: alimenti.ruoli,
+      etichette: alimenti.etichette,
+    })
+    .from(ricettaIngredienti)
+    .leftJoin(alimenti, eq(alimenti.id, ricettaIngredienti.alimentoId))
+    .where(
+      inArray(
+        ricettaIngredienti.ricettaId,
+        daRifare.map((r) => r.id),
+      ),
+    )
+    .orderBy(asc(ricettaIngredienti.ricettaId), asc(ricettaIngredienti.posizione))
+
+  const perRicetta = new Map<number, IngredienteRiconosciuto[]>()
+
+  for (const riga of righe) {
+    const elenco = perRicetta.get(riga.ricettaId) ?? []
+
+    elenco.push(
+      riga.alimentoId === null
+        ? // Nessun alimento su una ricetta che ha i posti: era una riga
+          // libera. Se fosse stata sconosciuta i posti non ci sarebbero.
+          { alimentoId: null, nome: riga.rigaGrezza, gruppo: null, ruolo: null, grammi: null, etichette: [], tipo: 'libero' }
+        : {
+            alimentoId: riga.alimentoId,
+            nome: riga.nome ?? riga.rigaGrezza,
+            gruppo: riga.gruppo,
+            ruolo: riga.ruoli?.[0] ?? null,
+            grammi: riga.grammi === null ? null : Number(riga.grammi),
+            etichette: riga.etichette ?? [],
+            tipo: 'alimento',
+          },
+    )
+
+    perRicetta.set(riga.ricettaId, elenco)
+  }
+
+  let rifatte = 0
+
+  for (const ricetta of daRifare) {
+    const letti = perRicetta.get(ricetta.id)
+
+    if (!letti || letti.length === 0) continue
+
+    const esito = converti(letti, ricetta.titolo)
+
+    await connessione
+      .update(ricette)
+      .set({ posti: esito.affidabile ? esito.posti : [], etichette: esito.etichette })
+      .where(eq(ricette.id, ricetta.id))
+
+    rifatte += 1
+  }
+
+  return rifatte
+}
+
 /** Quante ne restano da leggere: serve al worker per sapere quando smettere. */
 export async function daNormalizzare(): Promise<number> {
   const [riga] = await db()
@@ -340,7 +435,7 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
       continue
     }
 
-    const esito = converti(letti)
+    const esito = converti(letti, ricetta.titolo)
 
     for (const letto of letti) {
       if (letto.tipo !== 'sconosciuto') continue

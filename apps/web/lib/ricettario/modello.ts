@@ -28,6 +28,16 @@ export type Posto = {
   escludi?: string[]
   /** Se manca, la ricetta si fa lo stesso. */
   facoltativo?: boolean
+  /**
+   * L'alimento con cui il posto e' nato, e se il titolo lo nomina.
+   *
+   * Li mettono solo le ricette del catalogo, che nascono da alimenti precisi.
+   * Quelle scritte a mano non li hanno e non devono averli: "Pasta e legumi"
+   * accetta qualunque pasta ed e' quello il suo mestiere.
+   */
+  alimentoId?: number
+  nome?: string
+  nelTitolo?: boolean
 }
 
 export type RicettaComponibile = {
@@ -106,6 +116,19 @@ export type Abbinamento = {
 function accetta(posto: Posto, componente: ComponenteAbbinabile): 'pieno' | 'ripiego' | null {
   if (componente.quantita === 0) return null
   if (posto.escludi?.some((e) => componente.etichette.includes(e))) return null
+
+  // Il titolo nomina questo alimento: allora e' quello e nessun altro.
+  //
+  // Senza questa riga il gruppo bastava, e il gruppo `pesce` lo riempiono il
+  // baccala', i calamari e i gamberi allo stesso modo: "Baccala' alle
+  // verdure" e' arrivato in tavola coi calamari a pranzo e coi gamberi a
+  // cena, lo stesso giorno. Un titolo che nomina un alimento promette
+  // quell'alimento, e una promessa rotta e' peggio di una proposta in meno.
+  if (posto.nelTitolo) {
+    return posto.alimentoId !== undefined && componente.alimentoId === posto.alimentoId
+      ? 'pieno'
+      : null
+  }
 
   const gruppoGiusto = componente.gruppo !== null && posto.gruppi.includes(componente.gruppo)
   const ruoloGiusto = componente.ruolo === posto.ruolo

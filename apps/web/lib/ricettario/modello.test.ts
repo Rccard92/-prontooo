@@ -384,3 +384,96 @@ describe('fra il libro di casa e una ricetta vera', () => {
     assert.ok(!elenco[0]!.ricetta.id.startsWith('catalogo-'))
   })
 })
+
+describe('un titolo non deve mentire', () => {
+  // Il caso vero, dalla schermata del 21 settembre: "Baccala' alle verdure"
+  // proposto a pranzo coi calamari e a cena coi gamberi. Il posto chiedeva
+  // gruppo `pesce`, e il gruppo pesce lo riempiono tutti e tre.
+  const BACCALA: RicettaComponibile = {
+    id: 'catalogo-1',
+    titolo: 'Baccalà alle verdure',
+    fasce: ['pranzo', 'cena'],
+    minuti: 60,
+    posti: [
+      { chiave: 'base', ruolo: 'base', gruppi: ['tubero'], alimentoId: 10, nome: 'Patate' },
+      {
+        chiave: 'proteina',
+        ruolo: 'proteina',
+        gruppi: ['pesce'],
+        alimentoId: 20,
+        nome: 'Baccala',
+        nelTitolo: true,
+      },
+      { chiave: 'verdura', ruolo: 'verdura', gruppi: ['verdura'], alimentoId: 30, nome: 'Zucchine' },
+    ],
+    passi: [],
+    immagineUrl: 'https://esempio.it/baccala.jpg',
+    fonte: { nome: 'Esempio', url: 'https://esempio.it/r/1' },
+  }
+
+  const conPesce = (nome: string, alimentoId: number): ComponenteAbbinabile[] => [
+    { ruolo: 'base', alimentoId: 10, nome: 'Patate', quantita: 260, unita: 'g', gruppo: 'tubero', etichette: [] },
+    { ruolo: 'proteina', alimentoId, nome, quantita: 240, unita: 'g', gruppo: 'pesce', etichette: ['pesce'] },
+    { ruolo: 'verdura', alimentoId: 30, nome: 'Zucchine', quantita: 240, unita: 'g', gruppo: 'verdura', etichette: [] },
+  ]
+
+  it('non propone il baccalà quando in tavola ci sono i calamari', () => {
+    const elenco = proposte('pranzo', conPesce('Calamari', 21), [BACCALA])
+
+    assert.equal(
+      elenco.find((a) => a.ricetta.id === 'catalogo-1'),
+      undefined,
+      'ha proposto il baccalà fatto coi calamari',
+    )
+  })
+
+  it('e lo propone quando il baccalà c’è davvero', () => {
+    const elenco = proposte('pranzo', conPesce('Baccala', 20), [BACCALA])
+    const trovata = elenco.find((a) => a.ricetta.id === 'catalogo-1')
+
+    assert.ok(trovata, 'col baccalà in tavola la ricetta deve esserci')
+    assert.equal(trovata.livello, 'calza')
+  })
+
+  it('ma dove il titolo non nomina niente il posto resta largo', () => {
+    // "Zuppa di verdure" non promette nessun alimento preciso: li' scambiare
+    // una verdura con un'altra non rompe niente, e la ricetta deve restare
+    // proponibile. Altrimenti la regola giusta per i titoli specifici
+    // spegnerebbe tutte le ricette generiche.
+    const generica: RicettaComponibile = {
+      ...BACCALA,
+      id: 'catalogo-2',
+      titolo: 'Zuppa di pesce',
+      posti: BACCALA.posti.map((p) =>
+        p.chiave === 'proteina' ? { ...p, nelTitolo: false } : p,
+      ),
+    }
+
+    const elenco = proposte('pranzo', conPesce('Calamari', 21), [generica])
+
+    assert.ok(elenco.find((a) => a.ricetta.id === 'catalogo-2'))
+  })
+})
+
+describe('lo stesso piatto due volte nello stesso giorno', () => {
+  const PRANZO: ComponenteAbbinabile[] = [
+    comp('Pasta di semola', 'base', 'cereale', 80, ['glutine']),
+    comp('Zucchine', 'verdura', 'verdura', 200),
+    comp('Olio extravergine', 'grasso', 'grasso', 10),
+  ]
+
+  it('la seconda volta prende la ricetta dopo', () => {
+    // Pranzo e cena con gli stessi gruppi scelgono la stessa migliore, se
+    // scelgono ognuno per conto suo. La prova sta qui perche' e' successo:
+    // "Baccala' alle verdure" a pranzo e a cena, lo stesso giorno.
+    const elenco = proposte('pranzo', PRANZO)
+
+    assert.ok(elenco.length > 1, 'serve piu\' di una proposta per poter variare')
+
+    const prima = elenco[0]!.ricetta.id
+    const dopo = elenco.find((a) => a.ricetta.id !== prima)
+
+    assert.ok(dopo, 'non c’e’ una seconda ricetta da proporre')
+    assert.notEqual(dopo.ricetta.id, prima)
+  })
+})

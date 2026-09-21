@@ -1,5 +1,7 @@
 import type { PostoRicetta } from '@prontooo/db'
 
+import { parole } from './normalizza'
+
 /**
  * Da una ricetta del catalogo a una ricetta del ricettario.
  *
@@ -95,7 +97,7 @@ export type Conversione = {
  * la pasta, non il pizzico di qualcos'altro. Il peso e' il criterio piu'
  * onesto che abbiamo, perche' e' quello che la fonte ha scritto davvero.
  */
-export function converti(ingredienti: IngredienteRiconosciuto[]): Conversione {
+export function converti(ingredienti: IngredienteRiconosciuto[], titolo = ''): Conversione {
   const alimenti = ingredienti.filter((i) => i.tipo === 'alimento' && i.ruolo !== null)
   const liberi = ingredienti.filter((i) => i.tipo === 'libero').map((i) => i.nome)
   const affidabile = !ingredienti.some((i) => i.tipo === 'sconosciuto')
@@ -122,6 +124,12 @@ export function converti(ingredienti: IngredienteRiconosciuto[]): Conversione {
     // manzo solo perche' copre lo stesso ruolo. E' la stessa regola che
     // `abbina` applica ai posti scritti a mano.
     gruppi: ingrediente.gruppo === null ? [] : [ingrediente.gruppo],
+    // Da qui in poi il posto si ricorda **con cosa** e' nato. Il gruppo da
+    // solo non bastava: `pesce` lo riempiono il baccala', i calamari e i
+    // gamberi, e "Baccala' alle verdure" finiva in tavola coi calamari.
+    ...(ingrediente.alimentoId === null ? {} : { alimentoId: ingrediente.alimentoId }),
+    nome: ingrediente.nome,
+    ...(nominatoNel(titolo, ingrediente.nome) ? { nelTitolo: true } : {}),
     ...(CONDIMENTI.includes(ruolo) ? { facoltativo: true } : {}),
   }))
 
@@ -135,4 +143,28 @@ export function converti(ingredienti: IngredienteRiconosciuto[]): Conversione {
     liberi,
     affidabile,
   }
+}
+
+/**
+ * L'alimento e' scritto nel titolo della ricetta?
+ *
+ * E' la domanda che decide se un posto puo' accettare un altro alimento dello
+ * stesso gruppo. Un titolo che nomina un alimento fa una **promessa**, e
+ * riempire quel posto con qualcos'altro la rompe: "Baccala' alle verdure" coi
+ * calamari dentro non e' un adattamento, e' un'altra ricetta con sopra il
+ * nome sbagliato.
+ *
+ * Servono **tutte** le parole del nome, non una. Con una sola, "Pasta e
+ * fagioli" pretenderebbe la *Pasta di semola* esatta perche' contiene la
+ * parola "pasta", e la ricetta non si proporrebbe quasi mai. Con tutte, si
+ * accende dove il titolo e' davvero specifico - baccala', gamberi, salmone,
+ * "petto di pollo" - e resta spento dove e' generico.
+ */
+export function nominatoNel(titolo: string, nome: string): boolean {
+  if (titolo.trim() === '' || nome.trim() === '') return false
+
+  const nelTitolo = new Set(parole(titolo).split(' ').filter(Boolean))
+  const delNome = parole(nome).split(' ').filter(Boolean)
+
+  return delNome.length > 0 && delNome.every((p) => nelTitolo.has(p))
 }

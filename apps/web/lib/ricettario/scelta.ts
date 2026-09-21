@@ -209,12 +209,21 @@ function scegli(
   componenti: ComponenteAbbinabile[],
   scelta: string | null | undefined,
   catalogo: RicettaComponibile[],
+  gia: ReadonlySet<string> = new Set(),
 ) {
   const elenco = proposte(fascia, componenti, catalogo)
 
   if (elenco.length === 0) return null
 
-  const scelto = (scelta ? elenco.find((a) => a.ricetta.id === scelta) : null) ?? elenco[0]!
+  // Una scelta esplicita vale anche se ripete: l'hai chiesta tu, e il
+  // pulsante "altra ricetta" non deve trovarsi dei giorni in cui non succede
+  // niente perche' quella ricetta e' gia' da un'altra parte.
+  const voluto = scelta ? elenco.find((a) => a.ricetta.id === scelta) : null
+
+  // Altrimenti la migliore fra quelle che oggi non hai gia' davanti. Se sono
+  // finite si riprende la migliore e basta: meglio un piatto ripetuto che un
+  // pasto senza ricetta.
+  const scelto = voluto ?? elenco.find((a) => !gia.has(a.ricetta.id)) ?? elenco[0]!
 
   return vestila(scelto, elenco)
 }
@@ -256,17 +265,27 @@ export async function ricetteDeiPasti(
   const [dati, catalogo] = await Promise.all([leggiAlimenti(ids), catalogoComponibile()])
   const per = new Map<number, RicettaDelPasto>()
 
+  // Quello che la giornata ha gia' proposto. Senza, pranzo e cena scelgono
+  // ognuno per conto suo la migliore, e quando i componenti si somigliano
+  // scelgono la stessa: lo stesso piatto due volte nello stesso giorno, che
+  // e' la cosa che nessun piano dovrebbe fare.
+  const gia = new Set<string>()
+
   for (const pasto of pasti) {
     const ricetta = scegli(
       pasto.fascia,
       unisci(pasto.previsti, dati),
       pasto.ricettaLibro,
       catalogo,
+      gia,
     )
 
     // Nella scheda del giorno i passi non si mostrano: si mostra la foto e il
     // titolo, e il procedimento sta dietro al tocco. Quindi qui non si legge.
-    if (ricetta) per.set(pasto.id, ricetta)
+    if (ricetta) {
+      per.set(pasto.id, ricetta)
+      gia.add(ricetta.id)
+    }
   }
 
   return per

@@ -4,6 +4,7 @@ import {
   daNormalizzare,
   normalizzaProssime,
   riclassifica,
+  ricostruisciPosti,
   rimettiInCoda,
   statoCatalogo,
 } from '@/lib/ricette/archivio'
@@ -40,6 +41,7 @@ export async function POST(richiesta: Request) {
   let rileggi = false
   let soloStato = false
   let soloRiclassifica = false
+  let ricostruisci = false
 
   try {
     const corpo = (await richiesta.json()) as {
@@ -47,6 +49,7 @@ export async function POST(richiesta: Request) {
       rileggi?: unknown
       stato?: unknown
       riclassifica?: unknown
+      ricostruisci?: unknown
     }
 
     if (typeof corpo.quante === 'number' && Number.isFinite(corpo.quante)) {
@@ -56,6 +59,7 @@ export async function POST(richiesta: Request) {
     rileggi = corpo.rileggi === true
     soloStato = corpo.stato === true
     soloRiclassifica = corpo.riclassifica === true
+    ricostruisci = corpo.ricostruisci === true
   } catch {
     // Corpo vuoto o illeggibile: va bene lo stesso, si usa il predefinito.
   }
@@ -65,6 +69,14 @@ export async function POST(richiesta: Request) {
   // siamo - e' una query, non costa niente.
   if (soloStato) {
     return NextResponse.json({ ok: true, catalogo: await statoCatalogo() })
+  }
+
+  // Rifa' i posti di quello che e' gia' stato letto. Non chiama il modello: le
+  // righe con dentro l'alimento sono gia' in archivio, e da li' i posti si
+  // ricalcolano. E' il modo di correggere una regola sbagliata senza ricomprare
+  // duemila letture.
+  if (ricostruisci) {
+    return NextResponse.json({ ok: true, ricostruite: await ricostruisciPosti() })
   }
 
   // Solo la riclassificazione, senza rimettere in coda.
