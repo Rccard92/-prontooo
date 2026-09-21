@@ -86,7 +86,7 @@ function Attrezzi({ pasto, ricetta }: { pasto: Pasto; ricetta: RicettaDelPasto }
 
   return (
     <div className="absolute top-3 right-3 z-10 flex items-start gap-2">
-      {ricetta.alternative.length > 0 ? (
+      {ricetta.cambiabile ? (
         <form action={cambiaRicetta}>
           <input type="hidden" name="pasto" value={pasto.id} />
           <button type="submit" className={tondo} aria-label="Cambia ricetta" title="Cambia ricetta">

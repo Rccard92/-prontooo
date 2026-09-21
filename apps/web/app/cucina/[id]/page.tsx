@@ -139,7 +139,7 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
                     L&rsquo;ho mangiato
                   </button>
                 </form>
-                {ricetta.alternative.length > 0 ? (
+                {ricetta.cambiabile ? (
                   <form action={cambiaRicetta}>
                     <input type="hidden" name="pasto" value={pasto.id} />
                     <button

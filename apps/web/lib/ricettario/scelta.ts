@@ -199,6 +199,9 @@ function vestila(scelto: Abbinamento, elenco: Abbinamento[]) {
     avanzati: scelto.avanzati.map((c) => c.nome),
     immagineUrl: scelto.ricetta.immagineUrl ?? null,
     fonte: scelto.ricetta.fonte ?? null,
+    // Qui invece si cambia solo se un'altra che calzi c'e' davvero: il libro
+    // di casa sono quaranta voci, e su certi pasti ne regge una sola.
+    cambiabile: elenco.length > 1,
     alternative: elenco
       .filter((a) => a.ricetta.id !== scelto.ricetta.id)
       .slice(0, 6)
@@ -278,6 +281,10 @@ async function laRicettaStessa(
     avanzati: [],
     immagineUrl: riga.immagineUrl,
     fonte: { nome: riga.fonteNome, url: riga.fonteUrl },
+    // Un pasto che **e'** una ricetta del catalogo si cambia sempre: dietro
+    // ci sono millesettecento piatti, e "altra ricetta" ne pesca un altro e
+    // lo scala sulle stesse kcal. Non serve un elenco di candidate.
+    cambiabile: true,
     alternative: [],
   }
 }
