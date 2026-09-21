@@ -10,7 +10,7 @@ import {
   scopertePerUtente,
   settimana,
 } from '@/lib/giornata/componi'
-import { eData, giornoPerEsteso, quando, settimanaDi } from '@/lib/giornata/settimana'
+import { eData, quando, settimanaDi } from '@/lib/giornata/settimana'
 import { NOME_TIPO_GIORNO, TIPI_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 import { listaAttiva } from '@/lib/lista/archivio'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
@@ -97,7 +97,7 @@ function SchedaPasto({
           quello che serve e' il conto di cosa hai mangiato. */}
       {ricetta && !registrato ? (
         <Link href={`/cucina/${pasto.id}`} className="group block">
-          <div className={`relative aspect-4/3 w-full overflow-hidden ${stile}`}>
+          <div className={`relative aspect-16/9 w-full overflow-hidden ${stile}`}>
             {ricetta.immagineUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- le foto arrivano da domini arbitrari
               <img
@@ -160,12 +160,17 @@ function SchedaPasto({
             )}
           </ul>
         ) : (
-          <ul className="mt-3 flex flex-col gap-1.5">
+          // Gli ingredienti servono qui, e servono a colpo d'occhio: cosa
+          // mangi e quanto, senza aprire la ricetta. Erano pero' quattro
+          // schede dentro una scheda, ognuna col suo fondo e la sua ombra, e
+          // una lista di quattro cose diventava piu' alta della foto. Adesso
+          // sono quattro righe separate da un filo.
+          <ul className="divide-bordo mt-3 divide-y border-t border-bordo">
             {pasto.previsti.map((c, indice) => {
               const cambi = alternative.get(chiaveComponente(pasto.id, indice)) ?? []
 
               return (
-                <li key={`${c.ruolo}-${c.nome}`} className="rounded-controllo bg-fondo px-3 py-2">
+                <li key={`${c.ruolo}-${c.nome}`} className="py-2">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-sm text-inchiostro">
                       {c.nome}
@@ -175,14 +180,14 @@ function SchedaPasto({
                         </span>
                       ) : null}
                     </span>
-                    <span className="cifre shrink-0 text-sm font-bold text-inchiostro">
+                    <span className="cifre shrink-0 text-sm font-semibold text-inchiostro">
                       {c.quantita === 0 ? 'q.b.' : `${c.quantita} ${c.unita}`}
                     </span>
                   </div>
 
                   {cambi.length > 0 ? (
-                    <details className="mt-1">
-                      <summary className="cursor-pointer text-xs font-semibold text-fumo">
+                    <details className="mt-0.5">
+                      <summary className="cursor-pointer text-xs text-fumo">
                         Non ce l&rsquo;ho
                       </summary>
                       <ul className="mt-2 flex flex-col gap-1">
@@ -232,43 +237,72 @@ function SchedaPasto({
             </button>
           </form>
         ) : (
-          <div className="mt-4 flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
-              <form action={spuntaPasto}>
+          // Sei pulsanti tutti uguali che andavano a capo su tre righe, e
+          // quello che si tocca ogni giorno - "l'ho mangiato" - stava in
+          // mezzo agli altri. Adesso: uno che comanda, uno accanto, e gli
+          // altri quattro sotto i puntini, dove si va quando serve.
+          <div className="mt-4">
+            <div className="flex items-stretch gap-2">
+              <form action={spuntaPasto} className="flex-1">
                 <input type="hidden" name="pasto" value={pasto.id} />
-                <button type="submit" className="bottone hover:bg-basilico-scuro">
+                <button type="submit" className="bottone w-full hover:bg-basilico-scuro">
                   L&rsquo;ho mangiato
                 </button>
               </form>
+
               {ricetta ? (
-                <Link href={`/cucina/${pasto.id}`} className="bottone-chiaro hover:bg-basilico hover:text-bianco">
+                <Link
+                  href={`/cucina/${pasto.id}`}
+                  className="bottone-chiaro flex items-center hover:bg-basilico hover:text-bianco"
+                >
                   Cucina
                 </Link>
               ) : null}
-              {ricetta && ricetta.alternative.length > 0 ? (
-                <form action={cambiaRicetta}>
-                  <input type="hidden" name="pasto" value={pasto.id} />
-                  <button type="submit" className="pillola bg-fondo text-fumo">
-                    Altra ricetta
-                  </button>
-                </form>
-              ) : null}
-              <form action={cambiaPasto}>
-                <input type="hidden" name="pasto" value={pasto.id} />
-                <button type="submit" className="pillola bg-fondo text-fumo">
-                  Cambia gli alimenti
-                </button>
-              </form>
-              <form action={saltaPasto}>
-                <input type="hidden" name="pasto" value={pasto.id} />
-                <button type="submit" className="pillola bg-fondo text-fumo">
-                  Saltato
-                </button>
-              </form>
+
+              <details className="group relative">
+                <summary
+                  aria-label="Altre opzioni"
+                  className="bottone-chiaro flex h-full cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.8" />
+                    <circle cx="12" cy="12" r="1.8" />
+                    <circle cx="19" cy="12" r="1.8" />
+                  </svg>
+                </summary>
+
+                {/* Si apre sotto invece che sopra il contenuto: dentro una
+                    scheda un menu che galleggia finisce tagliato, e su un
+                    telefono non c'e' spazio per farlo galleggiare bene. */}
+                <div className="rounded-scheda absolute right-0 z-10 mt-2 w-56 border border-bordo bg-bianco p-1 shadow-sollevata">
+                  {ricetta && ricetta.alternative.length > 0 ? (
+                    <form action={cambiaRicetta}>
+                      <input type="hidden" name="pasto" value={pasto.id} />
+                      <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
+                        Altra ricetta
+                      </button>
+                    </form>
+                  ) : null}
+
+                  <form action={cambiaPasto}>
+                    <input type="hidden" name="pasto" value={pasto.id} />
+                    <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
+                      Cambia gli alimenti
+                    </button>
+                  </form>
+
+                  <form action={saltaPasto}>
+                    <input type="hidden" name="pasto" value={pasto.id} />
+                    <button type="submit" className="rounded-controllo w-full px-3 py-2 text-left text-sm text-inchiostro hover:bg-fondo">
+                      Saltato
+                    </button>
+                  </form>
+                </div>
+              </details>
             </div>
 
-            <details className="rounded-controllo bg-fondo px-3 py-2">
-              <summary className="cursor-pointer text-sm font-semibold text-fumo">
+            <details className="rounded-controllo mt-2 bg-fondo px-3 py-2">
+              <summary className="cursor-pointer text-sm text-fumo">
                 Ho mangiato fuori
               </summary>
               <form action={registraFuori} className="mt-3 flex flex-wrap items-center gap-2">
@@ -378,7 +412,6 @@ export default async function Oggi({
     )
   }
 
-  const etichettaData = giornoPerEsteso(data)
   const passato = quando(data, oggi()) === 'passato'
 
   const obiettivo = giorno?.giornata.obiettivo
@@ -387,12 +420,7 @@ export default async function Oggi({
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl first-letter:uppercase">
-          {eOggi ? 'Oggi' : etichettaData.split(' ')[0]}
-        </h1>
-        <p className="mt-1 text-sm text-fumo first-letter:uppercase">{etichettaData}</p>
-
+      <main className="mx-auto w-full max-w-2xl px-4 py-4 sm:px-6 sm:py-6">
         {!lista ? (
           <div className="scheda mt-6 px-6 py-12 text-center">
             <h2 className="font-marchio text-2xl text-inchiostro">Prima gli ingredienti</h2>

@@ -27,7 +27,7 @@ export function Calendario({
   const settimanaDiOggi = lunediDi(oggi) === lunedi
 
   return (
-    <nav className="scheda mt-5 p-3" aria-label="Settimana">
+    <nav className="scheda p-3" aria-label="Settimana">
       <div className="flex items-center justify-between gap-2 px-1 pb-3">
         <Freccia href={`/?giorno=${sposta(lunedi, -7)}`} verso="indietro" />
 
