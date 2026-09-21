@@ -4,7 +4,7 @@ import { utenteConProfilo } from '@/lib/accesso/sessione'
 import { lunediDi } from '@/lib/spesa/calcola'
 import { type ConsiglioSpesa, spesaConOfferte } from '@/lib/spesa/offerte'
 
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
 
 import { aggiungiInDispensa, preparaSettimana, spunta } from './azioni'
 
@@ -46,8 +46,6 @@ export default async function Spesa() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="spesa" />
-
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">La spesa</h1>
         <p className="cifre mt-1 text-sm text-fumo">
@@ -192,6 +190,7 @@ export default async function Spesa() {
           </>
         )}
       </main>
+      <Navigazione attiva="spesa" />
     </div>
   )
 }

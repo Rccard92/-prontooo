@@ -2,7 +2,7 @@ import { count, desc } from 'drizzle-orm'
 
 import { allergeni, battiti, db } from '@prontooo/db'
 
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,8 +82,6 @@ export default async function Stato() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata />
-
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Stato dell&rsquo;impianto</h1>
 
@@ -98,6 +96,7 @@ export default async function Stato() {
           Questa pagina non è l&rsquo;app: è la prova che l&rsquo;impianto sotto regge.
         </p>
       </main>
+      <Navigazione />
     </div>
   )
 }

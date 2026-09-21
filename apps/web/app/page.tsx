@@ -31,7 +31,7 @@ import {
   spuntaPasto,
 } from './azioni-giornata'
 import { Calendario } from './componenti/calendario'
-import { Testata, durata } from './componenti/testata'
+import { Navigazione, durata } from './componenti/navigazione'
 
 export const dynamic = 'force-dynamic'
 
@@ -367,13 +367,13 @@ export default async function Oggi({
 
     return (
       <div className="min-h-dvh bg-fondo">
-        <Testata attiva="oggi" />
         <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
           <div className="scheda px-6 py-12 text-center">
             <h1 className="font-marchio text-2xl text-pomodoro">Il database non risponde</h1>
             <p className="mt-2 text-base text-fumo">Il dettaglio sta nei log del deploy.</p>
           </div>
         </main>
+        <Navigazione attiva="oggi" />
       </div>
     )
   }
@@ -387,8 +387,6 @@ export default async function Oggi({
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="oggi" nome={utente.nome} />
-
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl first-letter:uppercase">
           {eOggi ? 'Oggi' : etichettaData.split(' ')[0]}
@@ -532,6 +530,7 @@ export default async function Oggi({
           </>
         )}
       </main>
+      <Navigazione attiva="oggi" />
     </div>
   )
 }

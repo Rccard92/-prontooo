@@ -9,7 +9,7 @@ import { NOME_LIVELLO, SPIEGA_LIVELLO } from '@/lib/ricettario/modello'
 import { ricettaDelPasto } from '@/lib/ricettario/scelta'
 
 import { cambiaRicetta, spuntaPasto } from '../../azioni-giornata'
-import { Testata, durata } from '../../componenti/testata'
+import { Navigazione, durata } from '../../componenti/navigazione'
 
 import { Cucina } from './cucina'
 
@@ -35,7 +35,6 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
 
   return (
     <>
-      <Testata attiva="oggi" />
 
       <main className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
         <Link href="/" className="text-sm font-semibold text-fumo hover:text-basilico">
@@ -190,6 +189,7 @@ export default async function Piatto({ params }: { params: Promise<{ id: string 
           </>
         )}
       </main>
+      <Navigazione attiva="oggi" />
     </>
   )
 }

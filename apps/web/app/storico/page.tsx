@@ -9,7 +9,7 @@ import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 import { NOME_TIPO_GIORNO, type TipoGiorno } from '@/lib/giornata/modello'
 
 import { Promemoria } from '../componenti/promemoria'
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
 
 import { segnaPeso, togliPeso } from './azioni'
 
@@ -67,8 +67,6 @@ export default async function Storico() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="storico" />
-
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Storico</h1>
         <p className="mt-1 max-w-xl text-fumo">
@@ -240,6 +238,7 @@ export default async function Storico() {
           </>
         )}
       </main>
+      <Navigazione attiva="storico" />
     </div>
   )
 }

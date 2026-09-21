@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 
@@ -21,7 +22,8 @@ import { utenteObbligatorio } from '@/lib/accesso/sessione'
 import { GIORNI, PROFILO_PREDEFINITO, leggiAlimenti, leggiProfilo } from '@/lib/profilo/leggi'
 
 import { Condizioni, CosaTogliere } from '../componenti/salute'
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
+import { esciDallApp } from '../entra/azioni'
 
 export const dynamic = 'force-dynamic'
 
@@ -242,8 +244,6 @@ export default async function Profilo({
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="profilo" />
-
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">
           {primaVolta ? 'Prima di cominciare' : 'Il tuo profilo'}
@@ -556,7 +556,36 @@ export default async function Profilo({
             {salvato ? 'Salva le preferenze' : 'Salva e genera la settimana'}
           </button>
         </form>
+
+        {/* Quello che stava nella testata e nella barra in basso non ci sta:
+            cinque voci sono quante ne prende il pollice. La lista la scrivi
+            una volta e l'uscita la usi quasi mai, e tutte e due sono roba
+            tua - qui sono a casa loro. */}
+        <div className="scheda mt-6 divide-y divide-bordo">
+          <Link
+            href="/ingredienti"
+            className="flex items-center justify-between px-5 py-4 text-base font-semibold text-inchiostro"
+          >
+            I tuoi ingredienti
+            <span className="text-sm font-normal text-fumo">Cosa puoi mangiare</span>
+          </Link>
+
+          <Link
+            href="/ricette"
+            className="flex items-center justify-between px-5 py-4 text-base font-semibold text-inchiostro"
+          >
+            Sfoglia le ricette
+            <span className="text-sm font-normal text-fumo">Tutto il catalogo</span>
+          </Link>
+
+          <form action={esciDallApp}>
+            <button type="submit" className="w-full px-5 py-4 text-left text-base font-semibold text-pomodoro">
+              Esci
+            </button>
+          </form>
+        </div>
       </main>
+      <Navigazione attiva="profilo" />
     </div>
   )
 }

@@ -41,7 +41,12 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" className={`${jakarta.variable} ${fraunces.variable}`}>
-      <body className="min-h-dvh antialiased">
+      <body
+        // Lo spazio per la barra in basso si mette qui una volta sola: e'
+        // fissa sullo schermo, quindi non occupa posto nel flusso, e senza
+        // questo l'ultima riga di ogni pagina le finisce sotto.
+        className="min-h-dvh pb-[calc(4.5rem+env(safe-area-inset-bottom))] antialiased"
+      >
         {children}
         <RegistraSw />
       </body>

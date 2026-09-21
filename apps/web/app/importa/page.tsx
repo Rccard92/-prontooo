@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { importaDaUrl } from '@/lib/ricette/importa'
 
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,8 +33,6 @@ export default async function Importa({
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata />
-
       <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="scheda p-6 sm:p-10">
           <h1 className="font-marchio text-3xl leading-tight text-inchiostro sm:text-4xl">
@@ -70,6 +68,7 @@ export default async function Importa({
           ) : null}
         </div>
       </main>
+      <Navigazione />
     </div>
   )
 }

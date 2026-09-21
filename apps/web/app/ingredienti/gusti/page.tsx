@@ -12,7 +12,7 @@ import { ammessi } from '@/lib/nutrizione/esclusioni'
 import { leggiProfilo } from '@/lib/profilo/leggi'
 import { NOME_FASCIA, eFascia } from '@/lib/ricette/fasce'
 
-import { Testata } from '../../componenti/testata'
+import { Navigazione } from '../../componenti/navigazione'
 import { salvaGusti } from '../azioni'
 
 export const dynamic = 'force-dynamic'
@@ -106,9 +106,7 @@ export default async function Gusti({
             ))}
           </div>
         </header>
-      ) : (
-        <Testata attiva="ingredienti" />
-      )}
+      ) : null}
 
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
         {benvenuto ? null : (
@@ -216,6 +214,7 @@ export default async function Gusti({
           </div>
         </form>
       </main>
+      <Navigazione />
     </div>
   )
 }

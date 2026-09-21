@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { db, ricettaIngredienti, ricette } from '@prontooo/db'
 
-import { Testata, durata } from '../../componenti/testata'
+import { Navigazione, durata } from '../../componenti/navigazione'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,8 +53,6 @@ export default async function PaginaRicetta({ params }: { params: Promise<{ id: 
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata />
-
       <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
         <article className="scheda overflow-hidden">
           {ricetta.immagineUrl ? (
@@ -140,6 +138,7 @@ export default async function PaginaRicetta({ params }: { params: Promise<{ id: 
           </div>
         </article>
       </main>
+      <Navigazione />
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { utenteConProfilo } from '@/lib/accesso/sessione'
 import { listaAttiva, righePerFascia, tutteLeListe, vociDi } from '@/lib/lista/archivio'
 import { arrotonda, nutrientiDi, obiettivoDa, sommaNutrienti } from '@/lib/lista/modello'
 
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
 
 import {
   aggiungiVoce,
@@ -99,8 +99,6 @@ export default async function Ingredienti({
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="ingredienti" />
-
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">I miei ingredienti</h1>
 
@@ -353,6 +351,7 @@ export default async function Ingredienti({
           </>
         )}
       </main>
+      <Navigazione />
     </div>
   )
 }

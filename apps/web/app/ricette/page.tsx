@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { db, ricette } from '@prontooo/db'
 
-import { Testata, durata } from '../componenti/testata'
+import { Navigazione, durata } from '../componenti/navigazione'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,8 +119,6 @@ export default async function Catalogo() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="catalogo" />
-
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         {righe === null ? (
           <Avviso
@@ -147,6 +145,7 @@ export default async function Catalogo() {
           </>
         )}
       </main>
+      <Navigazione />
     </div>
   )
 }

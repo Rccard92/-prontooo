@@ -1,6 +1,6 @@
 import { INSEGNE, daVerificare, volantiniCaricati } from '@/lib/offerte/archivio'
 
-import { Testata } from '../componenti/testata'
+import { Navigazione } from '../componenti/navigazione'
 
 import { cancellaVolantino, caricaVolantino, confermaAggancio, scollegaOfferta } from './azioni'
 
@@ -29,8 +29,6 @@ export default async function Offerte() {
 
   return (
     <div className="min-h-dvh bg-fondo">
-      <Testata attiva="offerte" />
-
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
         <h1 className="font-marchio text-3xl text-inchiostro sm:text-4xl">Offerte</h1>
         <p className="mt-1 max-w-2xl text-fumo">
@@ -191,6 +189,7 @@ export default async function Offerte() {
           )}
         </section>
       </main>
+      <Navigazione attiva="offerte" />
     </div>
   )
 }
