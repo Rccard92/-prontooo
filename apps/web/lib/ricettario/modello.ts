@@ -1,4 +1,5 @@
 import type { Fascia } from '../ricette/fasce'
+import { capo } from '../ricette/posti'
 
 /**
  * Il ricettario scritto per componenti.
@@ -117,17 +118,23 @@ function accetta(posto: Posto, componente: ComponenteAbbinabile): 'pieno' | 'rip
   if (componente.quantita === 0) return null
   if (posto.escludi?.some((e) => componente.etichette.includes(e))) return null
 
-  // Il titolo nomina questo alimento: allora e' quello e nessun altro.
+  // Il titolo nomina questo alimento: allora e' quello, o almeno lo stesso.
   //
   // Senza questa riga il gruppo bastava, e il gruppo `pesce` lo riempiono il
   // baccala', i calamari e i gamberi allo stesso modo: "Baccala' alle
   // verdure" e' arrivato in tavola coi calamari a pranzo e coi gamberi a
   // cena, lo stesso giorno. Un titolo che nomina un alimento promette
   // quell'alimento, e una promessa rotta e' peggio di una proposta in meno.
+  //
+  // "Lo stesso" e non "lo stessissimo": il Carnaroli e il basmati sono tutti
+  // e due riso, e "Risotto alla monzese" non promette la varieta'. Pretendere
+  // l'alimento identico vorrebbe dire non proporre mai quella ricetta.
   if (posto.nelTitolo) {
-    return posto.alimentoId !== undefined && componente.alimentoId === posto.alimentoId
-      ? 'pieno'
-      : null
+    if (posto.alimentoId !== undefined && componente.alimentoId === posto.alimentoId) {
+      return 'pieno'
+    }
+
+    return posto.nome !== undefined && capo(posto.nome) === capo(componente.nome) ? 'pieno' : null
   }
 
   const gruppoGiusto = componente.gruppo !== null && posto.gruppi.includes(componente.gruppo)

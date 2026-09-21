@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { POSTI_MASSIMI, type IngredienteRiconosciuto, converti, nominatoNel } from './posti'
+import { POSTI_MASSIMI, type IngredienteRiconosciuto, capo, converti, nominatoNel } from './posti'
 
 function ing(
   nome: string,
@@ -190,5 +190,37 @@ describe('quando un nome e’ scritto nel titolo', () => {
     assert.equal(nominatoNel('Baccalà alle verdure', 'Calamari'), false)
     assert.equal(nominatoNel('', 'Baccala'), false)
     assert.equal(nominatoNel('Baccalà alle verdure', ''), false)
+  })
+})
+
+describe('i soprannomi dei piatti', () => {
+  it('“risotto” nomina il riso, “spaghetti” nominano la pasta', () => {
+    // Sono i casi che la regola del nome non prende: risotto e spaghetti non
+    // sono alimenti del vocabolario, sono modi di chiamare un alimento.
+    assert.equal(nominatoNel('Risotto alla monzese', 'Riso Carnaroli'), true)
+    assert.equal(nominatoNel('Spaghetti alla bottarga', 'Pasta di semola'), true)
+    assert.equal(nominatoNel('Gnocchetti al nero di seppia', 'Gnocchi di patate'), true)
+  })
+
+  it('e non tirano dentro quello che non c’entra', () => {
+    assert.equal(nominatoNel('Risotto alla monzese', 'Pasta di semola'), false)
+    assert.equal(nominatoNel('Spaghetti alla bottarga', 'Riso Carnaroli'), false)
+    assert.equal(nominatoNel('Zuppa di ceci', 'Pasta di semola'), false)
+  })
+})
+
+describe('il capo di un nome', () => {
+  it('mette insieme le varianti dello stesso alimento', () => {
+    // Un titolo che dice "risotto" promette del riso, non il Carnaroli.
+    assert.equal(capo('Riso Carnaroli'), capo('Riso basmati'))
+    assert.equal(capo('Riso integrale'), capo('Riso venere'))
+    assert.equal(capo('Pasta di semola'), capo('Pasta di semola integrale'))
+  })
+
+  it('e tiene separati gli alimenti diversi', () => {
+    assert.notEqual(capo('Baccala'), capo('Calamari'))
+    assert.notEqual(capo('Baccala'), capo('Gamberi'))
+    assert.notEqual(capo('Petto di pollo'), capo('Fusi di pollo'))
+    assert.notEqual(capo('Riso basmati'), capo('Pasta di semola'))
   })
 })

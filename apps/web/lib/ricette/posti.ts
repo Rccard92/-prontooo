@@ -1,6 +1,6 @@
 import type { PostoRicetta } from '@prontooo/db'
 
-import { parole } from './normalizza'
+import { parole, radice } from './normalizza'
 
 /**
  * Da una ricetta del catalogo a una ricetta del ricettario.
@@ -166,5 +166,48 @@ export function nominatoNel(titolo: string, nome: string): boolean {
   const nelTitolo = new Set(parole(titolo).split(' ').filter(Boolean))
   const delNome = parole(nome).split(' ').filter(Boolean)
 
-  return delNome.length > 0 && delNome.every((p) => nelTitolo.has(p))
+  if (delNome.length > 0 && delNome.every((p) => nelTitolo.has(p))) return true
+
+  // I soprannomi. Un titolo nomina un alimento anche senza chiamarlo col suo
+  // nome: "Risotto alla monzese" parla di riso, "Spaghetti alla bottarga"
+  // parlano di pasta. Senza questa riga quel posto resta di gruppo `cereale`,
+  // e il gruppo cereale sono quarantotto alimenti - ci entra la pasta, ci
+  // entra il pangrattato, ci entrano i corn flakes.
+  const soprannome = SOPRANNOMI[capo(nome)]
+
+  return soprannome !== undefined && soprannome.test(parole(titolo))
+}
+
+/**
+ * La prima parola di un nome, ridotta alla radice.
+ *
+ * "Riso Carnaroli" e "Riso basmati" hanno lo stesso capo, "Baccala" e
+ * "Calamari" no. E' il metro con cui si decide se due alimenti sono la stessa
+ * cosa per un titolo: "Risotto alla monzese" promette del riso, non promette
+ * il Carnaroli, e pretendere la varieta' esatta vorrebbe dire non proporre
+ * mai quella ricetta.
+ *
+ * Non si puo' usare `parole`, che le mette in ordine alfabetico: serve la
+ * prima com'e' scritta, perche' in italiano il nome comincia col sostantivo
+ * e continua con quello che lo specifica.
+ */
+export function capo(nome: string): string {
+  return radice(nome.split(/\s+/)[0] ?? '')
+}
+
+/**
+ * Come i piatti chiamano gli alimenti senza nominarli.
+ *
+ * Tabella di parole e non un modello: costa zero e si corregge a mano, la
+ * stessa scelta della tabella delle fasce. La chiave e' il capo dell'alimento,
+ * il valore sono le parole del titolo che lo tirano in ballo.
+ */
+const SOPRANNOMI: Record<string, RegExp> = {
+  ris: /risott|\brisi\b/,
+  past: /spaghett|penne|rigatoni|paccheri|tagliatell|fusill|orecchiett|trofie|linguin|bucatin|maccheron|cavatell|strascinat|scialatiell|maltagliat|vermicell|casarecc|gigli|pennett|farfall/,
+  gnocch: /gnocchett|strangolaprev/,
+  polent: /polentin/,
+  lasagn: /lasagnett/,
+  raviol: /tortell|agnolott|casoncell|cappellacc|pansott/,
+  tortellin: /tortell|cappellett/,
 }
