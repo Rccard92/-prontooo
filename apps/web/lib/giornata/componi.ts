@@ -288,6 +288,17 @@ export async function componiGiorno(
     // che va benissimo.
     sostituisceLattosio || esclusioni.includes('lattosio'),
     [...evitaRicette, ...recenti],
+    // Da dove devono arrivare le calorie. E' lo stesso obiettivo che la
+    // schermata di oggi mostra nelle barre, usato un passo prima: invece di
+    // dirti a fine giornata che hai sforato di grassi, si sceglie un piatto
+    // che non te li fa sforare. Senza i dati del corpo non c'e' un profilo
+    // da rispettare, e si pesca fra le adatte come prima.
+    fabbisogno
+      ? {
+          proteine: (fabbisogno.proteine * 4) / fabbisogno.giornaliero,
+          grassi: (fabbisogno.grassi * 9) / fabbisogno.giornaliero,
+        }
+      : undefined,
   )
 
   const nutrientiDelPasto = new Map<string, ReturnType<typeof sommaNutrienti>>()

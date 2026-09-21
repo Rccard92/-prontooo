@@ -5,6 +5,7 @@ import { alimenti, db, ricettaIngredienti, ricette } from '@prontooo/db'
 import { RUOLI_IN_CATALOGO, classifica } from './fasce'
 import { chiaveConfigurata, leggiIngredienti } from './normalizza'
 import { type IngredienteRiconosciuto, converti } from './posti'
+import { nutrientiDi, sommaNutrienti } from '../lista/modello'
 
 /**
  * Normalizzare il catalogo, una ricetta alla volta.
@@ -248,6 +249,34 @@ export async function statoCatalogo(): Promise<{
 }
 
 /**
+ * I nutrienti di una ricetta, sommati dai suoi ingredienti riconosciuti.
+ *
+ * Tornano nulli quando non c'e' niente da sommare - nessun ingrediente
+ * riconosciuto, o nessuno con dei valori. Nullo e' diverso da zero: zero
+ * vorrebbe dire "questa ricetta non nutre", e non e' quello che sappiamo.
+ */
+function nutrientiDellaRicetta(
+  righe: { alimento: { kcal: string | null } | null; grammi: number | null }[],
+) {
+  const conValori = righe.filter((r) => r.alimento !== null && (r.grammi ?? 0) > 0)
+
+  if (conValori.length === 0) return null
+
+  const somma = sommaNutrienti(
+    conValori.map((r) => nutrientiDi(r.alimento as never, r.grammi ?? 0)),
+  )
+
+  if (somma.kcal <= 0) return null
+
+  return {
+    kcal: String(Math.round(somma.kcal)),
+    proteine: String(Math.round(somma.proteine * 10) / 10),
+    carboidrati: String(Math.round(somma.carboidrati * 10) / 10),
+    grassi: String(Math.round(somma.grassi * 10) / 10),
+  }
+}
+
+/**
  * Rifa' i posti di quello che e' gia' stato letto, **senza chiamare il modello**.
  *
  * Si puo' fare per un motivo solo, ed e' una fortuna: la normalizzazione non
@@ -282,11 +311,7 @@ export async function ricostruisciPosti(): Promise<number> {
       ricettaId: ricettaIngredienti.ricettaId,
       rigaGrezza: ricettaIngredienti.rigaGrezza,
       grammi: ricettaIngredienti.grammi,
-      alimentoId: alimenti.id,
-      nome: alimenti.nome,
-      gruppo: alimenti.gruppo,
-      ruoli: alimenti.ruoli,
-      etichette: alimenti.etichette,
+      alimento: alimenti,
     })
     .from(ricettaIngredienti)
     .leftJoin(alimenti, eq(alimenti.id, ricettaIngredienti.alimentoId))
@@ -299,27 +324,32 @@ export async function ricostruisciPosti(): Promise<number> {
     .orderBy(asc(ricettaIngredienti.ricettaId), asc(ricettaIngredienti.posizione))
 
   const perRicetta = new Map<number, IngredienteRiconosciuto[]>()
+  const crudo = new Map<number, { alimento: typeof righe[number]['alimento']; grammi: number | null }[]>()
 
   for (const riga of righe) {
     const elenco = perRicetta.get(riga.ricettaId) ?? []
 
     elenco.push(
-      riga.alimentoId === null
+      riga.alimento === null
         ? // Nessun alimento su una ricetta che ha i posti: era una riga
           // libera. Se fosse stata sconosciuta i posti non ci sarebbero.
           { alimentoId: null, nome: riga.rigaGrezza, gruppo: null, ruolo: null, grammi: null, etichette: [], tipo: 'libero' }
         : {
-            alimentoId: riga.alimentoId,
-            nome: riga.nome ?? riga.rigaGrezza,
-            gruppo: riga.gruppo,
-            ruolo: riga.ruoli?.[0] ?? null,
+            alimentoId: riga.alimento.id,
+            nome: riga.alimento.nome,
+            gruppo: riga.alimento.gruppo,
+            ruolo: riga.alimento.ruoli?.[0] ?? null,
             grammi: riga.grammi === null ? null : Number(riga.grammi),
-            etichette: riga.etichette ?? [],
+            etichette: riga.alimento.etichette ?? [],
             tipo: 'alimento',
           },
     )
 
     perRicetta.set(riga.ricettaId, elenco)
+    crudo.set(riga.ricettaId, [
+      ...(crudo.get(riga.ricettaId) ?? []),
+      { alimento: riga.alimento, grammi: riga.grammi === null ? null : Number(riga.grammi) },
+    ])
   }
 
   let rifatte = 0
@@ -333,7 +363,11 @@ export async function ricostruisciPosti(): Promise<number> {
 
     await connessione
       .update(ricette)
-      .set({ posti: esito.affidabile ? esito.posti : [], etichette: esito.etichette })
+      .set({
+        posti: esito.affidabile ? esito.posti : [],
+        etichette: esito.etichette,
+        ...(nutrientiDellaRicetta(crudo.get(ricetta.id) ?? []) ?? {}),
+      })
       .where(eq(ricette.id, ricetta.id))
 
     rifatte += 1
@@ -352,18 +386,16 @@ export async function daNormalizzare(): Promise<number> {
   return riga?.quante ?? 0
 }
 
-/** Il vocabolario ridotto a quello che serve per tradurre una riga. */
+/**
+ * Il vocabolario, riga intera.
+ *
+ * Il modello ha bisogno solo di nome e gruppo, ma subito dopo servono anche i
+ * valori nutrizionali: una ricetta appena letta si somma e i suoi quattro
+ * numeri si salvano sulla riga. Due query per la stessa tabella nello stesso
+ * giro sarebbero state una in piu'.
+ */
 async function vocabolario() {
-  return db()
-    .select({
-      id: alimenti.id,
-      nome: alimenti.nome,
-      gruppo: alimenti.gruppo,
-      ruoli: alimenti.ruoli,
-      etichette: alimenti.etichette,
-    })
-    .from(alimenti)
-    .orderBy(asc(alimenti.nome))
+  return db().select().from(alimenti).orderBy(asc(alimenti.nome))
 }
 
 /**
@@ -463,6 +495,10 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
         .where(eq(ricettaIngredienti.id, riga.id))
     }
 
+    // I quattro numeri della ricetta si calcolano adesso, che gli alimenti
+    // sono gia' in mano: rifarlo dopo vorrebbe dire rileggere le sue righe.
+    const perId = new Map(vocaboli.map((v) => [v.id, v]))
+
     await connessione
       .update(ricette)
       .set({
@@ -471,6 +507,12 @@ export async function normalizzaProssime(quante: number): Promise<EsitoNormalizz
         // non garantisco le etichette non entra nel piano: resta sfogliabile.
         posti: esito.affidabile ? esito.posti : [],
         etichette: esito.etichette,
+        ...(nutrientiDellaRicetta(
+          letti.map((l) => ({
+            alimento: l.alimentoId === null ? null : (perId.get(l.alimentoId) ?? null),
+            grammi: l.grammi,
+          })),
+        ) ?? {}),
         normalizzataIl: new Date(),
       })
       .where(eq(ricette.id, ricetta.id))

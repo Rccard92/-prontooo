@@ -127,6 +127,13 @@
       "when": 1789834536667,
       "tag": "0017_flawless_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790028410230,
+      "tag": "0018_common_elektra",
+      "breakpoints": true
     }
   ]
 }

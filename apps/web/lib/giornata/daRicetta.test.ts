@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { LIMITI, numeroDiRicetta, scalaRicetta } from './daRicetta'
+import { type Candidata, LIMITI, distanza, numeroDiRicetta, scalaRicetta } from './daRicetta'
 import type { Componente } from './modello'
 
 const BACCALA: Componente[] = [
@@ -105,5 +105,59 @@ describe('dove ci vanno le ricette del catalogo', () => {
         )
       }
     }
+  })
+})
+
+describe('scegliere la ricetta anche sui macro', () => {
+  const ricetta = (nome: string, kcal: number, proteine: number, grassi: number): Candidata => ({
+    id: 1,
+    titolo: nome,
+    fasce: ['pranzo'],
+    etichette: [],
+    ruolo: 'primo',
+    minuti: 30,
+    kcal: String(kcal),
+    proteine: String(proteine),
+    grassi: String(grassi),
+  })
+
+  // Il caso vero: 643 kcal con dentro 30 g di olio. Le calorie tornavano,
+  // il piatto era il 53% grassi e il 10% proteine.
+  const PESTO = ricetta('Pasta col pesto', 643, 16, 38)
+  const TONNO = ricetta('Pasta col tonno', 640, 35, 15)
+
+  // Quello che fabbisogno.ts calcola: grassi al 27%, proteine dal peso.
+  const VOLUTA = { proteine: 0.3, grassi: 0.27 }
+
+  it('mette davanti il piatto col profilo giusto', () => {
+    assert.ok(
+      distanza(TONNO, VOLUTA) < distanza(PESTO, VOLUTA),
+      'il piatto con meta’ calorie di olio non deve vincere sulle stesse kcal',
+    )
+  })
+
+  it('i grassi pesano il doppio', () => {
+    // Un piatto con poche proteine puo' restare un pranzo normale; uno in cui
+    // meta' delle calorie e' olio e' sbagliato per chiunque.
+    const scarsoDiProteine = ricetta('Pasta al pomodoro', 600, 12, 18)
+    const carico = ricetta('Pasta molto condita', 600, 20, 40)
+
+    assert.ok(distanza(carico, VOLUTA) > distanza(scarsoDiProteine, VOLUTA))
+  })
+
+  it('chi non ha i numeri finisce in fondo, non fuori', () => {
+    // E' una ricetta che non sappiamo giudicare, non una che sappiamo
+    // cattiva: resta in coda e viene proposta se non c'e' di meglio.
+    const senzaNumeri = { ...PESTO, kcal: null, proteine: null, grassi: null }
+
+    assert.equal(distanza(senzaNumeri, VOLUTA), Number.POSITIVE_INFINITY)
+    assert.ok(distanza(PESTO, VOLUTA) < distanza(senzaNumeri, VOLUTA))
+  })
+
+  it('una ricetta uguale al profilo ha distanza quasi zero', () => {
+    // 600 kcal: 45 g di proteine fanno il 30%, 18 g di grassi fanno il 27%.
+    const giusta = ricetta('Il pranzo che vorresti', 600, 45, 18)
+
+    assert.ok(distanza(giusta, VOLUTA) < 0.02)
   })
 })

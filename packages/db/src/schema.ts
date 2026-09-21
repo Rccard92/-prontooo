@@ -205,6 +205,22 @@ export const ricette = pgTable(
     // lattosio, pesce. Si riempie con la normalizzazione, ed e' quello che
     // permette di dire "questa ricetta non fa per te" senza tirare a indovinare.
     etichette: jsonb('etichette').$type<string[]>().notNull().default([]),
+    // I nutrienti della ricetta **come sta scritta**, sommati dai suoi
+    // ingredienti riconosciuti.
+    //
+    // Si salvano qui invece di ricalcolarli ogni volta, e non e' una
+    // micro-ottimizzazione: senza, per sapere se una ricetta ha il profilo
+    // giusto bisogna leggerne gli ingredienti, e per scegliere fra duemila
+    // candidate bisognerebbe leggerli tutti. Con questi quattro numeri sulla
+    // riga la scelta si fa in memoria e si legge una ricetta sola: quella
+    // scelta.
+    //
+    // Nulli finche' la ricetta non e' stata letta, o se nessun ingrediente
+    // porta valori: un piatto senza calorie non si puo' scalare.
+    kcal: numeric('kcal', { precision: 10, scale: 2 }),
+    proteine: numeric('proteine', { precision: 10, scale: 2 }),
+    carboidrati: numeric('carboidrati', { precision: 10, scale: 2 }),
+    grassi: numeric('grassi', { precision: 10, scale: 2 }),
     normalizzataIl: timestamp('normalizzata_il', { withTimezone: true }),
     importataIl: timestamp('importata_il', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -48,6 +48,16 @@ const DAL_CATALOGO = 'catalogo-'
 const DA_PROVARE = 12
 
 /**
+ * Quante ricette restano in gara dopo il filtro sul profilo.
+ *
+ * Trenta e' il numero che tiene insieme le due cose che servono: abbastanza
+ * strette da somigliarti davvero, abbastanza tante da non darti lo stesso
+ * piatto due volte a settimana. Una sola sarebbe la piu' giusta e la piu'
+ * noiosa.
+ */
+const GRUPPO_DI_TESTA = 30
+
+/**
  * Cosa ci sta in un pasto, e quanto tempo hai.
  *
  * Le fasce che non compaiono qui **non prendono ricette dal catalogo**, e si
@@ -71,13 +81,58 @@ export const LIMITI: Record<string, { ruoli: string[]; minuti: number }> = {
   cena: { ruoli: ['secondo', 'piatto_unico', 'primo'], minuti: 40 },
 }
 
-type Candidata = {
+export type Candidata = {
   id: number
   titolo: string
   fasce: string[]
   etichette: string[]
   ruolo: string | null
   minuti: number | null
+  kcal: string | null
+  proteine: string | null
+  grassi: string | null
+}
+
+/**
+ * Da dove vengono le calorie di un piatto, in frazioni.
+ *
+ * Una ricetta col pesto e una con la fettina possono avere le stesse calorie
+ * e non essere lo stesso pasto: nella prima meta' dell'energia arriva
+ * dall'olio. Scalarla la fa piccola, non la fa magra - la proporzione fra i
+ * nutrienti e' esattamente quello che la scalatura conserva.
+ *
+ * Per questo la ricetta si sceglie anche di qui, non solo sulle kcal.
+ */
+export type Ripartizione = { proteine: number; grassi: number }
+
+function ripartizioneDi(c: Candidata): Ripartizione | null {
+  const kcal = Number(c.kcal ?? 0)
+
+  if (!Number.isFinite(kcal) || kcal <= 0) return null
+
+  return {
+    proteine: (Number(c.proteine ?? 0) * 4) / kcal,
+    grassi: (Number(c.grassi ?? 0) * 9) / kcal,
+  }
+}
+
+/**
+ * Quanto una ricetta si allontana dal profilo che ti serve.
+ *
+ * Zero vuol dire uguale. I grassi pesano il doppio perche' e' li' che le
+ * ricette sbandano: un piatto puo' avere poche proteine ed essere comunque
+ * un pranzo normale, mentre uno in cui meta' delle calorie e' olio e' un
+ * piatto sbagliato per chiunque.
+ *
+ * Chi non ha i numeri finisce in fondo, non fuori: e' una ricetta che non
+ * sappiamo giudicare, non una che sappiamo cattiva.
+ */
+export function distanza(c: Candidata, voluta: Ripartizione): number {
+  const sua = ripartizioneDi(c)
+
+  if (!sua) return Number.POSITIVE_INFINITY
+
+  return Math.abs(sua.proteine - voluta.proteine) + 2 * Math.abs(sua.grassi - voluta.grassi)
 }
 
 /**
@@ -97,6 +152,9 @@ async function candidate(): Promise<Candidata[]> {
       etichette: ricette.etichette,
       ruolo: ricette.ruolo,
       minuti: ricette.minutiTotali,
+      kcal: ricette.kcal,
+      proteine: ricette.proteine,
+      grassi: ricette.grassi,
     })
     .from(ricette)
     .where(and(isNotNull(ricette.normalizzataIl), sql`jsonb_array_length(${ricette.posti}) > 0`))
@@ -175,6 +233,13 @@ export async function pastiDalleRicette(
   cambiaIlLattosio: boolean,
   /** Ricette da non riproporre: quelle di oggi, o quella che stai cambiando. */
   daSaltare: number[] = [],
+  /**
+   * Da dove devono arrivare le calorie, se lo sappiamo.
+   *
+   * Senza i dati del corpo non c'e' un profilo da rispettare e si pesca a
+   * caso fra le adatte, come prima.
+   */
+  voluta?: Ripartizione,
 ): Promise<{ pasti: Map<string, PastoDaRicetta>; alimenti: Map<number, Alimento> }> {
   const usati = new Map<number, Alimento>()
   const volute = fasce.filter(eFascia)
@@ -223,9 +288,24 @@ export async function pastiDalleRicette(
     // sola. Le esclusioni invece non si ripescano mai: quelle restano sopra.
     const perQuestaFascia = nuove.length > 0 ? nuove : adatte
 
-    // Alla cieca fra quelle buone: se prendessi sempre la prima, con gli
-    // stessi dati mangeresti lo stesso piatto per sempre.
-    const mucchio = [...perQuestaFascia].sort(() => Math.random() - 0.5).slice(0, DA_PROVARE)
+    // Prima si stringe il campo, poi si pesca a caso dentro. Mai il contrario,
+    // e mai solo la prima delle due cose.
+    //
+    // Ordinare per somiglianza e prendere la migliore darebbe **sempre la
+    // stessa ricetta**: il catalogo non cambia, il tuo profilo nemmeno, e un
+    // piano che azzecca i macro e ti fa mangiare lo stesso piatto ogni giorno
+    // non e' un piano. Pescare a caso e basta e' quello che faceva prima, e
+    // portava in tavola pranzi con meta' delle calorie di olio.
+    //
+    // Quindi: si tiene il gruppo di testa - le piu' vicine al profilo - e li'
+    // dentro si sceglie alla cieca.
+    const vicine = voluta
+      ? [...perQuestaFascia]
+          .sort((a, b) => distanza(a, voluta) - distanza(b, voluta))
+          .slice(0, GRUPPO_DI_TESTA)
+      : perQuestaFascia
+
+    const mucchio = [...vicine].sort(() => Math.random() - 0.5).slice(0, DA_PROVARE)
 
     for (const candidata of mucchio) {
       const righe = senzaLattosio(await ingredientiDi(candidata.id), gemelli)
