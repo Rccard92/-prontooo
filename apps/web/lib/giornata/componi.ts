@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray } from 'drizzle-orm'
 
 import {
   type Alimento,
@@ -25,7 +25,8 @@ import { arrotonda, nutrientiDi, sommaNutrienti } from '../lista/modello'
 import { FASCE } from '../ricette/fasce'
 
 import { MOLTIPLICATORI, type Componente, type TipoGiorno, nutrientiConsumati } from './modello'
-import { pastiDalleRicette, scalaRicetta } from './daRicetta'
+import { numeroDiRicetta, pastiDalleRicette, scalaRicetta } from './daRicetta'
+import { sposta } from './settimana'
 import { postiDi, riempiPosti } from './schema'
 import { ricalibra, scalaComponenti, type PastoDaRicalibrare } from './ricalibra'
 
@@ -273,6 +274,11 @@ export async function componiGiorno(
   // Il bersaglio e' quello del fabbisogno se lo conosciamo; se no, le kcal
   // che quel pasto aveva con le porzioni di riferimento. In tutti e due i
   // casi si scala su un numero che vuol dire qualcosa.
+  // Quelle di questa settimana arrivano da chi compone piu' giorni di fila;
+  // queste dalle settimane passate. Sono la stessa cosa per chi sceglie: un
+  // piatto che hai gia' davanti.
+  const recenti = await ricetteRecenti(utenteId, impostazioni?.settimaneAntiRipetizione ?? 0)
+
   const conRicetta = await pastiDalleRicette(
     pasti.map((p) => p.fascia),
     esclusioni,
@@ -281,7 +287,7 @@ export async function componiGiorno(
     // il lattosio non ce l'ha piu', e scartarla sarebbe togliere un piatto
     // che va benissimo.
     sostituisceLattosio || esclusioni.includes('lattosio'),
-    evitaRicette,
+    [...evitaRicette, ...recenti],
   )
 
   const nutrientiDelPasto = new Map<string, ReturnType<typeof sommaNutrienti>>()
@@ -483,6 +489,37 @@ export async function generaGiornata(
   }
 
   return { id: giornata.id, ricetteUsate: composto.ricetteUsate }
+}
+
+/**
+ * Le ricette gia' passate in tavola nelle ultime settimane.
+ *
+ * E' quello che mantiene la promessa scritta nel profilo - "per quante
+ * settimane una ricetta gia' cucinata resta fuori dal piano" - che fino a
+ * ieri era un'impostazione che non faceva niente: stava sul database, si
+ * poteva cambiare, e non la leggeva nessuno.
+ *
+ * Si guardano i piani, non solo i pasti spuntati. Una ricetta proposta e
+ * saltata l'hai comunque vista e scartata: riproporla tre giorni dopo e'
+ * peggio che averla lasciata fuori.
+ */
+async function ricetteRecenti(utenteId: number, settimane: number): Promise<number[]> {
+  if (settimane <= 0) return []
+
+  const righe = await db()
+    .select({ ricetta: giornataPasti.ricettaLibro })
+    .from(giornataPasti)
+    .innerJoin(giornate, eq(giornate.id, giornataPasti.giornataId))
+    .where(
+      and(
+        eq(giornate.utenteId, utenteId),
+        gte(giornate.data, sposta(oggi(), -settimane * 7)),
+      ),
+    )
+
+  return righe
+    .map((r) => numeroDiRicetta(r.ricetta))
+    .filter((n): n is number => n !== null)
 }
 
 /** Quel che serve a disegnare una casella del calendario. */

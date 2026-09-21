@@ -199,10 +199,9 @@ export async function pastiDalleRicette(
 
     // Si guarda anche l'etichetta salvata, ma solo per scartare in fretta il
     // grosso: quella vera e' la verifica sugli ingredienti, piu' sotto.
-    const perQuestaFascia = tutte.filter(
+    const adatte = tutte.filter(
       (r) =>
         r.fasce.includes(fascia) &&
-        !evitate.has(r.id) &&
         r.ruolo !== null &&
         limiti.ruoli.includes(r.ruolo) &&
         // Chi non dichiara i minuti passa: non sapere quanto ci vuole non e'
@@ -211,6 +210,18 @@ export async function pastiDalleRicette(
         (r.minuti === null || r.minuti <= limiti.minuti) &&
         r.etichette.every((e) => !esclusi.has(e) || (e === 'lattosio' && cambiaIlLattosio)),
     )
+
+    const nuove = adatte.filter((r) => !evitate.has(r.id))
+
+    // Se togliendo quelle gia' viste non resta niente, si ripescano.
+    //
+    // Non e' una scorciatoia: quell'elenco tiene dentro le ricette delle
+    // ultime settimane, e con un catalogo piccolo per una fascia potrebbe
+    // svuotarla del tutto. A quel punto il pasto tornerebbe al libro di casa
+    // **senza dirlo**, e tu vedresti sparire le ricette vere senza capire
+    // perche'. Meglio un piatto ripetuto che una funzione che si spegne da
+    // sola. Le esclusioni invece non si ripescano mai: quelle restano sopra.
+    const perQuestaFascia = nuove.length > 0 ? nuove : adatte
 
     // Alla cieca fra quelle buone: se prendessi sempre la prima, con gli
     // stessi dati mangeresti lo stesso piatto per sempre.
