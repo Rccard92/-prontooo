@@ -621,6 +621,194 @@ export const LIBRO: RicettaComponibile[] = [
     ],
     nota: 'Serve nei giorni in cui l’alternativa vera è saltare il pasto.',
   },
+
+  // ─── Colazioni, spuntini e merende aggiunti dopo ──────────────────────────
+  // Erano cinque, quattro e sei, e si vedeva: "Frutta e frutta secca" usciva
+  // due volte nello stesso giorno. A pranzo e a cena la varieta' la porta il
+  // catalogo; qui no, perche' in catalogo ci sono primi e secondi - e allora
+  // la varieta' di qui va scritta a mano.
+  //
+  // Non sono ricette da cercare in giro: sono modi di mettere insieme quello
+  // che hai gia'. I grammi e i macro li porta il vocabolario - 20 g di
+  // mandorle sono 121 kcal e 4,4 g di proteine perche' lo dice il CREA, non
+  // perche' l'ha scritto un sito.
+  {
+    id: 'yogurt-proteico-cioccolato',
+    titolo: 'Yogurt proteico e cioccolato',
+    fasce: ['colazione', 'merenda'],
+    minuti: 3,
+    posti: [
+      { chiave: 'yogurt', ruolo: 'latticino', gruppi: ['latticino'] },
+      { chiave: 'croccante', ruolo: 'cereale_colazione', gruppi: ['cereale'], facoltativo: true },
+      { chiave: 'dolce', ruolo: 'spalmabile', gruppi: ['dolce'], facoltativo: true },
+    ],
+    passi: [
+      'Versa {yogurt} nella ciotola.',
+      'Sopra {croccante} e {dolce}.',
+      'Non mescolare: il croccante dura finché resta sopra.',
+    ],
+    nota: 'Con uno yogurt greco tiene fino a pranzo, senza fame alle undici.',
+  },
+  {
+    id: 'latte-cereali',
+    titolo: 'Latte e cereali',
+    fasce: ['colazione'],
+    minuti: 2,
+    posti: [
+      { chiave: 'latte', ruolo: 'latticino', gruppi: ['latticino', 'bevanda'] },
+      { chiave: 'cereali', ruolo: 'cereale_colazione', gruppi: ['cereale'] },
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'], facoltativo: true },
+    ],
+    passi: ['{cereali} nella scodella, {latte} sopra.', 'Se ci metti {frutta}, tagliala prima.'],
+  },
+  {
+    id: 'biscotti-te',
+    titolo: 'Biscotti e tè',
+    fasce: ['colazione', 'merenda'],
+    minuti: 3,
+    posti: [
+      { chiave: 'biscotti', ruolo: 'snack', gruppi: ['dolce', 'pane'] },
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'], facoltativo: true },
+    ],
+    liberi: ['tè'],
+    passi: ['Fai il tè.', 'Inzuppa {biscotti}.', 'Se deve durare, aggiungi {frutta}.'],
+    nota: 'La colazione più corta che c’è: per le mattine in cui si esce di corsa.',
+  },
+  {
+    id: 'pane-burro-marmellata',
+    titolo: 'Pane, burro e marmellata',
+    fasce: ['colazione'],
+    minuti: 4,
+    posti: [
+      { chiave: 'pane', ruolo: 'base', gruppi: ['pane'] },
+      { chiave: 'grasso', ruolo: 'grasso', gruppi: ['grasso'], facoltativo: true },
+      { chiave: 'dolce', ruolo: 'spalmabile', gruppi: ['dolce'] },
+    ],
+    passi: ['Tosta {pane}.', 'Prima {grasso}, poi {dolce}: in quest’ordine non si bagna.'],
+  },
+  {
+    id: 'uova-e-frutta',
+    titolo: 'Uova e frutta',
+    fasce: ['colazione'],
+    minuti: 8,
+    posti: [
+      { chiave: 'uova', ruolo: 'proteina', gruppi: ['uova'] },
+      { chiave: 'pane', ruolo: 'base', gruppi: ['pane'], facoltativo: true },
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'], facoltativo: true },
+    ],
+    liberi: ['sale', 'pepe'],
+    passi: ['Cuoci {uova} in padella, fuoco basso.', 'Accanto {pane} e {frutta}.'],
+    nota: 'La colazione di chi si allena la mattina: la proteina sta qui, non nello spuntino.',
+  },
+  {
+    id: 'ricotta-e-pane',
+    titolo: 'Ricotta e pane',
+    fasce: ['colazione', 'merenda'],
+    minuti: 3,
+    posti: [
+      { chiave: 'ricotta', ruolo: 'latticino', gruppi: ['latticino'] },
+      { chiave: 'pane', ruolo: 'base', gruppi: ['pane'] },
+      { chiave: 'dolce', ruolo: 'spalmabile', gruppi: ['dolce'], facoltativo: true },
+    ],
+    passi: ['Spalma {ricotta} su {pane}.', 'Sopra {dolce}, poco.'],
+  },
+  {
+    id: 'frullato',
+    titolo: 'Frullato',
+    fasce: ['colazione', 'merenda'],
+    minuti: 4,
+    posti: [
+      { chiave: 'liquido', ruolo: 'latticino', gruppi: ['latticino', 'bevanda'] },
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'] },
+      { chiave: 'semi', ruolo: 'semi', gruppi: ['frutta_secca'], facoltativo: true },
+    ],
+    passi: [
+      'Nel frullatore {liquido} e {frutta}.',
+      'Frulla finché non resta nessun pezzo.',
+      'Sopra {semi}, a frullatore spento.',
+    ],
+    nota: 'Da bere subito: dopo dieci minuti si separa e non torna più come prima.',
+  },
+  {
+    id: 'budino-proteico',
+    titolo: 'Budino proteico',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 1,
+    posti: [
+      { chiave: 'budino', ruolo: 'proteina', gruppi: ['latticino'] },
+      { chiave: 'semi', ruolo: 'semi', gruppi: ['frutta_secca'], facoltativo: true },
+    ],
+    passi: ['Apri {budino}.', 'Se ci stanno, sopra {semi}.'],
+  },
+  {
+    id: 'parmigiano-e-frutta',
+    titolo: 'Parmigiano e frutta',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 2,
+    posti: [
+      { chiave: 'formaggio', ruolo: 'proteina', gruppi: ['latticino'] },
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'], facoltativo: true },
+    ],
+    passi: ['{formaggio} a cubetti.', 'Accanto {frutta}.'],
+    nota: 'Salato e dolce insieme: lo spuntino che non lascia voglia di altro.',
+  },
+  {
+    id: 'frutta-secca-e-frutta',
+    titolo: 'Frutta secca e frutta',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 1,
+    posti: [
+      { chiave: 'secca', ruolo: 'semi', gruppi: ['frutta_secca'] },
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'], facoltativo: true },
+    ],
+    passi: ['Pesa {secca}: a occhio è sempre il doppio.', 'Con {frutta} accanto.'],
+  },
+  {
+    id: 'gallette-e-spalmabile',
+    titolo: 'Gallette e spalmabile',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 2,
+    posti: [
+      { chiave: 'gallette', ruolo: 'base', gruppi: ['cereale', 'pane'] },
+      { chiave: 'sopra', ruolo: 'spalmabile', gruppi: ['dolce', 'grasso', 'frutta_secca'] },
+    ],
+    passi: ['Spalma {sopra} su {gallette}.'],
+  },
+  {
+    id: 'yogurt-e-semi',
+    titolo: 'Yogurt e semi',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 2,
+    posti: [
+      { chiave: 'yogurt', ruolo: 'latticino', gruppi: ['latticino'] },
+      { chiave: 'semi', ruolo: 'semi', gruppi: ['frutta_secca'] },
+    ],
+    passi: ['{yogurt} nella ciotola, {semi} sopra.'],
+  },
+  {
+    id: 'frutta-di-stagione',
+    titolo: 'Frutta di stagione',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 1,
+    posti: [
+      { chiave: 'frutta', ruolo: 'frutta', gruppi: ['frutta'] },
+      { chiave: 'secca', ruolo: 'semi', gruppi: ['frutta_secca'], facoltativo: true },
+    ],
+    passi: ['{frutta}, e basta.', 'Se hai fame vera, anche {secca}.'],
+  },
+  {
+    id: 'affettato-e-pane',
+    titolo: 'Affettato e pane',
+    fasce: ['spuntino', 'merenda'],
+    minuti: 3,
+    posti: [
+      { chiave: 'affettato', ruolo: 'proteina', gruppi: ['carne'] },
+      { chiave: 'pane', ruolo: 'base', gruppi: ['pane'] },
+    ],
+    passi: ['{affettato} dentro {pane}.'],
+    nota: 'Per i giorni in cui lo spuntino sostituisce un pasto saltato.',
+  },
+
 ]
 
 /** Indice per id, che serve alla pagina della ricetta. */
